@@ -1,0 +1,7 @@
+Flask
+gunicorn
+python-dotenv
+langchain
+langchain-openai
+openai
+requests
