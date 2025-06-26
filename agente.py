@@ -6,67 +6,86 @@ from dotenv import load_dotenv
 import os
 import requests
 
-# Cargar variables de entorno
 load_dotenv()
-
 app = Flask(__name__)
 
-# Configurar el modelo LLM (OpenAI)
+# LLM
 llm = ChatOpenAI(
-    model="gpt-3.5-turbo",
+    model="gpt-4o-mini",
     temperature=0,
     api_key=os.getenv("OPENAI_API_KEY")
 )
 
-RAG_SERVICE_URL = os.getenv("http://127.0.0.1:8000")
+# Ruta del servicio RAG
+RAG_SERVICE_URL = os.getenv("RAG_SERVICE_URL", "http://127.0.0.1:8000/query")
 
-# Función para verificar disponibilidad
+# Herramienta 1: Verificar disponibilidad
 def check_availability(date: str) -> str:
-    if date.lower() in ["sábado", "domingo"]:
+    print(f" Verificando disponibilidad para: {date}")
+    if date.lower() in ["sabado", "sábado", "domingo"]:
         return "Lo siento, no hay disponibilidad para ese día."
-    else:
-        return "¡Sí hay disponibilidad para esa fecha!"
+    return "¡Sí hay disponibilidad para esa fecha!"
 
-# Función para herramienta que llama a la API del RAG
+# Herramienta 2: Precios
+def obtener_precios(_: str) -> str:
+    return (
+        "Los precios del glamping Brillo de Luna son:\n"
+        "- Estándar: 150.000 COP por noche\n"
+        "- Premium: 250.000 COP por noche\n"
+        "- Glamping de lujo: 350.000 COP por noche"
+    )
+
+# Herramienta 3: Llamar al sistema RAG
 def call_rag_api(query: str) -> str:
-    try: 
-        response=requests.post(RAG_SERVICE_URL, json={"query": query})
+    try:
+        response = requests.post(RAG_SERVICE_URL, json={"query": query})
         response.raise_for_status()
-        rag_response=response.json()
-        return rag_response.get("answer", "No se pudo obtener informacion del sistema RAG")
-    except requests.exceptions.RequestException as e:
-        print(f"Error al llamar a la API del RAG: {e}")
-        return "lo siento, el sistema de informacion RAG no esta disponible en este momento"
-    
-# Registrar herramienta personalizada
+        return response.json().get("answer", "No se pudo obtener información del sistema RAG.")
+    except Exception as e:
+        print(f" Error RAG: {e}")
+        return "Lo siento, el sistema RAG no está disponible en este momento."
+
+# Herramientas registradas
 tools = [
     Tool(
         name="VerificarDisponibilidad",
         func=check_availability,
-        description="Verifica disponibilidad en una fecha (como 'sábado', 'lunes')"
+        description=(
+            "Usa esta herramienta siempre que te pregunten si hay disponibilidad para un día específico, como sábado o domingo. "
+            "No respondas tú mismo, siempre consulta esta herramienta."
+        )
     ),
-
+    Tool(
+        name="PreciosGlamping",
+        func=obtener_precios,
+        description="Úsala cuando el usuario quiera saber precios, tarifas o cuánto cuesta hospedarse."
+    ),
     Tool(
         name="InformacionGlamping",
         func=call_rag_api,
-        description="Util para responder preguntas generales sobre el glamping Brillo de Luna, coomo capasidad, precios, reglas, check-in/out, servicios o descripciones de los domos. Siempre usa esta herramienta para buscar informacion en los datos del glamping."
+        description="Consulta al sistema RAG sobre temas generales del glamping como servicios, reglas o descripciones."
     )
 ]
 
-# Crear memoria conversacional
+# Memoria conversacional
 memory = ConversationBufferMemory(
     memory_key="chat_history",
     return_messages=True,
     input_key="input"
 )
 
-# Mensajes iniciales
+# Instrucciones al agente (contexto inicial)
 memory.chat_memory.add_user_message(
-    "Quiero que actúes como un experto en glamping y que respondas siempre en español.")
+    "Actúa como un experto en glamping y responde siempre en español. "
+    "Cuando pregunten por disponibilidad de fechas, usa 'VerificarDisponibilidad'. "
+    "Cuando pregunten por precios, tarifas o cuánto cuesta, usa 'PreciosGlamping'. "
+    "Cuando la pregunta sea general sobre el glamping, usa 'InformacionGlamping'."
+)
 memory.chat_memory.add_ai_message(
-    "¡Claro! Estoy listo para responder cualquier pregunta sobre glamping: alojamiento, actividades, precios, ubicación, mascotas, etc.")
+    "¡Entendido! Usaré las herramientas correctamente y responderé como experto en glamping en español."
+)
 
-# Inicializar agente
+# Agente
 agent = initialize_agent(
     tools=tools,
     llm=llm,
@@ -75,7 +94,7 @@ agent = initialize_agent(
     verbose=True
 )
 
-# Endpoint para prueba directa del chatbot
+# ENDPOINT /chat
 @app.route("/chat", methods=["POST"])
 def chat():
     data = request.get_json()
@@ -88,30 +107,25 @@ def chat():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Webhook para integrarse con Dialogflow
+# ENDPOINT webhook para Dialogflow
 @app.route("/webhook", methods=["POST"])
 def webhook():
     data = request.get_json()
     query_text = data.get("queryResult", {}).get("queryText", "")
     try:
         result = agent.invoke({"input": query_text})
-        return jsonify({
-            "fulfillmentText": result["output"]
-        })
-    except Exception as e:
-        return jsonify({
-            "fulfillmentText": "Lo siento, hubo un error procesando tu solicitud."
-        })
+        return jsonify({"fulfillmentText": result["output"]})
+    except Exception:
+        return jsonify({"fulfillmentText": "Lo siento, hubo un error procesando tu solicitud."})
 
-# Endpoint REST para disponibilidad
+# REST para disponibilidad
 @app.route("/disponibilidad/<dia>", methods=["GET"])
 def disponibilidad(dia):
     if dia.lower() in ["sábado", "domingo"]:
         return jsonify({"disponible": False, "mensaje": "Lo siento, no hay disponibilidad para ese día."})
-    else:
-        return jsonify({"disponible": True, "mensaje": "¡Sí hay disponibilidad para esa fecha!"})
+    return jsonify({"disponible": True, "mensaje": "¡Sí hay disponibilidad para esa fecha!"})
 
-# Endpoint REST para precios
+# REST para precios
 @app.route("/precios", methods=["GET"])
 def precios():
     return jsonify({
@@ -119,13 +133,12 @@ def precios():
         "premium": "250.000 COP por noche",
         "glamping_de_lujo": "350.000 COP por noche"
     })
-# Ruta raíz para evitar error 404
+
 @app.route("/")
 def home():
-    return "¡Servidor Flask para Glamping funcionando correctamente!"
+    return "¡Servidor Flask del agente de Glamping funcionando!"
 
-
-# Iniciar servidor
+# Run
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
