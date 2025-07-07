@@ -1,7 +1,12 @@
 Flask
+flask-cors
 gunicorn
 python-dotenv
 langchain
 langchain-openai
+langchain-community
+langchain-core
 openai
 requests
+sentence-transformers
+faiss-cpu
