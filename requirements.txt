@@ -10,3 +10,4 @@ openai
 requests
 sentence-transformers
 faiss-cpu
+twilio
