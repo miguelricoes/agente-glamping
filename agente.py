@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from langchain.agents import initialize_agent, Tool, AgentType
 from langchain.memory import ConversationBufferMemory
 from langchain_openai import ChatOpenAI
-from rag_engine import qa_chain
+from rag_engine2 import qa_chain, qa_service_chain
 import os
 
 # Cargar variables de entorno
@@ -38,7 +38,12 @@ tools = [
         name="InformacionGlamping",
         func=lambda query: qa_chain.invoke({"query": query}),
         description="Úsalo para responder preguntas sobre precios, servicios, ubicación y horarios de Glamping Brillo de Luna."
-    )
+    ), 
+    Tool(
+        name="ServiciosGlamping",
+        func=lambda query: qa_service_chain.invoke({"query": query}),
+        description="Responde preguntas sobre los servicios ofrecidos, en el Glamping Brillo de Luna."
+    ), 
 ]
 
 # --- Endpoint para WhatsApp Webhook ---
@@ -60,8 +65,9 @@ def whatsapp_webhook():
         )
         # Mensaje de bienvenida inicial
         user_memories[from_number].chat_memory.add_user_message(
-            "Actúa como un experto en glamping y responde siempre en español. "
+            "Hola tu nombre es Maria: Actúa como un experta en glamping y responde siempre en español. "
             "Cuando te hagan cualquier pregunta sobre Glamping Brillo de Luna, usa la herramienta 'InformacionGlamping'."
+            "2. Servicios: o el @2,  usa la herramienta 'ServiciosGlamping'."
         )
         user_memories[from_number].chat_memory.add_ai_message(
             "¡Entendido! Responderé como experto usando la herramienta adecuada."
