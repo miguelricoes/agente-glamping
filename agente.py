@@ -6,12 +6,15 @@ from langchain.agents import initialize_agent, Tool, AgentType
 from langchain.memory import ConversationBufferMemory
 from langchain_openai import ChatOpenAI
 from rag_engine2 import qa_chain, qa_service_chain
+import uuid
 import os
 
 # Cargar variables de entorno
 load_dotenv()
 app = Flask(__name__)
 user_memories = {}  # Diccionario global para memorias por número
+user_agents = {}  # Diccionario global para almacenar agentes por sesión
+
 
 # Twilio
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
@@ -67,7 +70,7 @@ def whatsapp_webhook():
         user_memories[from_number].chat_memory.add_user_message(
             "Hola tu nombre es Maria: Actúa como un experta en glamping y responde siempre en español. "
             "Cuando te hagan cualquier pregunta sobre Glamping Brillo de Luna, usa la herramienta 'InformacionGlamping'."
-            "2. Servicios: o el @2,  usa la herramienta 'ServiciosGlamping'."
+            "Cuando se haga una pregunta sobre servicios,  usa la herramienta 'ServiciosGlamping'."
         )
         user_memories[from_number].chat_memory.add_ai_message(
             "¡Entendido! Responderé como experto usando la herramienta adecuada."
@@ -109,17 +112,40 @@ def whatsapp_webhook():
 def chat():
     data = request.get_json()
     user_input = data.get("input")
+
+    session_id = data.get("session_id")
+    if not session_id:
+        session_id = str(uuid.uuid4())  
+
     if not user_input:
         return jsonify({"error": "Falta el campo 'input'"}), 400
-    try:
-        result = initialize_agent(
+
+    # Crear o reutilizar la memoria
+    if session_id not in user_memories:
+        user_memories[session_id] = ConversationBufferMemory(
+            memory_key="chat_history", return_messages=True, input_key="input"
+        )
+
+    memory = user_memories[session_id]
+
+    # Crear o reutilizar el agente
+    if session_id not in user_agents:
+        user_agents[session_id] = initialize_agent(
             tools=tools,
             llm=llm,
             agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
-            memory=ConversationBufferMemory(memory_key="chat_history", return_messages=True),
+            memory=memory,
             verbose=False
-        ).invoke({"input": user_input})
-        return jsonify({"response": result["output"]})
+        )
+
+    agent = user_agents[session_id]
+
+    try:
+        result = agent.invoke({"input": user_input})
+        return jsonify({
+            "response": result["output"],
+            "session_id": session_id  # ✅ siempre devuelve el ID actual
+        })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
