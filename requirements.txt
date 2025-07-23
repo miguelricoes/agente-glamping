@@ -11,3 +11,4 @@ requests
 sentence-transformers
 faiss-cpu
 twilio
+langchain-huggingface

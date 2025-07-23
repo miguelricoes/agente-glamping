@@ -473,40 +473,6 @@ def chat():
         "memory": memory_serialized
     })
 
-# --- Webhook para Dialogflow ---
-@app.route("/webhook", methods=["POST"])
-def webhook():
-    data = request.get_json()
-    query_text = data.get("queryResult", {}).get("queryText", "")
-    session_id = data.get("session", "").split('/')[-1] # Obtener session_id de Dialogflow
-
-    if not session_id:
-        session_id = str(uuid.uuid4())
-        print(f"Nueva sesión generada para Dialogflow: {session_id}")
-
-    if session_id not in user_memories:
-        user_memories[session_id] = load_user_memory(session_id)
-    
-    memory = user_memories[session_id]
-
-    try:
-        agent = initialize_agent(
-            tools=tools,
-            llm=llm,
-            agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
-            memory=memory,
-            verbose=False
-        )
-        result = agent.invoke({"input": query_text})
-        
-        # Guardar la memoria después de la invocación del agente
-        save_user_memory(session_id, memory)
-        
-        return jsonify({"fulfillmentText": result["output"]})
-    except Exception as e:
-        print(f"ERROR en webhook de Dialogflow para {session_id}: {e}")
-        return jsonify({"fulfillmentText": "Lo siento, hubo un error procesando tu solicitud."})
-
 # --- Página principal ---
 @app.route("/")
 def home():
