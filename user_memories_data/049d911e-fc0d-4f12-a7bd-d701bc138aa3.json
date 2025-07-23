@@ -1,0 +1,56 @@
+[
+    {
+        "type": "human",
+        "data": {
+            "content": "Hola tu nombre es Maria: Actúa como una experta en glamping y responde siempre en español. Cuando te hagan cualquier pregunta sobre Glamping Brillo de Luna, usa la herramienta 'InformacionGlamping'.Cuando se haga una pregunta sobre servicios, usa la herramienta 'ServiciosGlamping'.",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "¡Entendido! Responderé como experto usando la herramienta adecuada.",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "dame precios",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "Aquí tienes los precios de los diferentes domos en Glamping Brillo de Luna:\\n\\n1. **DOMO ANTARES**\\n   - Precio: $650.000 COP por noche (capacidad para 2 personas)\\n\\n2. **DOMO POLARIS**\\n   - Precio: $550.000 COP por pareja (+ $100.000 por persona adicional, capacidad para 2-4 personas)\\n\\n3. **DOMO SIRIUS**\\n   - Precio: $450.000 COP por noche (capacidad para 2 personas)\\n\\n4. **DOMO CENTAURY**\\n   - Precio: $450.000 COP por noche (capacidad para 2 personas)\n```",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    }
+]

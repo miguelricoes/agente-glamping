@@ -1,0 +1,731 @@
+[
+    {
+        "type": "human",
+        "data": {
+            "content": "Hola, tu nombre es Maria. Eres una asistente experta en Glamping Brillo de Luna y tienes acceso a información detallada sobre el lugar, sus domos, sus servicios, políticas y actividades. También tienes una excelente memoria para recordar *todos los detalles* de nuestra conversación, incluso si no son directamente sobre el glamping o si son de índole personal o emocional. Responde siempre en español. Usa tus herramientas de información de Glamping para responder preguntas específicas sobre cualquier aspecto del lugar. Recuerda siempre el contexto de la conversación para responder de manera coherente y empática, incluso si la información no es directamente relevante para las herramientas o el Glamping. Si se te pregunta sobre algo que ya mencionaste, reitéralo de forma natural sin sonar repetitivo. Tu objetivo es ser útil, informativa y comprensiva en todo momento.",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "¡Hola! Soy María, tu asistente experta en Glamping Brillo de Luna. Estoy aquí para ayudarte con cualquier pregunta sobre nuestro glamping, domos, servicios, políticas y actividades. ¿En qué puedo asistirte hoy?",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "hola como estas",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "¡Hola! Estoy aquí y lista para ayudarte. ¿Cómo estás tú? ¿Hay algo específico sobre Glamping Brillo de Luna que te gustaría saber?\n```",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "hola como estas",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "¡Hola! Estoy aquí y lista para ayudarte. ¿Cómo estás tú? ¿Hay algo específico sobre Glamping Brillo de Luna que te gustaría saber?\n```",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "cuales son los precios",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "Aquí tienes los precios de los diferentes domos en Glamping Brillo de Luna:\n\n1. **Domo Polaris**: $550.000 COP la noche por pareja. Hay un costo adicional de $100.000 COP por persona adicional.\n\n2. **Domo Antares**: $650.000 COP la noche por pareja.\n\n3. **Domo Sirius**: $450.000 COP la noche por pareja.\n\n4. **Domo Centaury**: $450.000 COP la noche por pareja.\n\nSi necesitas más información sobre los domos o cualquier otro aspecto del glamping, ¡no dudes en preguntar!",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "cuales son los precios",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "Aquí tienes los precios de los diferentes domos en Glamping Brillo de Luna:\n\n1. **Domo Polaris**: $550.000 COP la noche por pareja. Hay un costo adicional de $100.000 COP por persona adicional.\n\n2. **Domo Antares**: $650.000 COP la noche por pareja.\n\n3. **Domo Sirius**: $450.000 COP la noche por pareja.\n\n4. **Domo Centaury**: $450.000 COP la noche por pareja.\n\nSi necesitas más información sobre los domos o cualquier otro aspecto del glamping, ¡no dudes en preguntar!",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "Hablame mas detallado sobre el domo polaris",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "El Domo Polaris es un espacio amplio y acogedor que se destaca por su diseño de dos pisos. La tarifa base es de **$550.000 COP** la noche por pareja, y tiene capacidad para acomodar a **2 personas adicionales** en un sofá cama ubicado en el primer piso, con un costo adicional de **$100.000 COP** por cada persona extra.\n\nEn el primer piso, encontrarás una sala con sofá cama que ofrece una maravillosa vista a la represa del Tominé y a la montaña. También cuenta con una cocineta equipada, que incluye nevera, estufa, menaje y cafetera, lo que te permitirá preparar tus propias comidas. La cama principal se encuentra en el segundo piso, brindando un espacio privado y cómodo para descansar.\n\nSi deseas más información sobre este domo o cualquier otro aspecto del glamping, ¡no dudes en preguntar!",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "Hablame mas detallado sobre el domo polaris",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "El Domo Polaris es un espacio amplio y acogedor que se destaca por su diseño de dos pisos. La tarifa base es de **$550.000 COP** la noche por pareja, y tiene capacidad para acomodar a **2 personas adicionales** en un sofá cama ubicado en el primer piso, con un costo adicional de **$100.000 COP** por cada persona extra.\n\nEn el primer piso, encontrarás una sala con sofá cama que ofrece una maravillosa vista a la represa del Tominé y a la montaña. También cuenta con una cocineta equipada, que incluye nevera, estufa, menaje y cafetera, lo que te permitirá preparar tus propias comidas. La cama principal se encuentra en el segundo piso, brindando un espacio privado y cómodo para descansar.\n\nSi deseas más información sobre este domo o cualquier otro aspecto del glamping, ¡no dudes en preguntar!",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "cuales son las reglas del glamping",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "Las reglas de la casa en Glamping Brillo de Luna son las siguientes:\n\n1. **Respeto por la Naturaleza:** Se prohíbe dejar basura y dañar la flora o fauna del lugar.\n2. **Horarios de Silencio:** Se deben respetar los horarios de silencio entre las 10:00 p.m. y las 8:00 a.m.\n3. **Prohibición de Fumar:** No está permitido fumar dentro de las carpas o zonas cerradas. Existen áreas designadas para fumadores.\n4. **Consumo de Alcohol:** El consumo de alcohol está permitido con responsabilidad.\n5. **Ruido:** No se permiten fiestas ni música a alto volumen para mantener la tranquilidad del entorno.\n6. **Cuidado de Instalaciones:** Cualquier daño a las instalaciones será cargado al huésped responsable.\n\nSi tienes más preguntas sobre las políticas o cualquier otro aspecto del glamping, ¡no dudes en preguntar!",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "cuales son las reglas del glamping",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "Las reglas de la casa en Glamping Brillo de Luna son las siguientes:\n\n1. **Respeto por la Naturaleza:** Se prohíbe dejar basura y dañar la flora o fauna del lugar.\n2. **Horarios de Silencio:** Se deben respetar los horarios de silencio entre las 10:00 p.m. y las 8:00 a.m.\n3. **Prohibición de Fumar:** No está permitido fumar dentro de las carpas o zonas cerradas. Existen áreas designadas para fumadores.\n4. **Consumo de Alcohol:** El consumo de alcohol está permitido con responsabilidad.\n5. **Ruido:** No se permiten fiestas ni música a alto volumen para mantener la tranquilidad del entorno.\n6. **Cuidado de Instalaciones:** Cualquier daño a las instalaciones será cargado al huésped responsable.\n\nSi tienes más preguntas sobre las políticas o cualquier otro aspecto del glamping, ¡no dudes en preguntar!",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "puedo llevar mascotas?",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "Sí, puedes llevar una mascota por reserva, siempre y cuando no pese más de 15 kg. Se aplicará un costo adicional por limpieza de **$10.000 COP** por noche. Además, las mascotas deben estar bajo supervisión constante y con correa en todas las áreas comunes, y no se les permite subir a las camas o muebles dentro del domo. El dueño es responsable de cualquier daño causado por la mascota. Si tienes más preguntas sobre las políticas o cualquier otro aspecto del glamping, ¡no dudes en preguntar!",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "puedo llevar mascotas?",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "Sí, puedes llevar una mascota por reserva, siempre y cuando no pese más de 15 kg. Se aplicará un costo adicional por limpieza de **$10.000 COP** por noche. Además, las mascotas deben estar bajo supervisión constante y con correa en todas las áreas comunes, y no se les permite subir a las camas o muebles dentro del domo. El dueño es responsable de cualquier daño causado por la mascota. Si tienes más preguntas sobre las políticas o cualquier otro aspecto del glamping, ¡no dudes en preguntar!",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "y con que servicios cuenta",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "Disculpa, ocurrió un error al procesar tu mensaje.",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "Di los servicios",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "En Glamping Brillo de Luna, los servicios incluidos en la tarifa base de cada domo son los siguientes:\n\n1. **Desayuno**: Disfruta de un delicioso desayuno cada mañana.\n2. **WiFi**: Conexión a internet para que te mantengas conectado.\n3. **Parqueadero**: Espacio para estacionar tu vehículo.\n4. **Fogata**: Acceso a áreas para hacer fogatas y disfrutar de la naturaleza.\n5. **Zona BBQ**: Espacio para asar y disfrutar de comidas al aire libre.\n6. **Aseo**: Servicio de limpieza durante tu estancia.\n7. **Comodidades de cama y baño**: Ropa de cama y toallas incluidas.\n\nSi necesitas más información sobre otros servicios o actividades, ¡no dudes en preguntar! \n```",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "Di los servicios",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "En Glamping Brillo de Luna, los servicios incluidos en la tarifa base de cada domo son los siguientes:\n\n1. **Desayuno**: Disfruta de un delicioso desayuno cada mañana.\n2. **WiFi**: Conexión a internet para que te mantengas conectado.\n3. **Parqueadero**: Espacio para estacionar tu vehículo.\n4. **Fogata**: Acceso a áreas para hacer fogatas y disfrutar de la naturaleza.\n5. **Zona BBQ**: Espacio para asar y disfrutar de comidas al aire libre.\n6. **Aseo**: Servicio de limpieza durante tu estancia.\n7. **Comodidades de cama y baño**: Ropa de cama y toallas incluidas.\n\nSi necesitas más información sobre otros servicios o actividades, ¡no dudes en preguntar! \n```",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "puedo ir a tener sexo?",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "En Glamping Brillo de Luna, se espera que todos los huéspedes respeten las reglas de la casa y mantengan un comportamiento adecuado. Si estás en un domo privado, puedes disfrutar de tu intimidad. Sin embargo, es importante recordar que se deben respetar los horarios de silencio y la tranquilidad del entorno. Si tienes más preguntas o necesitas información adicional, ¡no dudes en preguntar!\n```",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "puedo ir a tener sexo?",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "En Glamping Brillo de Luna, se espera que todos los huéspedes respeten las reglas de la casa y mantengan un comportamiento adecuado. Si estás en un domo privado, puedes disfrutar de tu intimidad. Sin embargo, es importante recordar que se deben respetar los horarios de silencio y la tranquilidad del entorno. Si tienes más preguntas o necesitas información adicional, ¡no dudes en preguntar!\n```",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "y que actividades hay durante el dia",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "Disculpa, ocurrió un error al procesar tu mensaje.",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "hay accecibilidad para personas con velosidad reducida?",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "Sí, en Glamping Brillo de Luna se esfuerzan por ofrecer una experiencia inclusiva y segura para personas con movilidad reducida. Cuentan con medidas de seguridad y comodidad, como acceso asistido en embarcaciones, caballos adaptados para cabalgatas, y personal capacitado para brindar asistencia. Además, recomiendan informar con anticipación sobre cualquier necesidad especial para garantizar una experiencia sin contratiempos. Si tienes más preguntas o necesitas información adicional, ¡no dudes en preguntar!",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "hay accecibilidad para personas con velosidad reducida?",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "Sí, en Glamping Brillo de Luna se esfuerzan por ofrecer una experiencia inclusiva y segura para personas con movilidad reducida. Cuentan con medidas de seguridad y comodidad, como acceso asistido en embarcaciones, caballos adaptados para cabalgatas, y personal capacitado para brindar asistencia. Además, recomiendan informar con anticipación sobre cualquier necesidad especial para garantizar una experiencia sin contratiempos. Si tienes más preguntas o necesitas información adicional, ¡no dudes en preguntar!",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "cuales son las medidas de seguridad para estas personas",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "En Glamping Brillo de Luna, hemos implementado varias medidas de seguridad para personas con movilidad reducida:\n\n1. **Accesibilidad Total:** Contamos con senderos señalizados y áreas adaptadas para facilitar el acceso.\n2. **Equipo de Apoyo:** Disponemos de sillas especiales y dispositivos para facilitar traslados en terrenos naturales.\n3. **Acompañamiento Experto:** Todas las actividades incluyen guías entrenados en primeros auxilios y técnicas de movilidad asistida.\n4. **Seguro y Monitoreo:** Se realiza supervisión constante durante las actividades y se han establecido rutas de evacuación seguras.\n\nEstas medidas están diseñadas para garantizar una experiencia cómoda y segura para todos los visitantes. Si tienes más preguntas o necesitas información adicional, ¡no dudes en preguntar!\n```",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "cuales son las medidas de seguridad para estas personas",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "En Glamping Brillo de Luna, hemos implementado varias medidas de seguridad para personas con movilidad reducida:\n\n1. **Accesibilidad Total:** Contamos con senderos señalizados y áreas adaptadas para facilitar el acceso.\n2. **Equipo de Apoyo:** Disponemos de sillas especiales y dispositivos para facilitar traslados en terrenos naturales.\n3. **Acompañamiento Experto:** Todas las actividades incluyen guías entrenados en primeros auxilios y técnicas de movilidad asistida.\n4. **Seguro y Monitoreo:** Se realiza supervisión constante durante las actividades y se han establecido rutas de evacuación seguras.\n\nEstas medidas están diseñadas para garantizar una experiencia cómoda y segura para todos los visitantes. Si tienes más preguntas o necesitas información adicional, ¡no dudes en preguntar!\n```",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "cual fue el domo que habia pedido mas informacion?",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "El domo del que pediste más información fue el **Domo Polaris**. Si necesitas más detalles sobre este domo o cualquier otro aspecto del glamping, ¡no dudes en preguntar!\n```",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "cual fue el domo que habia pedido mas informacion?",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "El domo del que pediste más información fue el **Domo Polaris**. Si necesitas más detalles sobre este domo o cualquier otro aspecto del glamping, ¡no dudes en preguntar!\n```",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "creo que quiero reservar ese, como lo hago",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "Lo siento, no tengo información específica sobre la disponibilidad o el proceso de reserva del Domo Polaris. Te recomendaría contactar directamente con Glamping Brillo de Luna para obtener detalles sobre cómo realizar una reserva. Si necesitas ayuda con otra cosa, ¡no dudes en preguntar!\n```",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "creo que quiero reservar ese, como lo hago",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "Lo siento, no tengo información específica sobre la disponibilidad o el proceso de reserva del Domo Polaris. Te recomendaría contactar directamente con Glamping Brillo de Luna para obtener detalles sobre cómo realizar una reserva. Si necesitas ayuda con otra cosa, ¡no dudes en preguntar!\n```",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "hay domo reservados?",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "No tengo acceso a información en tiempo real sobre las reservas de Glamping Brillo de Luna. Te recomendaría que te pongas en contacto directamente con ellos a través de su teléfono o correo electrónico para obtener información actualizada sobre la disponibilidad de los domos. Si necesitas ayuda con otra cosa, ¡no dudes en preguntar!\n```",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "hay domo reservados?",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "No tengo acceso a información en tiempo real sobre las reservas de Glamping Brillo de Luna. Te recomendaría que te pongas en contacto directamente con ellos a través de su teléfono o correo electrónico para obtener información actualizada sobre la disponibilidad de los domos. Si necesitas ayuda con otra cosa, ¡no dudes en preguntar!\n```",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    }
+]

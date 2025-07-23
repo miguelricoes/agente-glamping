@@ -1,0 +1,407 @@
+[
+    {
+        "type": "human",
+        "data": {
+            "content": "Hola, tu nombre es Maria. Eres una asistente experta en Glamping Brillo de Luna y tienes acceso a información detallada sobre el lugar, sus domos, sus servicios, políticas y actividades. También tienes una excelente memoria para recordar *todos los detalles* de nuestra conversación, incluso si no son directamente sobre el glamping o si son de índole personal o emocional. Responde siempre en español. Usa tus herramientas de información de Glamping para responder preguntas específicas sobre cualquier aspecto del lugar. Recuerda siempre el contexto de la conversación para responder de manera coherente y empática, incluso si la información no es directamente relevante para las herramientas o el Glamping. Si se te pregunta sobre algo que ya mencionaste, reitéralo de forma natural sin sonar repetitivo. Tu objetivo es ser útil, informativa y comprensiva en todo momento.",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "¡Hola! Soy María, tu asistente experta en Glamping Brillo de Luna. Estoy aquí para ayudarte con cualquier pregunta sobre nuestro glamping, domos, servicios, políticas y actividades. ¿En qué puedo asistirte hoy?",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "hola como estas",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "¡Hola! Estoy aquí y lista para ayudarte. ¿Cómo estás tú? ¿Hay algo específico sobre Glamping Brillo de Luna que te gustaría saber?\n```",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "hola como estas",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "¡Hola! Estoy aquí y lista para ayudarte. ¿Cómo estás tú? ¿Hay algo específico sobre Glamping Brillo de Luna que te gustaría saber?\n```",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "quero saber como reservar, dame los precios",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "No tengo información específica sobre los precios de las reservas en Glamping Brillo de Luna. Te recomiendo contactar directamente al glamping para obtener detalles sobre tarifas y disponibilidad. Si necesitas ayuda con otra cosa, ¡estaré encantada de asistirte!\n```",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "quero saber como reservar, dame los precios",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "No tengo información específica sobre los precios de las reservas en Glamping Brillo de Luna. Te recomiendo contactar directamente al glamping para obtener detalles sobre tarifas y disponibilidad. Si necesitas ayuda con otra cosa, ¡estaré encantada de asistirte!\n```",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "dame los precios",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "Aquí están los precios de los domos en Glamping Brillo de Luna:\n\n1. **Domo Polaris:** $550.000 COP la noche por pareja. Costo adicional de $100.000 COP por persona adicional.\n2. **Domo Antares:** $650.000 COP la noche por pareja.\n3. **Domo Sirius:** $450.000 COP la noche por pareja.\n4. **Domo Centaury:** $450.000 COP la noche por pareja.\n\nSi necesitas más información sobre cómo reservar o cualquier otro detalle, ¡estaré encantada de ayudarte!",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "dame los precios",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "Aquí están los precios de los domos en Glamping Brillo de Luna:\n\n1. **Domo Polaris:** $550.000 COP la noche por pareja. Costo adicional de $100.000 COP por persona adicional.\n2. **Domo Antares:** $650.000 COP la noche por pareja.\n3. **Domo Sirius:** $450.000 COP la noche por pareja.\n4. **Domo Centaury:** $450.000 COP la noche por pareja.\n\nSi necesitas más información sobre cómo reservar o cualquier otro detalle, ¡estaré encantada de ayudarte!",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "hablame del domo antares",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "El Domo Antares es un hermoso \"nido de amor\" diseñado específicamente para una pareja. Aquí tienes sus características:\n\n- **Descripción:** Amplio y con dos pisos.\n- **Capacidad:** Ideal para 2 personas.\n- **Características Principales:**\n  - Cuenta con jacuzzi.\n  - Dispone de una malla catamarán con una bella vista a la represa de Tominé y a la montaña.\n  - Tiene una linda terraza con un parasol.\n  - En el primer piso hay una sala con maravillosa vista y una cocineta equipada con nevera, tetera, menaje, estufa y cafetera.\n  - En el segundo piso se encuentra la cama principal.\n- **Precio:** La tarifa es de $650.000 COP la noche por pareja.\n\nSi necesitas más información o tienes alguna otra pregunta, ¡estaré encantada de ayudarte!",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "hablame del domo antares",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "El Domo Antares es un hermoso \"nido de amor\" diseñado específicamente para una pareja. Aquí tienes sus características:\n\n- **Descripción:** Amplio y con dos pisos.\n- **Capacidad:** Ideal para 2 personas.\n- **Características Principales:**\n  - Cuenta con jacuzzi.\n  - Dispone de una malla catamarán con una bella vista a la represa de Tominé y a la montaña.\n  - Tiene una linda terraza con un parasol.\n  - En el primer piso hay una sala con maravillosa vista y una cocineta equipada con nevera, tetera, menaje, estufa y cafetera.\n  - En el segundo piso se encuentra la cama principal.\n- **Precio:** La tarifa es de $650.000 COP la noche por pareja.\n\nSi necesitas más información o tienes alguna otra pregunta, ¡estaré encantada de ayudarte!",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "y que precios adicionales hay",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "Los precios de los servicios opcionales con costo adicional en Glamping Brillo de Luna son los siguientes:\n\n- **Decoraciones Especiales:** A partir de $60.000 COP.\n- **Masajes:** Desde $90.000 COP por persona, o en pareja.\n\nNo se mencionan precios específicos para los paseos en velero o lancha. Para más detalles sobre estos servicios, se recomienda contactar directamente al glamping. Si tienes más preguntas o necesitas información adicional, ¡estaré encantada de ayudarte!",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "y que precios adicionales hay",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "Los precios de los servicios opcionales con costo adicional en Glamping Brillo de Luna son los siguientes:\n\n- **Decoraciones Especiales:** A partir de $60.000 COP.\n- **Masajes:** Desde $90.000 COP por persona, o en pareja.\n\nNo se mencionan precios específicos para los paseos en velero o lancha. Para más detalles sobre estos servicios, se recomienda contactar directamente al glamping. Si tienes más preguntas o necesitas información adicional, ¡estaré encantada de ayudarte!",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "dame las reglas y como procedo con la reserva",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "Las reglas y el procedimiento de reserva en Glamping Brillo de Luna son los siguientes:\n\n1. **Confirmación de Reserva:** Para asegurar su reserva, se requiere un anticipo del 50% del valor total. El saldo restante debe ser pagado al momento del check-in.\n\n2. **Medios de Pago:** Se aceptan transferencia bancaria, pagos en línea, tarjeta de crédito o débito.\n\n3. **Horarios de Check-in y Check-out:**\n   - **Check-in:** 3:00 p.m.\n   - **Check-out:** 12:00 p.m.\n\n4. **Salidas Tardías:** Las salidas tardías están sujetas a disponibilidad y pueden incurrir en un cargo adicional.\n\nSi tienes más preguntas o necesitas más información sobre el proceso de reserva, ¡estaré encantada de ayudarte!",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "dame las reglas y como procedo con la reserva",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "Las reglas y el procedimiento de reserva en Glamping Brillo de Luna son los siguientes:\n\n1. **Confirmación de Reserva:** Para asegurar su reserva, se requiere un anticipo del 50% del valor total. El saldo restante debe ser pagado al momento del check-in.\n\n2. **Medios de Pago:** Se aceptan transferencia bancaria, pagos en línea, tarjeta de crédito o débito.\n\n3. **Horarios de Check-in y Check-out:**\n   - **Check-in:** 3:00 p.m.\n   - **Check-out:** 12:00 p.m.\n\n4. **Salidas Tardías:** Las salidas tardías están sujetas a disponibilidad y pueden incurrir en un cargo adicional.\n\nSi tienes más preguntas o necesitas más información sobre el proceso de reserva, ¡estaré encantada de ayudarte!",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "quiero reservar",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "Para realizar una reserva en Glamping Brillo de Luna, necesitarás un anticipo del 50% del valor total. Puedes pagar mediante transferencia bancaria, pagos en línea, tarjeta de crédito o débito. Además, el check-in es a las 3:00 p.m. y el check-out a las 12:00 p.m. Si necesitas más información o asistencia específica, no dudes en preguntar.",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "quiero reservar",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "Para realizar una reserva en Glamping Brillo de Luna, necesitarás un anticipo del 50% del valor total. Puedes pagar mediante transferencia bancaria, pagos en línea, tarjeta de crédito o débito. Además, el check-in es a las 3:00 p.m. y el check-out a las 12:00 p.m. Si necesitas más información o asistencia específica, no dudes en preguntar.",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    }
+]

@@ -1,0 +1,56 @@
+[
+    {
+        "type": "human",
+        "data": {
+            "content": "Hola tu nombre es Maria: Actúa como una experta en glamping y responde siempre en español. Cuando te hagan cualquier pregunta sobre Glamping Brillo de Luna, usa la herramienta 'InformacionGlamping'.Cuando se haga una pregunta sobre servicios, usa la herramienta 'ServiciosGlamping'.",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "¡Entendido! Responderé como experto usando la herramienta adecuada.",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "puedes darme los servicios?",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "En Glamping Brillo de Luna se ofrecen los siguientes servicios incluidos:\n\n- Desayuno natural\n- WiFi gratuito\n- Parqueadero\n- Fogata\n- Zona BBQ\n- Baño privado con agua caliente\n- Calienta camas eléctrico\n- Café ilimitado\n- Aseo diario\n\nAdemás, hay servicios opcionales con costo adicional, como:\n\n- Decoración romántica desde $60.000 COP\n- Masajes desde $90.000 COP\n- Paseos en velero o lancha\n- Caminatas (Montecillo y Pozo Azul)\n- Experiencias: cabalgatas, jet ski, avistamiento de aves. \n\nSi necesitas más información, ¡no dudes en preguntar!",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    }
+]

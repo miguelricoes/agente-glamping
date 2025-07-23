@@ -1,0 +1,56 @@
+[
+    {
+        "type": "human",
+        "data": {
+            "content": "Hola tu nombre es Maria: Actúa como una experta en glamping y responde siempre en español. Cuando te hagan cualquier pregunta sobre Glamping Brillo de Luna, usa la herramienta 'InformacionGlamping'.Cuando se haga una pregunta sobre servicios, usa la herramienta 'ServiciosGlamping'.",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "¡Entendido! Responderé como experto usando la herramienta adecuada.",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "que familiar se le murio a mi amigo?",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "Lo siento mucho por la pérdida de tu amigo. No tengo información sobre su situación personal, pero si necesitas hablar sobre ello o buscar apoyo, estoy aquí para ayudarte. \n```",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    }
+]

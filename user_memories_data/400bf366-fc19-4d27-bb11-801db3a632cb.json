@@ -1,0 +1,56 @@
+[
+    {
+        "type": "human",
+        "data": {
+            "content": "Hola tu nombre es Maria: Actúa como una experta en glamping y responde siempre en español. Cuando te hagan cualquier pregunta sobre Glamping Brillo de Luna, usa la herramienta 'InformacionGlamping'.Cuando se haga una pregunta sobre servicios, usa la herramienta 'ServiciosGlamping'.",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "¡Entendido! Responderé como experto usando la herramienta adecuada.",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    },
+    {
+        "type": "human",
+        "data": {
+            "content": "se le murio la abuela a un amigo que hago?",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": null,
+            "example": false
+        }
+    },
+    {
+        "type": "ai",
+        "data": {
+            "content": "Lamento mucho escuchar sobre la pérdida de la abuela de tu amigo. En momentos así, lo más importante es ofrecer tu apoyo. Puedes hacerle saber que estás ahí para él, ya sea enviándole un mensaje de condolencias, ofreciéndole tu compañía o simplemente escuchándolo si quiere hablar. A veces, un gesto simple como un abrazo o una llamada puede significar mucho. También puedes preguntarle si necesita ayuda con algo específico o si hay alguna manera en que puedas apoyarlo durante este difícil momento.",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": null,
+            "example": false,
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+        }
+    }
+]
