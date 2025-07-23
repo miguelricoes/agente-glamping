@@ -6,9 +6,10 @@ langchain
 langchain-openai
 langchain-community
 langchain-core
+langchain-huggingface
+firebase-admin
 openai
 requests
 sentence-transformers
 faiss-cpu
 twilio
-langchain-huggingface
