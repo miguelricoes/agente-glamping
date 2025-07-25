@@ -344,7 +344,8 @@ def whatsapp_webhook():
             llm=llm,
             agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
             memory=memory,
-            verbose=True
+            verbose=True,
+            handle_parsing_errors=True
         )
         result = custom_agent.invoke(
             {"input": incoming_msg, "chat_history": memory.load_memory_variables({}).get("chat_history", [])},
