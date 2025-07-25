@@ -7,9 +7,11 @@ langchain-openai
 langchain-community
 langchain-core
 langchain-huggingface
+langchain-pinecone 
 firebase-admin
 openai
 requests
 sentence-transformers
 faiss-cpu
 twilio
+pinecone 

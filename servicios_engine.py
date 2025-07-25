@@ -25,7 +25,7 @@ vectorstore.save_local("faiss_index")
 # QA Chain
 retriever = vectorstore.as_retriever()
 qa_service_chain = RetrievalQA.from_chain_type(
-    llm=ChatOpenAI(model="gpt-4o", temperature=0, api_key=os.getenv("OPENAI_API_KEY")),
+    llm=ChatOpenAI(model="gpt-o4-mini", temperature=0, api_key=os.getenv("OPENAI_API_KEY")),
     chain_type="stuff",
     retriever=retriever
 )

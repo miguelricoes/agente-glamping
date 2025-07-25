@@ -1,3 +1,5 @@
+# rag_engine.py
+
 import os
 from dotenv import load_dotenv
 from langchain_community.document_loaders import TextLoader
@@ -12,27 +14,43 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 assert OPENAI_API_KEY, "Falta la variable OPENAI_API_KEY en las variables de entorno."
 
-# Inicializar LLM
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0, api_key=OPENAI_API_KEY)
+# Inicializar LLM (debe ser el mismo modelo que el LLM principal si quieres consistencia)
+llm = ChatOpenAI(model="gpt-o4-mini", temperature=0, api_key=OPENAI_API_KEY)
 
-# Embeddings
+# Embeddings (HuggingFaceEmbeddings para FAISS local)
 embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
 # Utilidad para cargar documentos, generar vectorstore y cadena QA
-def create_qa_chain(file_path: str, index_dir: str) -> RetrievalQA:
+def create_qa_chain(file_path: str, index_dir: str) -> RetrievalQA | None: # Añadido Union[RetrievalQA, None] para claridad
     # Cargar y dividir documentos
-    loader = TextLoader(file_path, encoding="utf-8")
-    documents = loader.load()
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=200) # Ajusta chunk_size/overlap si es necesario
-    docs = text_splitter.split_documents(documents)
+    try:
+        loader = TextLoader(file_path, encoding="utf-8")
+        documents = loader.load()
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=200)
+        docs = text_splitter.split_documents(documents)
+    except FileNotFoundError:
+        print(f"Advertencia: Archivo '{file_path}' no encontrado. No se creará la cadena QA.")
+        return None
+    except Exception as e:
+        print(f"Error al cargar o procesar el archivo '{file_path}': {e}. No se creará la cadena QA.")
+        return None
 
     # Crear el directorio del índice si no existe
     if not os.path.exists(index_dir):
         os.makedirs(index_dir)
 
-    # Vector store y guardado local
-    vectorstore = FAISS.from_documents(docs, embedding_model)
-    vectorstore.save_local(index_dir)
+    # Vector store y guardado/carga local
+    try:
+        if os.path.exists(index_dir) and len(os.listdir(index_dir)) > 0: # Verifica si el índice ya existe
+            vectorstore = FAISS.load_local(index_dir, embedding_model, allow_dangerous_deserialization=True) # Cargar índice existente
+            print(f"Índice FAISS cargado localmente desde: {index_dir}")
+        else:
+            vectorstore = FAISS.from_documents(docs, embedding_model)
+            vectorstore.save_local(index_dir)
+            print(f"Índice FAISS creado y guardado localmente en: {index_dir}")
+    except Exception as e:
+        print(f"Error al crear/cargar el vectorstore FAISS para {file_path}: {e}")
+        return None
 
     # Crear y retornar la cadena QA
     retriever = vectorstore.as_retriever()
@@ -45,57 +63,29 @@ DATA_DIR = "data"
 # Directorio base para los índices FAISS
 VECTORSTORE_BASE_DIR = "vectorstore"
 
-# 1. Ubicación y Contacto
-qa_ubicacion_contacto = create_qa_chain(
-    os.path.join(DATA_DIR, "ubicacion_contacto.txt"),
-    os.path.join(VECTORSTORE_BASE_DIR, "ubicacion_contacto_index")
-)
+# Diccionario para almacenar las cadenas QA
+qa_chains = {}
 
-# 2. Accesibilidad y Movilidad Reducida
-qa_accesibilidad = create_qa_chain(
-    os.path.join(DATA_DIR, "accesibilidad_movilidad_reducida.txt"),
-    os.path.join(VECTORSTORE_BASE_DIR, "accesibilidad_index")
-)
-
-# 3. Información de Domos (Características y Precios)
-qa_domos_info = create_qa_chain(
-    os.path.join(DATA_DIR, "domos_info.txt"),
-    os.path.join(VECTORSTORE_BASE_DIR, "domos_info_index")
-)
-
-# 4. Concepto y Filosofía del Glamping
-qa_concepto = create_qa_chain(
-    os.path.join(DATA_DIR, "concepto_brillodeluna.txt"),
-    os.path.join(VECTORSTORE_BASE_DIR, "concepto_index")
-)
-
-# 5. Políticas y Términos del Glamping
-qa_politicas = create_qa_chain(
-    os.path.join(DATA_DIR, "politicas_glamping.txt"),
-    os.path.join(VECTORSTORE_BASE_DIR, "politicas_index")
-)
-
-# 6. Servicios Incluidos en los Domos
-qa_servicios_incluidos = create_qa_chain(
-    os.path.join(DATA_DIR, "servicios_incluidos_domos.txt"),
-    os.path.join(VECTORSTORE_BASE_DIR, "servicios_incluidos_index")
-)
-
-# 7. Actividades y Servicios Adicionales (Opcionales)
-qa_actividades_adicionales = create_qa_chain(
-    os.path.join(DATA_DIR, "actividades_y_servicios_adicionales.txt"),
-    os.path.join(VECTORSTORE_BASE_DIR, "actividades_adicionales_index")
-)
-
-# Opcional: Exportar las cadenas QA en un diccionario para fácil acceso desde agente.py
-# Si tu agente.py ya importa estas variables directamente, puedes omitir esta parte.
-# Si prefieres un diccionario para iterar, mantenlo.
-qa_chains = {
-    "ubicacion_contacto": qa_ubicacion_contacto,
-    "accesibilidad": qa_accesibilidad,
-    "domos_info": qa_domos_info,
-    "concepto_glamping": qa_concepto,
-    "politicas_glamping": qa_politicas,
-    "servicios_incluidos": qa_servicios_incluidos,
-    "actividades_adicionales": qa_actividades_adicionales,
+# Lista de archivos y sus nombres de cadena
+files_to_process = {
+    "ubicacion_contacto": "ubicacion_contacto.txt",
+    "accesibilidad": "accesibilidad_movilidad_reducida.txt",
+    "domos_info": "domos_info.txt",
+    "concepto_glamping": "concepto_brillodeluna.txt",
+    "politicas_glamping": "politicas_glamping.txt",
+    "servicios_incluidos": "servicios_incluidos_domos.txt",
+    "actividades_adicionales": "actividades_y_servicios_adicionales.txt",
+    "requisitos_reserva": "requisitos_reserva.txt",
 }
+
+for chain_name, file_name in files_to_process.items():
+    file_path = os.path.join(DATA_DIR, file_name)
+    index_dir = os.path.join(VECTORSTORE_BASE_DIR, f"{chain_name}_index")
+    
+    chain = create_qa_chain(file_path, index_dir)
+    if chain:
+        qa_chains[chain_name] = chain
+        print(f"Cadena QA '{chain_name}' creada/cargada exitosamente.")
+    else:
+        qa_chains[chain_name] = None # Asegúrate de que la entrada exista, incluso si es None
+        print(f"No se pudo crear/cargar la cadena QA para '{chain_name}'.")
