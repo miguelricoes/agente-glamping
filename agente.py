@@ -197,7 +197,7 @@ async def parse_reservation_details(user_input):
         return None
 
 @app.route("/whatsapp_webhook", methods=["POST"])
-async def whatsapp_webhook():
+def whatsapp_webhook():
     incoming_msg = request.values.get('Body', '').strip()
     from_number = request.values.get('From', '')
     button_payload = request.values.get('ButtonPayload') 
