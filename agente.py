@@ -242,7 +242,8 @@ def whatsapp_webhook():
     if user_state["current_flow"] == "reserva" and user_state["reserva_step"] == 1:
         resp.message("Procesando tu solicitud de reserva, por favor espera un momento...")
         
-        parsed_data = await parse_reservation_details(incoming_msg)
+        import asyncio
+        parsed_data = asyncio.run(parse_reservation_details(incoming_msg))
 
         if parsed_data:
             try:
@@ -317,7 +318,9 @@ def whatsapp_webhook():
         if incoming_msg.lower() in ["si", "sí"]:
             try:
                 reservation_data = user_state["reserva_data"]
-                await save_reservation_data(from_number, reservation_data)
+                # Llamada sin await porque estamos en una función síncrona
+                import asyncio
+                asyncio.run(save_reservation_data(from_number, reservation_data))
                 resp.message("¡Reserva confirmada y procesada! Nos pondremos en contacto contigo pronto para los detalles finales. ¡Gracias por elegir Glamping Brillo de Luna!")
             except Exception as e:
                 print(f"Error al procesar la reserva: {e}")
