@@ -35,7 +35,7 @@ except Exception as e:
     twilio_client = None
 
 llm = ChatOpenAI(
-    model="gpt-o4-mini",
+    model="gpt-4o",
     temperature=0,
     api_key=os.getenv("OPENAI_API_KEY")
 )
@@ -182,7 +182,7 @@ async def parse_reservation_details(user_input):
     
     try:
         parsing_llm = ChatOpenAI(
-            model="gpt-o4-mini",
+            model="gpt-4o",
             temperature=0,
             api_key=os.getenv("OPENAI_API_KEY")
         )
