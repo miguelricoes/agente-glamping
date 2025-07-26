@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, Response, request, jsonify
 from twilio.twiml.messaging_response import MessagingResponse
 from twilio.rest import Client
 from dotenv import load_dotenv
@@ -7,6 +7,7 @@ from langchain.memory import ConversationBufferMemory
 from langchain.schema import messages_from_dict, messages_to_dict
 from langchain_openai import ChatOpenAI
 from rag_engine import qa_chains
+from twilio.twiml.messaging_response import MessagingResponse
 import uuid
 import os
 import json
@@ -347,16 +348,23 @@ def whatsapp_webhook():
             verbose=True,
             handle_parsing_errors=True
         )
-        result = custom_agent.invoke(
-            {"input": incoming_msg, "chat_history": memory.load_memory_variables({}).get("chat_history", [])},
-            config={"configurable": {"session_id": from_number}}
-        )
-        agent_answer = result.get("output", agent_answer)
+        try:
+            result = custom_agent.invoke(
+                {"input": incoming_msg, "chat_history": memory.load_memory_variables({}).get("chat_history", [])},
+                config={"configurable": {"session_id": from_number}}
+            )
+            if isinstance(result, dict) and "output" in result:
+                agent_answer = result["output"]
+            else:
+                raise ValueError("El agente no devolvió un campo 'output'.")
+        except Exception as e:
+            print(f"ERROR procesando mensaje con agente: {e}")
+            agent_answer = "Disculpa, ocurrió un error al procesar tu mensaje con el agente."
+        finally:
+            save_user_memory(from_number, memory)
     except Exception as e:
-        print(f"ERROR procesando mensaje con agente: {e}")
-        agent_answer = "Disculpa, ocurrió un error al procesar tu mensaje con el agente."
-    finally:
-        save_user_memory(from_number, memory)
+        print(f"Error inesperado al inicializar el agente: {e}")
+        agent_answer = "Disculpa, ocurrió un error inesperado al procesar tu mensaje."
 
     # Si el agente decide iniciar el flujo de reserva (a través de la herramienta)
     if agent_answer == "REQUEST_RESERVATION_DETAILS":
