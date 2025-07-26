@@ -95,7 +95,7 @@ tools = [
         description="Adaptaciones y recomendaciones para personas con movilidad reducida."
     ),
     Tool(
-        name="RequisitosReserva e",
+        name="RequisitosReserva",
         func=qa_chains["requisitos_reserva"].run,
         description="Requisitos para que el usuario pueda reservar."
     )
@@ -505,7 +505,8 @@ async def chat():
             llm=llm,
             agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
             memory=memory,
-            verbose=True
+            verbose=True,
+            handle_parsing_errors=True
         )
         try:
             result = agent.invoke({"input": user_input})
