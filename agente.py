@@ -107,6 +107,12 @@ tools = [
 def _get_memory_file_path(user_id: str) -> str:
     return os.path.join(MEMORY_DIR, f"{user_id}.json")
 
+def save_user_memory(user_id: str, memory: ConversationBufferMemory):
+    memory_path = _get_memory_file_path(user_id)
+    with open(memory_path, 'w', encoding='utf-8') as f:
+        json.dump(messages_to_dict(memory.chat_memory.messages), f, ensure_ascii=False, indent=2)
+    print(f"Memoria guardada en archivo para el usuario: {user_id}")
+
 def load_user_memory(user_id: str) -> ConversationBufferMemory:
     memory_path = _get_memory_file_path(user_id)
     memory = ConversationBufferMemory(
