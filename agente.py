@@ -381,9 +381,9 @@ def whatsapp_webhook():
         )
     else:
         resp.message(agent_answer)
-    
-    print(f"[{from_number}] Respuesta: '{resp.messages[0].body}'")
+        print(f"[{from_number}] Respuesta: '{agent_answer}'")
     return str(resp)
+
 
 @app.route("/chat", methods=["POST"])
 async def chat():
