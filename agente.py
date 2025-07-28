@@ -145,21 +145,13 @@ def load_user_memory(user_id: str) -> ConversationBufferMemory:
 
     return memory
 
-def save_user_memory(user_id: str, memory: ConversationBufferMemory):
-    memory_path = _get_memory_file_path(user_id)
-    try:
-        with open(memory_path, 'w', encoding='utf-8') as f:
-            json.dump(messages_to_dict(memory.chat_memory.messages), f, ensure_ascii=False, indent=4)
-        print(f"Memoria guardada para el usuario: {user_id}")
-    except Exception as e:
-        print(f"Error al guardar memoria para el usuario {user_id}: {e}")
-
-async def save_reservation_data(user_phone_number, reservation_data):
+# ...existing code...
+def save_reservation_data(user_phone_number, reservation_data):
     print(f"Datos de reserva para {user_phone_number}: {json.dumps(reservation_data, indent=2)}")
     print("La reserva se ha procesado, pero no se ha guardado en una base de datos persistente.")
     return True
 
-async def parse_reservation_details(user_input):
+def parse_reservation_details(user_input):
     prompt = f"""
     Extrae los siguientes datos de la solicitud de reserva del usuario. Si un dato no se proporciona, usa 'N/A'.
     El nombre completo de los huéspedes debe ser una lista de strings.
@@ -180,7 +172,6 @@ async def parse_reservation_details(user_input):
         "email_contacto": "Correo Electronico"
     }}
     """
-    
     try:
         parsing_llm = ChatOpenAI(
             model="gpt-4o",
@@ -242,9 +233,7 @@ def whatsapp_webhook():
 
     if user_state["current_flow"] == "reserva" and user_state["reserva_step"] == 1:
         resp.message("Procesando tu solicitud de reserva, por favor espera un momento...")
-        
-        import asyncio
-        parsed_data = asyncio.run(parse_reservation_details(incoming_msg))
+        parsed_data = parse_reservation_details(incoming_msg)
 
         if parsed_data:
             try:
@@ -319,9 +308,7 @@ def whatsapp_webhook():
         if incoming_msg.lower() in ["si", "sí"]:
             try:
                 reservation_data = user_state["reserva_data"]
-                # Llamada sin await porque estamos en una función síncrona
-                import asyncio
-                asyncio.run(save_reservation_data(from_number, reservation_data))
+                save_reservation_data(from_number, reservation_data)
                 resp.message("¡Reserva confirmada y procesada! Nos pondremos en contacto contigo pronto para los detalles finales. ¡Gracias por elegir Glamping Brillo de Luna!")
             except Exception as e:
                 print(f"Error al procesar la reserva: {e}")
@@ -384,9 +371,8 @@ def whatsapp_webhook():
         print(f"[{from_number}] Respuesta: '{agent_answer}'")
     return str(resp)
 
-
 @app.route("/chat", methods=["POST"])
-async def chat():
+def chat():
     data = request.get_json()
     user_input = data.get("input", "").strip()
     session_id = data.get("session_id", str(uuid.uuid4()))
@@ -423,7 +409,7 @@ async def chat():
             "Por favor, escribe toda la información en un solo mensaje."
         )
     elif user_state["current_flow"] == "reserva" and user_state["reserva_step"] == 1:
-        parsed_data = await parse_reservation_details(user_input)
+        parsed_data = parse_reservation_details(user_input)
         if parsed_data:
             try:
                 names_list = [name.strip() for name in parsed_data.get("nombres_huespedes", []) if name.strip()]
@@ -492,7 +478,7 @@ async def chat():
         if user_input.lower() in ["si", "sí"]:
             try:
                 reservation_data = user_state["reserva_data"]
-                await save_reservation_data(session_id, reservation_data)
+                save_reservation_data(session_id, reservation_data)
                 response_output = "¡Reserva confirmada y procesada! Nos pondremos en contacto contigo pronto para los detalles finales. ¡Gracias por elegir Glamping Brillo de Luna!"
             except Exception as e:
                 print(f"Error al procesar la reserva en /chat: {e}")
