@@ -1,0 +1,21 @@
+# Imagen base con Python
+FROM python:3.12-slim
+
+# Directorio de trabajo
+WORKDIR /app
+
+# Copia dependencias
+COPY requirements.txt .
+
+# Instala dependencias
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copia el resto del proyecto
+COPY . .
+
+# Exponer el puerto (opcional, para Railway)
+EXPOSE 8080
+
+# Comando para iniciar la app (agente.py debe tener un objeto app)
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "agente:app"]
