@@ -1,22 +1,19 @@
-# Imagen base oficial con Python
+# Imagen base oficial de Python
 FROM python:3.12-slim
 
-# Directorio de trabajo
+# Crear directorio de trabajo
 WORKDIR /app
 
-# Copiar dependencias
+# Copiar e instalar dependencias
 COPY requirements.txt .
-
-# Instalar dependencias
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
 # Copiar el resto del código
 COPY . .
 
-# Exponer un puerto por defecto (Railway usa la variable PORT automáticamente)
+# Exponer puerto para Railway
 EXPOSE 8080
 
-# 👇 ¡Aquí está la corrección crítica!
-ENTRYPOINT ["bash", "-c"]
+# ✅ Entrada correcta que expande la variable PORT
+ENTRYPOINT ["/bin/bash", "-c"]
 CMD ["exec gunicorn --bind 0.0.0.0:${PORT:-8080} agente:app"]
