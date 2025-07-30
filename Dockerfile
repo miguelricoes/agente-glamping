@@ -17,6 +17,5 @@ COPY . .
 # Exponer el puerto (opcional, para Railway)
 EXPOSE 8080
 
-# Comando para iniciar la app (agente.py debe tener un objeto app)
-CMD sh -c "gunicorn --bind 0.0.0.0:${PORT} agente:app"
-
+# Comando para iniciar la app (Railway expandirá ${PORT})
+ENTRYPOINT ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT} agente:app"]
