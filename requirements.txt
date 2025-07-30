@@ -14,5 +14,4 @@ requests
 sentence-transformers
 faiss-cpu
 twilio
-pinecone 
 pinecone-client==2.2.2
