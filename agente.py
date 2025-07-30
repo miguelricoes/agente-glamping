@@ -14,6 +14,23 @@ import json
 from datetime import datetime
 from langchain.tools import BaseTool, Tool # Importamos BaseTool y Tool
 
+
+#Importaciones Paincone
+
+from langchain_openai import OpenAIEmbeddings
+import pinecone
+
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT")
+PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "reservas")
+
+pinecone.init(api_key=PINECONE_API_KEY, environment=PINECONE_ENVIRONMENT)
+
+if PINECONE_INDEX_NAME not in pinecone.list_indexes():
+    pinecone.create_index(PINECONE_INDEX_NAME, dimension=768)
+
+pinecone_index = pinecone.Index(PINECONE_INDEX_NAME)
+
 load_dotenv()
 app = Flask(__name__)
 
@@ -46,7 +63,6 @@ llm = ChatOpenAI(
 # Esta clase de Herramienta para solicitar datos de reserva es un buen enfoque.
 # El agente la "llama" y luego tu código Flask interpreta la respuesta
 # "REQUEST_RESERVATION_DETAILS" para iniciar el flujo.
-# ¡CORRECCIÓN AQUÍ: HEREDA DE BASETOOL!
 class ReservationRequestTool(BaseTool):
     name: str = "SolicitarDatosReserva"
     description: str = "Útil para iniciar el proceso de recolección de datos de reserva. Úsala cuando el usuario exprese claramente su deseo de hacer una reserva (ej. 'quiero reservar', 'hacer una reserva', 'reservar un domo', 'cómo reservo')."
@@ -156,6 +172,17 @@ def save_reservation_data(user_phone_number, reservation_data):
     print(f"Datos de reserva para {user_phone_number}: {json.dumps(reservation_data, indent=2)}")
     print("La reserva se ha procesado, pero no se ha guardado en una base de datos persistente.")
     return True
+
+#Funcion para guardar los datos de reserva en Pinecone
+def save_reservation_to_pinecone(user_phone_number, reservation_data):
+    # Convierte los datos de reserva a un string para vectorizar
+    reserva_text = json.dumps(reservation_data, ensure_ascii=False)
+    # Obtén el embedding del texto de la reserva
+    embedder = OpenAIEmbeddings(openai_api_key=os.getenv("OPENAI_API_KEY"))
+    vector = embedder.embed_query(reserva_text)
+    # Usa el número de teléfono como ID único
+    pinecone_index.upsert([(user_phone_number, vector, reservation_data)])
+    print(f"Reserva guardada en Pinecone para {user_phone_number}")
 
 def parse_reservation_details(user_input):
     prompt = f"""
@@ -281,6 +308,8 @@ def whatsapp_webhook():
                     f"Email: {reserva_info['email_contacto']}\n\n"
                     "¿Confirmas esta reserva? (Sí/No)"
                 )
+
+                
                 resp.message(confirmation_msg)
                 user_state["reserva_step"] = 2
                 
@@ -315,6 +344,7 @@ def whatsapp_webhook():
             try:
                 reservation_data = user_state["reserva_data"]
                 save_reservation_data(from_number, reservation_data)
+                save_reservation_to_pinecone(from_number, reservation_data)
                 resp.message("¡Reserva confirmada y procesada! Nos pondremos en contacto contigo pronto para los detalles finales. ¡Gracias por elegir Glamping Brillo de Luna!")
             except Exception as e:
                 print(f"Error al procesar la reserva: {e}")
@@ -480,11 +510,13 @@ def chat():
             user_state["current_flow"] = "none"
             user_state["reserva_step"] = 0
             user_state["reserva_data"] = {}
+
     elif user_state["current_flow"] == "reserva" and user_state["reserva_step"] == 2:
         if user_input.lower() in ["si", "sí"]:
             try:
                 reservation_data = user_state["reserva_data"]
                 save_reservation_data(session_id, reservation_data)
+                save_reservation_to_pinecone(reservation_data["numero_contacto"], reservation_data)
                 response_output = "¡Reserva confirmada y procesada! Nos pondremos en contacto contigo pronto para los detalles finales. ¡Gracias por elegir Glamping Brillo de Luna!"
             except Exception as e:
                 print(f"Error al procesar la reserva en /chat: {e}")
