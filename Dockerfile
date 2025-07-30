@@ -18,4 +18,4 @@ COPY . .
 EXPOSE 8080
 
 # Comando correcto para iniciar gunicorn y usar la variable de entorno PORT
-CMD sh -c "gunicorn --bind 0.0.0.0:${PORT:-8080} agente:app"
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-8080} agente:app"]
