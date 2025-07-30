@@ -18,4 +18,4 @@ COPY . .
 EXPOSE 8080
 
 # Comando para iniciar la app (agente.py debe tener un objeto app)
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "agente:app"]
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:$PORT agente:app"]
