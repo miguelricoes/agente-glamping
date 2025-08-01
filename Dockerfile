@@ -10,4 +10,5 @@ COPY . .
 EXPOSE 8080
 
 # 🔥 Este sí expande la variable PORT correctamente:
-CMD sh -c "echo El puerto es: \$PORT && env && sleep 300"
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "agente:app"]
+
