@@ -1,17 +1,28 @@
+# Backend y servidor
 Flask
 flask-cors
 gunicorn
 python-dotenv
-langchain
-langchain-openai
-langchain-community
-langchain-core
-langchain-huggingface
-langchain-pinecone 
-firebase-admin
-openai
 requests
+
+# LLM + embeddings
+openai
 sentence-transformers
 faiss-cpu
+
+# LangChain y proveedores
+langchain
+langchain-core
+langchain-community
+langchain-openai
+langchain-huggingface
+langchain-pinecone
+
+# Pinecone (versión moderna, SDK v3)
+pinecone>=7.0.0
+
+# Twilio
 twilio
-pinecone-client==2.2.2
+
+# Firebase Admin SDK
+firebase-admin
