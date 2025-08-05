@@ -19,7 +19,7 @@ langchain-huggingface
 langchain-pinecone
 
 # Pinecone (versión moderna, SDK v3)
-pinecone>=7.0.0
+pinecone-client==2.2.2
 
 # Twilio
 twilio
