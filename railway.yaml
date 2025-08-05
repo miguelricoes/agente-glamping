@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: agente-chat
+    dockerfilePath: Dockerfile
+    envVars:
+      - key: OPENAI_API_KEY
+        fromDotEnv: true
+      - key: PINECONE_API_KEY
+        fromDotEnv: true
+      - key: PINECONE_ENVIRONMENT
+        fromDotEnv: true
+      - key: PINECONE_INDEX_NAME
+        fromDotEnv: true
+      - key: TWILIO_ACCOUNT_SID
+        fromDotEnv: true
+      - key: TWILIO_API_KEY_SID
+        fromDotEnv: true
+      - key: TWILIO_API_KEY_SECRET
+        fromDotEnv: true
+      - key: TWILIO_PHONE_NUMBER
+        fromDotEnv: true
