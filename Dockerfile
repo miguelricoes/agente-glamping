@@ -20,8 +20,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copiar el resto del código al contenedor
 COPY . .
 
-# Exponer el puerto (usado por Railway)
+# Exponer el puerto usado por Railway (aunque solo es informativo)
 EXPOSE 8080
 
-# Comando para iniciar el servidor
-CMD ["sh", "-c", "gunicorn agente:app --bind 0.0.0.0:${PORT}"]
+# Usar shell para que $PORT se expanda correctamente
+CMD gunicorn agente:app --bind 0.0.0.0:$PORT

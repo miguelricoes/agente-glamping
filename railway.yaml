@@ -2,22 +2,21 @@ services:
   - type: web
     name: agente-chat
     dockerfilePath: Dockerfile
+    startCommand: gunicorn agente:app --bind 0.0.0.0:$PORT
     envVars:
       - key: OPENAI_API_KEY
-    fromDotEnv: true
-  - key: PINECONE_API_KEY
-    fromDotEnv: true
-  - key: PINECONE_ENVIRONMENT
-    fromDotEnv: true
-  - key: PINECONE_INDEX_NAME
-    fromDotEnv: true
-  - key: TWILIO_ACCOUNT_SID
-    fromDotEnv: true
-  - key: TWILIO_API_KEY_SID
-    fromDotEnv: true
-  - key: TWILIO_API_KEY_SECRET
-    fromDotEnv: true
-  - key: TWILIO_PHONE_NUMBER
-    fromDotEnv: true
-  - key: PORT
-    value: "8080"
+        fromDotEnv: true
+      - key: PINECONE_API_KEY
+        fromDotEnv: true
+      - key: PINECONE_ENVIRONMENT
+        fromDotEnv: true
+      - key: PINECONE_INDEX_NAME
+        fromDotEnv: true
+      - key: TWILIO_ACCOUNT_SID
+        fromDotEnv: true
+      - key: TWILIO_API_KEY_SID
+        fromDotEnv: true
+      - key: TWILIO_API_KEY_SECRET
+        fromDotEnv: true
+      - key: TWILIO_PHONE_NUMBER
+        fromDotEnv: true
