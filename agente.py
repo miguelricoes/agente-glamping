@@ -18,20 +18,27 @@ from langchain.tools import BaseTool, Tool # Importamos BaseTool y Tool
 #Importaciones Paincone
 
 from langchain_openai import OpenAIEmbeddings
-import pinecone
+from pinecone import Pinecone
 
+# Cargar variables de entorno
+load_dotenv()
+
+# Variables de entorno Pinecone
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT")
+PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT")  # ya no se usa directamente en v3
 PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "reservas")
 
-pinecone.init(api_key=PINECONE_API_KEY, environment=PINECONE_ENVIRONMENT)
+# Inicializar cliente Pinecone
+pc = Pinecone(api_key=PINECONE_API_KEY)
 
-if PINECONE_INDEX_NAME not in pinecone.list_indexes():
-    pinecone.create_index(PINECONE_INDEX_NAME, dimension=768)
+# Crear índice si no existe
+if PINECONE_INDEX_NAME not in [i.name for i in pc.list_indexes()]:
+    pc.create_index(name=PINECONE_INDEX_NAME, dimension=768, metric="cosine")  # ajusta si usas otro
 
-pinecone_index = pinecone.Index(PINECONE_INDEX_NAME)
+# Obtener instancia del índice
+pinecone_index = pc.Index(PINECONE_INDEX_NAME)
 
-load_dotenv()
+# Configuración básica de Flask
 app = Flask(__name__)
 
 MEMORY_DIR = "user_memories_data"
@@ -40,6 +47,7 @@ os.makedirs(MEMORY_DIR, exist_ok=True)
 user_memories = {}
 user_states = {}
 
+# Configuración Twilio
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
 TWILIO_API_KEY_SID = os.getenv("TWILIO_API_KEY_SID")
 TWILIO_API_KEY_SECRET = os.getenv("TWILIO_API_KEY_SECRET")
@@ -52,6 +60,7 @@ except Exception as e:
     print(f"Error cargando Twilio: {e}")
     twilio_client = None
 
+# Inicializar modelo OpenAI
 llm = ChatOpenAI(
     model="gpt-4o",
     temperature=0,

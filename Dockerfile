@@ -9,6 +9,4 @@ COPY . .
 
 EXPOSE 8080
 
-# 🔥 Este sí expande la variable PORT correctamente:
 CMD ["gunicorn", "--bind", "0.0.0.0:8080", "agente:app"]
-
