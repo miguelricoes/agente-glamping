@@ -1,0 +1,18 @@
+# Ignorar archivos pesados y temporales
+__pycache__/
+*.pyc
+*.pkl
+*.pt
+*.npy
+*.log
+.env
+.env.*
+vectorstore/
+user_memories_data/
+*.db
+*.zip
+*.gz
+*.tar
+node_modules/
+.vscode/
+.git/
