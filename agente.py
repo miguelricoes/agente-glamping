@@ -18,27 +18,25 @@ from langchain.tools import BaseTool, Tool # Importamos BaseTool y Tool
 #Importaciones Paincone
 
 from langchain_openai import OpenAIEmbeddings
-from pinecone import Pinecone
-
+from pinecone import Pinecone, ServerlessSpec
 # Cargar variables de entorno
 load_dotenv()
 
-# Variables de entorno Pinecone
+# Pinecone (versión nueva - 3.x)
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT")  # ya no se usa directamente en v3
-PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "reservas")
+PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "reservas-glamping-v2")
 
 # Inicializar cliente Pinecone
 pc = Pinecone(api_key=PINECONE_API_KEY)
 
-# Crear índice si no existe
-if PINECONE_INDEX_NAME not in [i.name for i in pc.list_indexes()]:
-    pc.create_index(name=PINECONE_INDEX_NAME, dimension=768, metric="cosine")  # ajusta si usas otro
+# Conectar al índice existente (asegúrate que ya está creado)
+try:
+    pinecone_index = pc.Index(PINECONE_INDEX_NAME)
+    print(f"✅ Índice '{PINECONE_INDEX_NAME}' conectado correctamente.")
+except Exception as e:
+    raise RuntimeError(f"❌ Error al conectar con el índice '{PINECONE_INDEX_NAME}': {e}")
 
-# Obtener instancia del índice
-pinecone_index = pc.Index(PINECONE_INDEX_NAME)
-
-# Configuración básica de Flask
+# Flask config
 app = Flask(__name__)
 
 MEMORY_DIR = "user_memories_data"
@@ -47,7 +45,7 @@ os.makedirs(MEMORY_DIR, exist_ok=True)
 user_memories = {}
 user_states = {}
 
-# Configuración Twilio
+# Twilio config
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
 TWILIO_API_KEY_SID = os.getenv("TWILIO_API_KEY_SID")
 TWILIO_API_KEY_SECRET = os.getenv("TWILIO_API_KEY_SECRET")
@@ -55,18 +53,17 @@ TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")
 
 try:
     twilio_client = Client(TWILIO_API_KEY_SID, TWILIO_API_KEY_SECRET, account_sid=TWILIO_ACCOUNT_SID)
-    print("Cliente Twilio cargado correctamente.")
+    print("📞 Cliente Twilio cargado correctamente.")
 except Exception as e:
-    print(f"Error cargando Twilio: {e}")
+    print(f"❌ Error cargando Twilio: {e}")
     twilio_client = None
 
-# Inicializar modelo OpenAI
+# LLM (OpenAI)
 llm = ChatOpenAI(
     model="gpt-4o",
     temperature=0,
     api_key=os.getenv("OPENAI_API_KEY")
 )
-
 # --- Herramientas RAG para el Agente ---
 
 # Esta clase de Herramienta para solicitar datos de reserva es un buen enfoque.

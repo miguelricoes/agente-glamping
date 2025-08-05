@@ -5,7 +5,7 @@ gunicorn
 python-dotenv
 requests
 
-# LLM + embeddings
+# LLM + Embeddings
 openai
 sentence-transformers
 faiss-cpu
@@ -19,7 +19,7 @@ langchain-huggingface
 langchain-pinecone
 
 # Pinecone (versión moderna, SDK v3)
-pinecone-client==2.2.2
+pinecone-client==3.0.0
 
 # Twilio
 twilio
