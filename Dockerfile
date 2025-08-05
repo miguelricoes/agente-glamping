@@ -1,13 +1,9 @@
-FROM python:3.12-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
-
 COPY . .
 
-EXPOSE 8080
+RUN pip install --no-cache-dir -r requirements.txt
 
-CMD ["python", "agente.py"]
-
+CMD ["gunicorn", "agente:app", "--bind", "0.0.0.0:$PORT"]

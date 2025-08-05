@@ -22,19 +22,19 @@ from pinecone import Pinecone, ServerlessSpec
 # Cargar variables de entorno
 load_dotenv()
 
-# Pinecone (versión nueva - 3.x)
+# Pinecone V3
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "reservas-glamping-v2")
 
 # Inicializar cliente Pinecone
 pc = Pinecone(api_key=PINECONE_API_KEY)
 
-# Conectar al índice existente (asegúrate que ya está creado)
-try:
-    pinecone_index = pc.Index(PINECONE_INDEX_NAME)
-    print(f"✅ Índice '{PINECONE_INDEX_NAME}' conectado correctamente.")
-except Exception as e:
-    raise RuntimeError(f"❌ Error al conectar con el índice '{PINECONE_INDEX_NAME}': {e}")
+# Validar que el índice exista
+indexes = [index["name"] for index in pc.list_indexes().get("indexes", [])]
+if PINECONE_INDEX_NAME not in indexes:
+    raise RuntimeError(f"El índice '{PINECONE_INDEX_NAME}' no existe en tu cuenta Pinecone.")
+
+pinecone_index = pc.Index(PINECONE_INDEX_NAME)
 
 # Flask config
 app = Flask(__name__)
@@ -45,7 +45,7 @@ os.makedirs(MEMORY_DIR, exist_ok=True)
 user_memories = {}
 user_states = {}
 
-# Twilio config
+# Twilio
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
 TWILIO_API_KEY_SID = os.getenv("TWILIO_API_KEY_SID")
 TWILIO_API_KEY_SECRET = os.getenv("TWILIO_API_KEY_SECRET")
@@ -53,17 +53,18 @@ TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")
 
 try:
     twilio_client = Client(TWILIO_API_KEY_SID, TWILIO_API_KEY_SECRET, account_sid=TWILIO_ACCOUNT_SID)
-    print("📞 Cliente Twilio cargado correctamente.")
+    print("Cliente Twilio cargado correctamente.")
 except Exception as e:
-    print(f"❌ Error cargando Twilio: {e}")
+    print(f"Error cargando Twilio: {e}")
     twilio_client = None
 
-# LLM (OpenAI)
+# LLM
 llm = ChatOpenAI(
     model="gpt-4o",
     temperature=0,
     api_key=os.getenv("OPENAI_API_KEY")
 )
+
 # --- Herramientas RAG para el Agente ---
 
 # Esta clase de Herramienta para solicitar datos de reserva es un buen enfoque.
