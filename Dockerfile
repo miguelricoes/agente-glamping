@@ -9,4 +9,4 @@ COPY . .
 
 EXPOSE 8080
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "agente:app"]
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:$PORT agente:app"]
