@@ -22,4 +22,5 @@ COPY . .
 EXPOSE 8080
 
 # Comando que inicia tu app (usa el puerto 8080 fijo)
-CMD ["gunicorn", "agente:app", "--bind", "0.0.0.0:8080"]
+CMD ["sh", "-c", "gunicorn agente:app --bind 0.0.0.0:$PORT"]
+

@@ -15,6 +15,9 @@ from datetime import datetime
 from langchain.tools import BaseTool, Tool # Importamos BaseTool y Tool
 
 
+print("Puerto asignado:", os.environ.get("PORT"))
+
+
 #Importaciones Paincone
 
 from langchain_openai import OpenAIEmbeddings
