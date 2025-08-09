@@ -446,7 +446,7 @@ def chat():
         response_output = (
             "¡Claro! Dame los siguientes datos:\n"
             "-Tu nombre completo y de tus acompañantes\n"
-            "-Domo que quieras\n"
+            "-Domo que quieras reservar\n"
             "-Fecha que quieras asistir y hasta cuando seria tu estadia (Formato DD/MM/AAAA)\n"
             "-Servicios que quieras incluir\n"
             "-Adicciones (Servicios, mascota etc)\n"
