@@ -13,6 +13,9 @@ import os
 import json
 from datetime import datetime
 from langchain.tools import BaseTool, Tool # Importamos BaseTool y Tool
+# Importaciones para base de datos
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime, date
 
 
 print("Puerto asignado:", os.environ.get("PORT"))
@@ -41,6 +44,32 @@ pinecone_index = pc.Index(PINECONE_INDEX_NAME)
 
 # Flask config
 app = Flask(__name__)
+
+# Configuración de la base de datos
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Inicializar SQLAlchemy
+db = SQLAlchemy(app)
+
+# Modelo de datos para reservas
+class Reserva(db.Model):
+    __tablename__ = 'reservas'
+    id = db.Column(db.Integer, primary_key=True)
+    numero_whatsapp = db.Column(db.String(50), nullable=False)
+    nombres_huespedes = db.Column(db.String(255), nullable=False)
+    cantidad_huespedes = db.Column(db.Integer, nullable=False)
+    domo = db.Column(db.String(50))
+    fecha_entrada = db.Column(db.Date)
+    fecha_salida = db.Column(db.Date)
+    servicio_elegido = db.Column(db.String(100))
+    adicciones = db.Column(db.String(255))
+    numero_contacto = db.Column(db.String(50))
+    email_contacto = db.Column(db.String(100))
+    fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<Reserva {self.id}: {self.nombres_huespedes}>'
 
 MEMORY_DIR = "user_memories_data"
 os.makedirs(MEMORY_DIR, exist_ok=True)
@@ -178,10 +207,11 @@ def load_user_memory(user_id: str) -> ConversationBufferMemory:
     return memory
 
 # ...existing code...
-def save_reservation_data(user_phone_number, reservation_data):
-    print(f"Datos de reserva para {user_phone_number}: {json.dumps(reservation_data, indent=2)}")
-    print("La reserva se ha procesado, pero no se ha guardado en una base de datos persistente.")
-    return True
+# Esta función ya no es necesaria - reemplazada por SQLAlchemy
+# def save_reservation_data(user_phone_number, reservation_data):
+#     print(f"Datos de reserva para {user_phone_number}: {json.dumps(reservation_data, indent=2)}")
+#     print("La reserva se ha procesado, pero no se ha guardado en una base de datos persistente.")
+#     return True
 
 #Funcion para guardar los datos de reserva en Pinecone
 def save_reservation_to_pinecone(user_phone_number, reservation_data):
@@ -353,10 +383,37 @@ def whatsapp_webhook():
         if incoming_msg.lower() in ["si", "sí"]:
             try:
                 reservation_data = user_state["reserva_data"]
-                save_reservation_data(from_number, reservation_data)
+                
+                # Convertir fechas de string a objeto date
+                fecha_entrada = datetime.fromisoformat(reservation_data['fecha_entrada']).date()
+                fecha_salida = datetime.fromisoformat(reservation_data['fecha_salida']).date()
+                
+                # Crear nueva reserva en la base de datos
+                nueva_reserva = Reserva(
+                    numero_whatsapp=from_number.replace("whatsapp:", ""),
+                    nombres_huespedes=', '.join(reservation_data['nombres_huespedes']),
+                    cantidad_huespedes=reservation_data['cantidad_huespedes'],
+                    domo=reservation_data['domo'],
+                    fecha_entrada=fecha_entrada,
+                    fecha_salida=fecha_salida,
+                    servicio_elegido=reservation_data['servicio_elegido'],
+                    adicciones=reservation_data['adicciones'],
+                    numero_contacto=reservation_data['numero_contacto'],
+                    email_contacto=reservation_data['email_contacto']
+                )
+                
+                # Guardar en la base de datos
+                db.session.add(nueva_reserva)
+                db.session.commit()
+                
+                # También guardar en Pinecone (mantener funcionalidad existente)
                 save_reservation_to_pinecone(from_number, reservation_data)
-                resp.message("¡Reserva confirmada y procesada! Nos pondremos en contacto contigo pronto para los detalles finales. ¡Gracias por elegir Glamping Brillo de Luna!")
+                
+                resp.message("¡Reserva confirmada y guardada! Nos pondremos en contacto contigo pronto para los detalles finales. ¡Gracias por elegir Glamping Brillo de Luna!")
+                print(f"Reserva guardada exitosamente en PostgreSQL - ID: {nueva_reserva.id}")
+                
             except Exception as e:
+                db.session.rollback()  # Revertir transacción en caso de error
                 print(f"Error al procesar la reserva: {e}")
                 resp.message("Lo siento, hubo un error al procesar tu reserva. Por favor, intenta de nuevo más tarde.")
             finally:
@@ -525,10 +582,37 @@ def chat():
         if user_input.lower() in ["si", "sí"]:
             try:
                 reservation_data = user_state["reserva_data"]
-                save_reservation_data(session_id, reservation_data)
+                
+                # Convertir fechas de string a objeto date
+                fecha_entrada = datetime.fromisoformat(reservation_data['fecha_entrada']).date()
+                fecha_salida = datetime.fromisoformat(reservation_data['fecha_salida']).date()
+                
+                # Crear nueva reserva en la base de datos
+                nueva_reserva = Reserva(
+                    numero_whatsapp=session_id,  # En /chat usamos session_id como identificador
+                    nombres_huespedes=', '.join(reservation_data['nombres_huespedes']),
+                    cantidad_huespedes=reservation_data['cantidad_huespedes'],
+                    domo=reservation_data['domo'],
+                    fecha_entrada=fecha_entrada,
+                    fecha_salida=fecha_salida,
+                    servicio_elegido=reservation_data['servicio_elegido'],
+                    adicciones=reservation_data['adicciones'],
+                    numero_contacto=reservation_data['numero_contacto'],
+                    email_contacto=reservation_data['email_contacto']
+                )
+                
+                # Guardar en la base de datos
+                db.session.add(nueva_reserva)
+                db.session.commit()
+                
+                # También guardar en Pinecone (mantener funcionalidad existente)
                 save_reservation_to_pinecone(reservation_data["numero_contacto"], reservation_data)
-                response_output = "¡Reserva confirmada y procesada! Nos pondremos en contacto contigo pronto para los detalles finales. ¡Gracias por elegir Glamping Brillo de Luna!"
+                
+                response_output = "¡Reserva confirmada y guardada! Nos pondremos en contacto contigo pronto para los detalles finales. ¡Gracias por elegir Glamping Brillo de Luna!"
+                print(f"Reserva guardada exitosamente en PostgreSQL - ID: {nueva_reserva.id}")
+                
             except Exception as e:
+                db.session.rollback()  # Revertir transacción en caso de error
                 print(f"Error al procesar la reserva en /chat: {e}")
                 response_output = "Lo siento, hubo un error al procesar tu reserva. Por favor, intenta de nuevo más tarde."
             finally:
