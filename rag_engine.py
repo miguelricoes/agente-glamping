@@ -2,9 +2,8 @@
 
 import os
 from dotenv import load_dotenv
-from langchain_community.document_loaders import TextLoader
-from langchain_community.vectorstores import FAISS
-#from langchain_huggingface import HuggingFaceEmbeddings
+from langchain.document_loaders import TextLoader
+from langchain.vectorstores import FAISS
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chains import RetrievalQA
 from langchain_openai import ChatOpenAI
@@ -25,7 +24,7 @@ embedding_model = OpenAIEmbeddings()
 
 
 # Utilidad para cargar documentos, generar vectorstore y cadena QA
-def create_qa_chain(file_path: str, index_dir: str) -> RetrievalQA | None: # Añadido Union[RetrievalQA, None] para claridad
+def create_qa_chain(file_path: str, index_dir: str):
     # Cargar y dividir documentos
     try:
         loader = TextLoader(file_path, encoding="utf-8")

@@ -9,12 +9,16 @@ ENV PYTHONUNBUFFERED 1
 # Define el directorio de trabajo
 WORKDIR /app
 
-# Instala dependencias del sistema necesarias para psycopg2
+# Instala dependencias del sistema necesarias para psycopg2, ML y compilation
 # libpq-dev: para conectarse a PostgreSQL
 # build-essential: para compilar dependencias de Python
+# python3-dev: headers de Python para compilación
+# pkg-config: para encontrar librerías del sistema
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     build-essential \
+    python3-dev \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 # Copia el archivo de requisitos y descarga las dependencias
