@@ -16,12 +16,12 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 assert OPENAI_API_KEY, "Falta la variable OPENAI_API_KEY en las variables de entorno."
 
 # Inicializar LLM (debe ser el mismo modelo que el LLM principal si quieres consistencia)
-llm = ChatOpenAI(model="gpt-4o", temperature=0, api_key=OPENAI_API_KEY)
+llm = ChatOpenAI(model="gpt-4o", temperature=0)
 
 # Embeddings (HuggingFaceEmbeddings para FAISS local)
 # embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
-embedding_model = OpenAIEmbeddings(openai_api_key=os.getenv("OPENAI_API_KEY"))
+embedding_model = OpenAIEmbeddings()
 
 
 # Utilidad para cargar documentos, generar vectorstore y cadena QA

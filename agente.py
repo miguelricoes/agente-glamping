@@ -93,8 +93,7 @@ except Exception as e:
 # LLM
 llm = ChatOpenAI(
     model="gpt-4o",
-    temperature=0,
-    api_key=os.getenv("OPENAI_API_KEY")
+    temperature=0
 )
 
 # --- Herramientas RAG para el Agente ---
@@ -218,7 +217,7 @@ def save_reservation_to_pinecone(user_phone_number, reservation_data):
     # Convierte los datos de reserva a un string para vectorizar
     reserva_text = json.dumps(reservation_data, ensure_ascii=False)
     # Obtén el embedding del texto de la reserva
-    embedder = OpenAIEmbeddings(openai_api_key=os.getenv("OPENAI_API_KEY"))
+    embedder = OpenAIEmbeddings()
     vector = embedder.embed_query(reserva_text)
     # Usa el número de teléfono como ID único
     pinecone_index.upsert([(user_phone_number, vector, reservation_data)])
@@ -248,8 +247,7 @@ def parse_reservation_details(user_input):
     try:
         parsing_llm = ChatOpenAI(
             model="gpt-4o",
-            temperature=0,
-            api_key=os.getenv("OPENAI_API_KEY")
+            temperature=0
         )
         response_text = parsing_llm.invoke(prompt).content
         parsed_json = json.loads(response_text)
