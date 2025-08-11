@@ -4,10 +4,11 @@ import os
 from dotenv import load_dotenv
 from langchain_community.document_loaders import TextLoader
 from langchain_community.vectorstores import FAISS
-from langchain_huggingface import HuggingFaceEmbeddings
+#from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chains import RetrievalQA
 from langchain_openai import ChatOpenAI
+from langchain_openai import OpenAIEmbeddings
 
 # Cargar variables de entorno
 load_dotenv()
@@ -18,7 +19,10 @@ assert OPENAI_API_KEY, "Falta la variable OPENAI_API_KEY en las variables de ent
 llm = ChatOpenAI(model="gpt-4o", temperature=0, api_key=OPENAI_API_KEY)
 
 # Embeddings (HuggingFaceEmbeddings para FAISS local)
-embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+# embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+
+embedding_model = OpenAIEmbeddings(openai_api_key=os.getenv("OPENAI_API_KEY"))
+
 
 # Utilidad para cargar documentos, generar vectorstore y cadena QA
 def create_qa_chain(file_path: str, index_dir: str) -> RetrievalQA | None: # Añadido Union[RetrievalQA, None] para claridad

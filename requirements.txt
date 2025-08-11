@@ -15,7 +15,7 @@ langchain
 langchain-core
 langchain-community
 langchain-openai
-langchain-huggingface
+# langchain-huggingface
 langchain-pinecone
 
 # Pinecone (versión moderna, SDK v3)
