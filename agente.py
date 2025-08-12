@@ -1,4 +1,5 @@
 from flask import Flask, Response, request, jsonify
+from flask_cors import CORS
 from twilio.twiml.messaging_response import MessagingResponse
 from twilio.rest import Client
 from dotenv import load_dotenv
@@ -184,6 +185,10 @@ else:
 # Flask config
 app = Flask(__name__)
 
+# Configurar CORS para el panel de control
+CORS_ORIGIN = os.getenv('CORS_ORIGIN', 'https://panel-con-react-production.up.railway.app')
+CORS(app, origins=[CORS_ORIGIN])
+
 # Configuración de la base de datos opcional con prioridad para URL privada
 DATABASE_PRIVATE_URL = os.getenv('DATABASE_PRIVATE_URL')
 DATABASE_PUBLIC_URL = os.getenv('DATABASE_PUBLIC_URL')
@@ -234,10 +239,107 @@ if db:
         adicciones = db.Column(db.String(255))
         numero_contacto = db.Column(db.String(50))
         email_contacto = db.Column(db.String(100))
+        # Nuevos campos para funcionalidad completa
+        metodo_pago = db.Column(db.String(50), default='Pendiente')
+        monto_total = db.Column(db.Numeric(10, 2), default=0.00)
+        comentarios_especiales = db.Column(db.Text)
         fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
 
         def __repr__(self):
             return f'<Reserva {self.id}: {self.nombres_huespedes}>'
+
+# Sistema de cálculo de precios para reservas
+def calcular_precio_reserva(domo, cantidad_huespedes, fecha_entrada, fecha_salida, servicios_adicionales=None):
+    """Calcula el precio total de una reserva basado en domo, huéspedes, días y servicios"""
+    
+    # Precios base por domo por noche (para pareja)
+    precios_domos = {
+        'antares': 650000,    # Nido de amor con jacuzzi - $650.000/noche
+        'polaris': 550000,    # Amplio con sofá cama - $550.000/noche + $100.000 por persona extra
+        'sirius': 450000,     # Un piso, pareja - $450.000/noche
+        'centaury': 450000    # Similar a Sirius - $450.000/noche
+    }
+    
+    # Servicios adicionales disponibles
+    precios_servicios = {
+        'decoraciones': 60000,      # Desde $60.000
+        'masajes': 90000,           # $90.000 por persona
+        'masajes_pareja': 180000,   # Masajes para pareja
+        'velero': 150000,           # Estimado para paseo en velero
+        'lancha': 80000,            # Estimado para lancha compartida
+        'caminata_montecillo': 50000,  # Estimado para caminata guiada
+        'caminata_pozo_azul': 70000    # Estimado para caminata más larga
+    }
+    
+    try:
+        # Calcular número de noches
+        if isinstance(fecha_entrada, str):
+            fecha_entrada = datetime.fromisoformat(fecha_entrada).date()
+        if isinstance(fecha_salida, str):
+            fecha_salida = datetime.fromisoformat(fecha_salida).date()
+            
+        noches = (fecha_salida - fecha_entrada).days
+        if noches <= 0:
+            noches = 1  # Mínimo una noche
+        
+        # Precio base del domo
+        domo_key = domo.lower() if domo else 'centaury'
+        precio_base_noche = precios_domos.get(domo_key, 450000)
+        
+        # Costo por huéspedes adicionales (solo para Polaris)
+        costo_huespedes_extra = 0
+        if domo_key == 'polaris' and cantidad_huespedes > 2:
+            personas_extra = cantidad_huespedes - 2
+            costo_huespedes_extra = personas_extra * 100000 * noches  # $100.000 por persona extra por noche
+        
+        # Precio total de estadía
+        precio_estadia = (precio_base_noche * noches) + costo_huespedes_extra
+        
+        # Agregar servicios adicionales
+        precio_servicios_total = 0
+        if servicios_adicionales:
+            servicios_lista = servicios_adicionales.lower().split(',') if isinstance(servicios_adicionales, str) else [servicios_adicionales.lower()]
+            
+            for servicio in servicios_lista:
+                servicio_clean = servicio.strip()
+                if 'masaje' in servicio_clean:
+                    if cantidad_huespedes >= 2:
+                        precio_servicios_total += precios_servicios['masajes_pareja']
+                    else:
+                        precio_servicios_total += precios_servicios['masajes']
+                elif 'decoracion' in servicio_clean:
+                    precio_servicios_total += precios_servicios['decoraciones']
+                elif 'velero' in servicio_clean:
+                    precio_servicios_total += precios_servicios['velero']
+                elif 'lancha' in servicio_clean:
+                    precio_servicios_total += precios_servicios['lancha']
+                elif 'montecillo' in servicio_clean:
+                    precio_servicios_total += precios_servicios['caminata_montecillo']
+                elif 'pozo' in servicio_clean or 'azul' in servicio_clean:
+                    precio_servicios_total += precios_servicios['caminata_pozo_azul']
+        
+        precio_total = precio_estadia + precio_servicios_total
+        
+        return {
+            'precio_total': precio_total,
+            'precio_base_noche': precio_base_noche,
+            'noches': noches,
+            'precio_estadia': precio_estadia,
+            'costo_huespedes_extra': costo_huespedes_extra,
+            'precio_servicios': precio_servicios_total,
+            'desglose': {
+                'domo': f"{domo_key.title()} - ${precio_base_noche:,} x {noches} noche{'s' if noches > 1 else ''}",
+                'huespedes_extra': f"${costo_huespedes_extra:,}" if costo_huespedes_extra > 0 else "No aplica",
+                'servicios': f"${precio_servicios_total:,}" if precio_servicios_total > 0 else "Ninguno"
+            }
+        }
+        
+    except Exception as e:
+        print(f"Error calculando precio: {e}")
+        return {
+            'precio_total': 450000,  # Precio base de emergencia
+            'error': str(e)
+        }
 
 # Crear tablas de base de datos y validar conexión (opcional)
 def initialize_database():
@@ -840,14 +942,6 @@ cleanup_corrupted_memory_files()
 memory_health = get_memory_system_health()
 print(f"[STATUS] Estado memoria: {memory_health['status']} | Archivos: {memory_health.get('total_files', 0)} | Tamaño: {memory_health.get('total_size_mb', 0)} MB")
 
-# Nota: Test de LLM se ejecutará después de definir todas las funciones
-
-# ...existing code...
-# Esta función ya no es necesaria - reemplazada por SQLAlchemy
-# def save_reservation_data(user_phone_number, reservation_data):
-#     print(f"Datos de reserva para {user_phone_number}: {json.dumps(reservation_data, indent=2)}")
-#     print("La reserva se ha procesado, pero no se ha guardado en una base de datos persistente.")
-#     return True
 
 # Funciones de validación robusta para datos de reserva
 import re
@@ -1059,24 +1153,39 @@ def save_reservation_to_pinecone(user_phone_number, reservation_data):
 def parse_reservation_details(user_input):
     """Parsea detalles de reserva con LLM robusto y manejo de errores"""
     prompt = f"""
-    Extrae los siguientes datos de la solicitud de reserva del usuario. Si un dato no se proporciona, usa 'N/A'.
-    El nombre completo de los huéspedes debe ser una lista de strings.
-    Las fechas pueden estar en cualquier formato (DD/MM/AAAA, DD-MM-YYYY, etc).
-    Si el usuario no especifica un servicio adicional o adiciones, usa "ninguno".
-    IMPORTANTE: Responde SOLO con JSON válido, sin texto adicional.
+    Extrae los siguientes datos de la solicitud de reserva del usuario. Analiza línea por línea.
+    
+    FORMATO TÍPICO DE ENTRADA:
+    Línea 1: Nombres de huéspedes (separados por comas o "y")
+    Línea 2: Tipo de domo (Luna, Sol, Centaury, etc.)
+    Línea 3: Fechas (formato DD/MM/AAAA hasta DD/MM/AAAA)
+    Línea 4: Servicios adicionales
+    Línea 5: Adiciones especiales (mascotas, etc.)
+    Línea 6: Número de teléfono
+    Línea 7: Email
+    
+    INSTRUCCIONES IMPORTANTES:
+    - Los nombres de huéspedes están en la PRIMERA línea
+    - El tipo de domo está en una línea SEPARADA (Luna, Sol, Centaury, etc.)
+    - Si dice "voy con X personas más", cuenta el solicitante + X acompañantes
+    - Si dice "somos X personas", usa ese número total
+    - Responde SOLO con JSON válido, sin texto adicional
 
     Solicitud del usuario: "{user_input}"
 
     Formato de salida JSON requerido:
     {{
         "nombres_huespedes": ["Nombre Completo 1", "Nombre Completo 2"],
+        "numero_acompanantes": "número_total_de_acompañantes_incluyendo_solicitante",
         "domo": "Tipo de Domo",
         "fecha_entrada": "fecha_entrada_del_usuario",
         "fecha_salida": "fecha_salida_del_usuario", 
         "servicio_elegido": "Servicio Adicional",
         "adicciones": "Adicciones (ej. mascota, otro servicio)",
         "numero_contacto": "Numero de Telefono",
-        "email_contacto": "Correo Electronico"
+        "email_contacto": "Correo Electronico",
+        "metodo_pago": "Forma de pago (efectivo, transferencia, tarjeta, etc.)",
+        "comentarios_especiales": "Solicitudes especiales o comentarios adicionales"
     }}
     """
     
@@ -1096,6 +1205,8 @@ def parse_reservation_details(user_input):
     
     # Validar estructura básica del JSON
     required_fields = ["nombres_huespedes", "domo", "fecha_entrada", "fecha_salida"]
+    optional_fields = ["numero_acompanantes", "servicio_elegido", "adicciones", "numero_contacto", "email_contacto", "metodo_pago", "comentarios_especiales"]
+    
     missing_fields = [field for field in required_fields if field not in parsed_json]
     
     if missing_fields:
@@ -1104,6 +1215,16 @@ def parse_reservation_details(user_input):
         for field in missing_fields:
             if field == "nombres_huespedes":
                 parsed_json[field] = []
+            else:
+                parsed_json[field] = "N/A"
+    
+    # Agregar campos opcionales faltantes con valores por defecto
+    for field in optional_fields:
+        if field not in parsed_json:
+            if field == "numero_acompanantes":
+                parsed_json[field] = "N/A"
+            elif field in ["servicio_elegido", "adicciones"]:
+                parsed_json[field] = "ninguno"
             else:
                 parsed_json[field] = "N/A"
     
@@ -1122,8 +1243,15 @@ def validate_and_process_reservation_data(parsed_data, from_number) -> tuple[boo
             errors.append(f"Nombres: {names_msg}")
         else:
             processed_data["nombres_huespedes"] = validated_names
-            processed_data["cantidad_huespedes"] = len(validated_names)
-            print(f"ℹ️  {names_msg}")
+            
+            # Usar numero_acompanantes si está disponible, sino contar nombres
+            numero_acompanantes = parsed_data.get("numero_acompanantes")
+            if numero_acompanantes and str(numero_acompanantes).isdigit():
+                processed_data["cantidad_huespedes"] = int(numero_acompanantes)
+                print(f"ℹ️  Número de acompañantes especificado: {numero_acompanantes}")
+            else:
+                processed_data["cantidad_huespedes"] = len(validated_names)
+                print(f"ℹ️  {names_msg}")
         
         # 2. Validar domo
         domo = parsed_data.get("domo", "").strip()
@@ -1408,9 +1536,8 @@ def run_agent_safe(agent, user_input: str, max_retries: int = 2) -> tuple[bool, 
     # Si todos los intentos fallaron
     return False, "", last_error
 
-# ============================================================================
+
 # VALIDACIONES DE SISTEMA AL INICIALIZAR (después de definir todas las funciones)
-# ============================================================================
 
 print("[TESTING] Probando conexión con LLM OpenAI...")
 try:
@@ -1426,10 +1553,7 @@ except Exception as e:
 
 print("[STARTING] Sistema inicializado - Iniciando rutas Flask...")
 
-# ============================================================================
-# RUTAS DE LA APLICACIÓN FLASK
-# ============================================================================
-
+# Rutas Flask para manejo de WhatsApp
 @app.route("/whatsapp_webhook", methods=["POST"])
 def whatsapp_webhook():
     incoming_msg = request.values.get('Body', '').strip()
@@ -1487,6 +1611,18 @@ def whatsapp_webhook():
                 # Datos válidos - mostrar confirmación
                 user_state["reserva_data"] = processed_data
                 
+                # Calcular precio para mostrar en confirmación
+                fecha_entrada = datetime.fromisoformat(processed_data['fecha_entrada']).date()
+                fecha_salida = datetime.fromisoformat(processed_data['fecha_salida']).date()
+                
+                calculo_precio = calcular_precio_reserva(
+                    domo=processed_data['domo'],
+                    cantidad_huespedes=processed_data['cantidad_huespedes'],
+                    fecha_entrada=fecha_entrada,
+                    fecha_salida=fecha_salida,
+                    servicios_adicionales=processed_data.get('adicciones', '')
+                )
+                
                 reserva_info = processed_data
                 confirmation_msg = (
                     "OK: ¡Perfecto! Aquí está el resumen de tu reserva:\n\n"
@@ -1497,7 +1633,10 @@ def whatsapp_webhook():
                     f"📅 **Entrada:** {datetime.fromisoformat(reserva_info['fecha_entrada']).strftime('%d/%m/%Y')}\n"
                     f"📅 **Salida:** {datetime.fromisoformat(reserva_info['fecha_salida']).strftime('%d/%m/%Y')}\n"
                     f"📞 **Teléfono:** {reserva_info['numero_contacto']}\n"
-                    f"📧 **Email:** {reserva_info['email_contacto']}\n\n"
+                    f"📧 **Email:** {reserva_info['email_contacto']}\n"
+                    f"💰 **Precio Total:** ${calculo_precio['precio_total']:,} COP\n"
+                    f"💳 **Método de Pago:** {reserva_info.get('metodo_pago', 'No especificado')}\n"
+                    f"📝 **Comentarios:** {reserva_info.get('comentarios_especiales', 'Ninguno')}\n\n"
                     "❓ **¿Confirmas esta reserva?** (Responde: *Sí* o *No*)"
                 )
 
@@ -1556,6 +1695,15 @@ def whatsapp_webhook():
                 fecha_entrada = datetime.fromisoformat(reservation_data['fecha_entrada']).date()
                 fecha_salida = datetime.fromisoformat(reservation_data['fecha_salida']).date()
                 
+                # Calcular precio total de la reserva
+                calculo_precio = calcular_precio_reserva(
+                    domo=reservation_data['domo'],
+                    cantidad_huespedes=reservation_data['cantidad_huespedes'],
+                    fecha_entrada=fecha_entrada,
+                    fecha_salida=fecha_salida,
+                    servicios_adicionales=reservation_data.get('adicciones', '')
+                )
+                
                 # Crear nueva reserva en la base de datos
                 nueva_reserva = Reserva(
                     numero_whatsapp=from_number.replace("whatsapp:", ""),
@@ -1567,7 +1715,10 @@ def whatsapp_webhook():
                     servicio_elegido=reservation_data['servicio_elegido'],
                     adicciones=reservation_data['adicciones'],
                     numero_contacto=reservation_data['numero_contacto'],
-                    email_contacto=reservation_data['email_contacto']
+                    email_contacto=reservation_data['email_contacto'],
+                    metodo_pago=reservation_data.get('metodo_pago', 'No especificado'),
+                    monto_total=calculo_precio['precio_total'],
+                    comentarios_especiales=reservation_data.get('comentarios_especiales', '')
                 )
                 
                 # Guardar en la base de datos con manejo robusto
@@ -1716,6 +1867,18 @@ def chat():
                 # Datos válidos - mostrar confirmación
                 user_state["reserva_data"] = processed_data
                 
+                # Calcular precio para mostrar en confirmación
+                fecha_entrada = datetime.fromisoformat(processed_data['fecha_entrada']).date()
+                fecha_salida = datetime.fromisoformat(processed_data['fecha_salida']).date()
+                
+                calculo_precio = calcular_precio_reserva(
+                    domo=processed_data['domo'],
+                    cantidad_huespedes=processed_data['cantidad_huespedes'],
+                    fecha_entrada=fecha_entrada,
+                    fecha_salida=fecha_salida,
+                    servicios_adicionales=processed_data.get('adicciones', '')
+                )
+                
                 reserva_info = processed_data
                 response_output = (
                     "OK: ¡Perfecto! Aquí está el resumen de tu reserva:\n\n"
@@ -1726,7 +1889,10 @@ def chat():
                     f"📅 Entrada: {datetime.fromisoformat(reserva_info['fecha_entrada']).strftime('%d/%m/%Y')}\n"
                     f"📅 Salida: {datetime.fromisoformat(reserva_info['fecha_salida']).strftime('%d/%m/%Y')}\n"
                     f"📞 Teléfono: {reserva_info['numero_contacto']}\n"
-                    f"📧 Email: {reserva_info['email_contacto']}\n\n"
+                    f"📧 Email: {reserva_info['email_contacto']}\n"
+                    f"💰 Precio Total: ${calculo_precio['precio_total']:,} COP\n"
+                    f"💳 Método de Pago: {reserva_info.get('metodo_pago', 'No especificado')}\n"
+                    f"📝 Comentarios: {reserva_info.get('comentarios_especiales', 'Ninguno')}\n\n"
                     "❓ ¿Confirmas esta reserva? (Responde: Sí o No)"
                 )
                 user_state["reserva_step"] = 2
@@ -1776,6 +1942,15 @@ def chat():
                 fecha_entrada = datetime.fromisoformat(reservation_data['fecha_entrada']).date()
                 fecha_salida = datetime.fromisoformat(reservation_data['fecha_salida']).date()
                 
+                # Calcular precio total de la reserva
+                calculo_precio = calcular_precio_reserva(
+                    domo=reservation_data['domo'],
+                    cantidad_huespedes=reservation_data['cantidad_huespedes'],
+                    fecha_entrada=fecha_entrada,
+                    fecha_salida=fecha_salida,
+                    servicios_adicionales=reservation_data.get('adicciones', '')
+                )
+                
                 # Crear nueva reserva en la base de datos
                 nueva_reserva = Reserva(
                     numero_whatsapp=session_id,  # En /chat usamos session_id como identificador
@@ -1787,7 +1962,10 @@ def chat():
                     servicio_elegido=reservation_data['servicio_elegido'],
                     adicciones=reservation_data['adicciones'],
                     numero_contacto=reservation_data['numero_contacto'],
-                    email_contacto=reservation_data['email_contacto']
+                    email_contacto=reservation_data['email_contacto'],
+                    metodo_pago=reservation_data.get('metodo_pago', 'No especificado'),
+                    monto_total=calculo_precio['precio_total'],
+                    comentarios_especiales=reservation_data.get('comentarios_especiales', '')
                 )
                 
                 # Guardar en la base de datos con manejo robusto
@@ -1879,6 +2057,208 @@ def chat():
         "response": response_output,
         "memory": messages_to_dict(memory.chat_memory.messages)
     })
+
+@app.route('/api/reservas', methods=['GET'])
+def get_reservas():
+    """Endpoint para obtener todas las reservas para el panel de control"""
+    try:
+        if not db or not Reserva:
+            return jsonify({'error': 'Base de datos no disponible'}), 503
+            
+        reservas = Reserva.query.order_by(Reserva.fecha_creacion.desc()).all()
+        reservas_json = []
+        
+        for reserva in reservas:
+            # Procesar servicios
+            servicios = []
+            if reserva.servicio_elegido and reserva.servicio_elegido.lower() != 'ninguno':
+                servicios = [reserva.servicio_elegido]
+            
+            # Usar el monto calculado si está disponible, o calcular en tiempo real
+            monto_total = 0
+            if hasattr(reserva, 'monto_total') and reserva.monto_total:
+                monto_total = reserva.monto_total
+            elif reserva.domo and reserva.fecha_entrada and reserva.fecha_salida:
+                # Calcular precio usando la función de pricing
+                calculo_precio = calcular_precio_reserva(
+                    domo=reserva.domo,
+                    cantidad_huespedes=reserva.cantidad_huespedes,
+                    fecha_entrada=reserva.fecha_entrada,
+                    fecha_salida=reserva.fecha_salida,
+                    servicios_adicionales=reserva.adicciones
+                )
+                monto_total = calculo_precio['precio_total']
+            
+            reserva_data = {
+                'id': f"RSV-{reserva.id:03d}",
+                'nombre': reserva.nombres_huespedes,
+                'numero': reserva.numero_whatsapp,
+                'email': reserva.email_contacto or 'No proporcionado',
+                'numeroPersonas': reserva.cantidad_huespedes,
+                'fechaEntrada': reserva.fecha_entrada.isoformat() if reserva.fecha_entrada else None,
+                'fechaSalida': reserva.fecha_salida.isoformat() if reserva.fecha_salida else None,
+                'domo': reserva.domo or 'No especificado',
+                'servicios': servicios,
+                'montoAPagar': monto_total,
+                'metodoPago': getattr(reserva, 'metodo_pago', 'No especificado') or 'Pendiente',
+                'observaciones': reserva.adicciones or '',
+                'comentariosEspeciales': getattr(reserva, 'comentarios_especiales', '') or '',
+                'fechaCreacion': reserva.fecha_creacion.isoformat()
+            }
+            reservas_json.append(reserva_data)
+            
+        return jsonify({
+            'success': True,
+            'total': len(reservas_json),
+            'reservas': reservas_json
+        })
+        
+    except Exception as e:
+        print(f"ERROR en /api/reservas: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint para monitoreo"""
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.utcnow().isoformat(),
+        'database': 'connected' if database_available else 'disconnected'
+    })
+
+@app.route('/api/reservas', methods=['POST'])
+def create_reserva():
+    """Crear nueva reserva desde panel admin"""
+    if not database_available:
+        return jsonify({'error': 'Base de datos no disponible'}), 503
+
+    try:
+        data = request.get_json()
+
+        # Calcular precio total si no se proporciona
+        monto_total = data.get('montoAPagar', 0)
+        if not monto_total and data.get('domo') and data.get('fechaEntrada') and data.get('fechaSalida'):
+            calculo_precio = calcular_precio_reserva(
+                domo=data['domo'],
+                cantidad_huespedes=data['numeroPersonas'],
+                fecha_entrada=data['fechaEntrada'],
+                fecha_salida=data['fechaSalida'],
+                servicios_adicionales=', '.join([s.get('nombre', '') for s in data.get('servicios', [])])
+            )
+            monto_total = calculo_precio['precio_total']
+
+        nueva_reserva = Reserva(
+            numero_whatsapp=data.get('numero', ''),
+            nombres_huespedes=data['nombre'],
+            cantidad_huespedes=data['numeroPersonas'],
+            domo=data['domo'],
+            fecha_entrada=datetime.fromisoformat(data['fechaEntrada']).date(),
+            fecha_salida=datetime.fromisoformat(data['fechaSalida']).date(),
+            servicio_elegido=', '.join([s.get('nombre', '') for s in data.get('servicios', [])]),
+            numero_contacto=data.get('numero', ''),
+            email_contacto=data.get('email', ''),
+            metodo_pago=data.get('metodoPago', 'No especificado'),
+            monto_total=monto_total,
+            comentarios_especiales=data.get('comentariosEspeciales', '')
+        )
+
+        db.session.add(nueva_reserva)
+        db.session.commit()
+
+        return jsonify({
+            'id': f"RSV-{nueva_reserva.id:03d}",
+            'message': 'Reserva creada exitosamente'
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/reservas/<reserva_id>', methods=['PUT'])
+def update_reserva(reserva_id):
+    """Actualizar reserva existente"""
+    if not database_available:
+        return jsonify({'error': 'Base de datos no disponible'}), 503
+
+    try:
+        # Extraer ID numérico de RSV-XXX
+        numeric_id = int(reserva_id.replace('RSV-', ''))
+        reserva = Reserva.query.get(numeric_id)
+
+        if not reserva:
+            return jsonify({'error': 'Reserva no encontrada'}), 404
+
+        data = request.get_json()
+
+        # Actualizar campos básicos
+        reserva.nombres_huespedes = data.get('nombre', reserva.nombres_huespedes)
+        reserva.cantidad_huespedes = data.get('numeroPersonas', reserva.cantidad_huespedes)
+        reserva.domo = data.get('domo', reserva.domo)
+        reserva.email_contacto = data.get('email', reserva.email_contacto)
+        reserva.numero_contacto = data.get('numero', reserva.numero_contacto)
+
+        if 'fechaEntrada' in data:
+            reserva.fecha_entrada = datetime.fromisoformat(data['fechaEntrada']).date()
+        if 'fechaSalida' in data:
+            reserva.fecha_salida = datetime.fromisoformat(data['fechaSalida']).date()
+
+        # Actualizar nuevos campos
+        if 'metodoPago' in data:
+            reserva.metodo_pago = data['metodoPago']
+        if 'comentariosEspeciales' in data:
+            reserva.comentarios_especiales = data['comentariosEspeciales']
+        
+        # Actualizar servicios
+        if 'servicios' in data:
+            reserva.servicio_elegido = ', '.join([s.get('nombre', '') for s in data['servicios']])
+
+        # Recalcular precio si es necesario
+        if 'montoAPagar' in data:
+            reserva.monto_total = data['montoAPagar']
+        elif any(field in data for field in ['domo', 'numeroPersonas', 'fechaEntrada', 'fechaSalida', 'servicios']):
+            # Recalcular precio automáticamente si cambiaron datos relevantes
+            calculo_precio = calcular_precio_reserva(
+                domo=reserva.domo,
+                cantidad_huespedes=reserva.cantidad_huespedes,
+                fecha_entrada=reserva.fecha_entrada,
+                fecha_salida=reserva.fecha_salida,
+                servicios_adicionales=reserva.servicio_elegido
+            )
+            reserva.monto_total = calculo_precio['precio_total']
+
+        db.session.commit()
+
+        return jsonify({'message': 'Reserva actualizada exitosamente'})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/reservas/<reserva_id>', methods=['DELETE'])
+def delete_reserva(reserva_id):
+    """Eliminar reserva"""
+    if not database_available:
+        return jsonify({'error': 'Base de datos no disponible'}), 503
+
+    try:
+        # Extraer ID numérico de RSV-XXX
+        numeric_id = int(reserva_id.replace('RSV-', ''))
+        reserva = Reserva.query.get(numeric_id)
+
+        if not reserva:
+            return jsonify({'error': 'Reserva no encontrada'}), 404
+
+        db.session.delete(reserva)
+        db.session.commit()
+
+        return jsonify({'message': 'Reserva eliminada exitosamente'})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
 @app.route("/")
 def home():
