@@ -62,143 +62,175 @@ load_dotenv()
 
 # Función para validar variables de entorno críticas
 def validate_environment_variables():
-    """Valida que todas las variables de entorno críticas estén configuradas"""
-    required_vars = {
+    """Valida que las variables de entorno críticas estén configuradas"""
+    # Variables absolutamente críticas (sin estas no puede funcionar el LLM)
+    critical_vars = {
+        'OPENAI_API_KEY': 'API Key de OpenAI para LLM',
+    }
+    
+    # Variables opcionales (funcionalidades específicas)
+    optional_vars = {
         'DATABASE_URL': 'URL de conexión a PostgreSQL',
         'PINECONE_API_KEY': 'API Key de Pinecone para vectorstore',
-        'OPENAI_API_KEY': 'API Key de OpenAI para LLM',
         'TWILIO_ACCOUNT_SID': 'Account SID de Twilio',
         'TWILIO_API_KEY_SID': 'API Key SID de Twilio',
         'TWILIO_API_KEY_SECRET': 'API Key Secret de Twilio',
         'TWILIO_PHONE_NUMBER': 'Número de teléfono de Twilio'
     }
     
-    missing_vars = []
-    for var_name, description in required_vars.items():
+    # Verificar variables críticas
+    missing_critical = []
+    for var_name, description in critical_vars.items():
         value = os.getenv(var_name)
         if not value or value.strip() == '':
-            missing_vars.append(f"  - {var_name}: {description}")
+            missing_critical.append(f"  - {var_name}: {description}")
     
-    if missing_vars:
-        error_msg = "ERROR: VARIABLES DE ENTORNO FALTANTES:\n" + "\n".join(missing_vars)
+    if missing_critical:
+        error_msg = "ERROR: VARIABLES CRÍTICAS FALTANTES:\n" + "\n".join(missing_critical)
         error_msg += "\n\n[TIP] Configura estas variables en tu archivo .env o en Railway"
         print(error_msg)
         raise EnvironmentError(error_msg)
     
-    print("OK: Todas las variables de entorno críticas están configuradas")
+    # Verificar variables opcionales (solo advertir)
+    missing_optional = []
+    for var_name, description in optional_vars.items():
+        value = os.getenv(var_name)
+        if not value or value.strip() == '':
+            missing_optional.append(f"  - {var_name}: {description}")
+    
+    if missing_optional:
+        warning_msg = "WARNING: VARIABLES OPCIONALES FALTANTES (funcionalidad limitada):\n" + "\n".join(missing_optional)
+        warning_msg += "\n[TIP] Algunas funciones pueden no estar disponibles"
+        print(warning_msg)
+    
+    print("OK: Variables críticas configuradas correctamente")
     return True
 
 # Validar variables de entorno al inicio
 validate_environment_variables()
 
-# Pinecone V3 - Ahora validadas
+# Pinecone V3 - Inicialización opcional
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "reservas-glamping-v2")
+pc = None
+pinecone_index = None
 
-# Inicializar cliente Pinecone con manejo de errores
-try:
-    if hasattr(Pinecone, '__call__'):
-        # Pinecone v3.0+ - Clase inicializable
-        pc = Pinecone(api_key=PINECONE_API_KEY)
-        print("OK: Cliente Pinecone v3.0+ inicializado correctamente")
-    else:
-        # Pinecone legacy - API estática
-        pc = Pinecone
-        pc.init(api_key=PINECONE_API_KEY, environment="us-east1-gcp")  # Ajustar environment según tu configuración
-        print("OK: Cliente Pinecone legacy inicializado correctamente")
-except Exception as e:
-    error_msg = f"ERROR: Error al inicializar Pinecone: {e}\n[TIP] Verifica tu PINECONE_API_KEY y environment"
-    print(error_msg)
-    raise ConnectionError(error_msg)
-
-# Validar que el índice exista con mejor manejo de errores
-try:
-    # Obtener lista de índices según la versión de Pinecone
+# Inicializar cliente Pinecone con manejo de errores (opcional)
+if PINECONE_API_KEY:
     try:
-        # Pinecone v3.0+
-        if hasattr(pc, 'list_indexes') and callable(pc.list_indexes):
-            indexes_response = pc.list_indexes()
-            if isinstance(indexes_response, dict) and "indexes" in indexes_response:
-                indexes = [index["name"] for index in indexes_response["indexes"]]
-            else:
-                # Respuesta directa (lista)
-                indexes = [index.name for index in indexes_response] if hasattr(indexes_response[0], 'name') else [str(index) for index in indexes_response]
+        if hasattr(Pinecone, '__call__'):
+            # Pinecone v3.0+ - Clase inicializable
+            pc = Pinecone(api_key=PINECONE_API_KEY)
+            print("OK: Cliente Pinecone v3.0+ inicializado correctamente")
         else:
-            # Pinecone legacy
-            indexes = pc.list_indexes()
-    except Exception as list_error:
-        print(f"WARNING:  No se pudo obtener lista de índices: {list_error}")
-        indexes = []  # Continuar sin validar
-    
-    if indexes and PINECONE_INDEX_NAME not in indexes:
-        error_msg = f"ERROR: El índice '{PINECONE_INDEX_NAME}' no existe en Pinecone.\n[TIP] Índices disponibles: {indexes}"
-        print(error_msg)
-        raise RuntimeError(error_msg)
-    
-    # Conectar al índice
+            # Pinecone legacy - API estática
+            pc = Pinecone
+            pc.init(api_key=PINECONE_API_KEY, environment="us-east1-gcp")  # Ajustar environment según tu configuración
+            print("OK: Cliente Pinecone legacy inicializado correctamente")
+    except Exception as e:
+        warning_msg = f"WARNING: Error al inicializar Pinecone: {e}\n[TIP] Funcionalidad Pinecone deshabilitada"
+        print(warning_msg)
+        pc = None
+else:
+    print("WARNING: PINECONE_API_KEY no configurada - Funcionalidad Pinecone deshabilitada")
+
+# Validar que el índice exista con mejor manejo de errores (opcional)
+if pc:
     try:
-        if hasattr(pc, 'Index'):
+        # Obtener lista de índices según la versión de Pinecone
+        try:
             # Pinecone v3.0+
-            pinecone_index = pc.Index(PINECONE_INDEX_NAME)
+            if hasattr(pc, 'list_indexes') and callable(pc.list_indexes):
+                indexes_response = pc.list_indexes()
+                if isinstance(indexes_response, dict) and "indexes" in indexes_response:
+                    indexes = [index["name"] for index in indexes_response["indexes"]]
+                else:
+                    # Respuesta directa (lista)
+                    indexes = [index.name for index in indexes_response] if hasattr(indexes_response[0], 'name') else [str(index) for index in indexes_response]
+            else:
+                # Pinecone legacy
+                indexes = pc.list_indexes()
+        except Exception as list_error:
+            print(f"WARNING: No se pudo obtener lista de índices: {list_error}")
+            indexes = []  # Continuar sin validar
+        
+        if indexes and PINECONE_INDEX_NAME not in indexes:
+            warning_msg = f"WARNING: El índice '{PINECONE_INDEX_NAME}' no existe en Pinecone.\n[TIP] Índices disponibles: {indexes}\n[INFO] Funcionalidad Pinecone deshabilitada"
+            print(warning_msg)
+            pinecone_index = None
         else:
-            # Pinecone legacy
-            pinecone_index = pc.Index(index_name=PINECONE_INDEX_NAME)
-        
-        print(f"OK: Conectado al índice Pinecone: {PINECONE_INDEX_NAME}")
-    except Exception as index_error:
-        error_msg = f"ERROR: Error al conectar con el índice '{PINECONE_INDEX_NAME}': {index_error}"
-        print(error_msg)
-        raise ConnectionError(error_msg)
-        
-except Exception as e:
-    error_msg = f"ERROR: Error general con Pinecone: {e}"
-    print(error_msg)
-    raise ConnectionError(error_msg)
+            # Conectar al índice
+            try:
+                if hasattr(pc, 'Index'):
+                    # Pinecone v3.0+
+                    pinecone_index = pc.Index(PINECONE_INDEX_NAME)
+                else:
+                    # Pinecone legacy
+                    pinecone_index = pc.Index(index_name=PINECONE_INDEX_NAME)
+                
+                print(f"OK: Conectado al índice Pinecone: {PINECONE_INDEX_NAME}")
+            except Exception as index_error:
+                warning_msg = f"WARNING: Error al conectar con el índice '{PINECONE_INDEX_NAME}': {index_error}\n[INFO] Funcionalidad Pinecone deshabilitada"
+                print(warning_msg)
+                pinecone_index = None
+            
+    except Exception as e:
+        warning_msg = f"WARNING: Error general con Pinecone: {e}\n[INFO] Funcionalidad Pinecone deshabilitada"
+        print(warning_msg)
+        pinecone_index = None
+else:
+    print("INFO: Pinecone no inicializado - Usando solo FAISS local")
 
 # Flask config
 app = Flask(__name__)
 
-# Configuración de la base de datos con validación
+# Configuración de la base de datos opcional
 DATABASE_URL = os.getenv('DATABASE_URL')
-if not DATABASE_URL:
-    error_msg = "ERROR: DATABASE_URL no configurada\n[TIP] Configura la URL de PostgreSQL en Railway o .env"
-    print(error_msg)
-    raise EnvironmentError(error_msg)
+db = None
 
-app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+if DATABASE_URL:
+    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    
+    # Inicializar SQLAlchemy con validación de conexión
+    try:
+        db = SQLAlchemy(app)
+        print("OK: SQLAlchemy inicializado correctamente")
+    except Exception as e:
+        warning_msg = f"WARNING: Error al inicializar la base de datos: {e}\n[TIP] Funcionalidad de base de datos deshabilitada"
+        print(warning_msg)
+        db = None
+else:
+    print("WARNING: DATABASE_URL no configurada - Funcionalidad de base de datos deshabilitada")
 
-# Inicializar SQLAlchemy con validación de conexión
-try:
-    db = SQLAlchemy(app)
-    print("OK: SQLAlchemy inicializado correctamente")
-except Exception as e:
-    error_msg = f"ERROR: Error al inicializar la base de datos: {e}\n[TIP] Verifica tu DATABASE_URL"
-    print(error_msg)
-    raise ConnectionError(error_msg)
+# Modelo de datos para reservas (solo si hay base de datos)
+Reserva = None
+if db:
+    class Reserva(db.Model):
+        __tablename__ = 'reservas'
+        id = db.Column(db.Integer, primary_key=True)
+        numero_whatsapp = db.Column(db.String(50), nullable=False)
+        nombres_huespedes = db.Column(db.String(255), nullable=False)
+        cantidad_huespedes = db.Column(db.Integer, nullable=False)
+        domo = db.Column(db.String(50))
+        fecha_entrada = db.Column(db.Date)
+        fecha_salida = db.Column(db.Date)
+        servicio_elegido = db.Column(db.String(100))
+        adicciones = db.Column(db.String(255))
+        numero_contacto = db.Column(db.String(50))
+        email_contacto = db.Column(db.String(100))
+        fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
 
-# Modelo de datos para reservas
-class Reserva(db.Model):
-    __tablename__ = 'reservas'
-    id = db.Column(db.Integer, primary_key=True)
-    numero_whatsapp = db.Column(db.String(50), nullable=False)
-    nombres_huespedes = db.Column(db.String(255), nullable=False)
-    cantidad_huespedes = db.Column(db.Integer, nullable=False)
-    domo = db.Column(db.String(50))
-    fecha_entrada = db.Column(db.Date)
-    fecha_salida = db.Column(db.Date)
-    servicio_elegido = db.Column(db.String(100))
-    adicciones = db.Column(db.String(255))
-    numero_contacto = db.Column(db.String(50))
-    email_contacto = db.Column(db.String(100))
-    fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
+        def __repr__(self):
+            return f'<Reserva {self.id}: {self.nombres_huespedes}>'
 
-    def __repr__(self):
-        return f'<Reserva {self.id}: {self.nombres_huespedes}>'
-
-# Crear tablas de base de datos y validar conexión
+# Crear tablas de base de datos y validar conexión (opcional)
 def initialize_database():
     """Inicializa la base de datos y crea las tablas necesarias"""
+    if not db:
+        print("INFO: Base de datos no configurada - Saltando inicialización")
+        return False
+        
     try:
         # Probar conexión a la base de datos
         with app.app_context():
@@ -209,12 +241,12 @@ def initialize_database():
         print("OK: Base de datos inicializada y tablas creadas correctamente")
         return True
     except Exception as e:
-        error_msg = f"ERROR: Error al conectar con la base de datos: {e}\n[TIP] Verifica tu DATABASE_URL y que PostgreSQL esté disponible"
-        print(error_msg)
-        raise ConnectionError(error_msg)
+        warning_msg = f"WARNING: Error al conectar con la base de datos: {e}\n[TIP] Funcionalidad de base de datos deshabilitada"
+        print(warning_msg)
+        return False
 
-# Inicializar base de datos
-initialize_database()
+# Inicializar base de datos si está disponible
+db_initialized = initialize_database()
 
 MEMORY_DIR = "user_memories_data"
 try:
