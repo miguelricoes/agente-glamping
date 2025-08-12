@@ -184,12 +184,26 @@ else:
 # Flask config
 app = Flask(__name__)
 
-# Configuración de la base de datos opcional
+# Configuración de la base de datos opcional con prioridad para URL privada
+DATABASE_PRIVATE_URL = os.getenv('DATABASE_PRIVATE_URL')
+DATABASE_PUBLIC_URL = os.getenv('DATABASE_PUBLIC_URL')
 DATABASE_URL = os.getenv('DATABASE_URL')
+
+# Prioridad: PRIVATE > PUBLIC > URL genérica
+database_url = DATABASE_PRIVATE_URL or DATABASE_PUBLIC_URL or DATABASE_URL
+
+if DATABASE_PRIVATE_URL:
+    print("OK: Usando DATABASE_PRIVATE_URL (sin costos de egress)")
+elif DATABASE_PUBLIC_URL:
+    print("WARNING: Usando DATABASE_PUBLIC_URL (puede generar costos de egress)")
+    print("TIP: Usa DATABASE_PRIVATE_URL para evitar costos")
+elif DATABASE_URL:
+    print("INFO: Usando DATABASE_URL genérica")
+
 db = None
 
-if DATABASE_URL:
-    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+if database_url:
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     
     # Inicializar SQLAlchemy con validación de conexión
@@ -201,7 +215,8 @@ if DATABASE_URL:
         print(warning_msg)
         db = None
 else:
-    print("WARNING: DATABASE_URL no configurada - Funcionalidad de base de datos deshabilitada")
+    print("WARNING: Ninguna DATABASE_URL configurada - Funcionalidad de base de datos deshabilitada")
+    print("TIP: Configura DATABASE_PRIVATE_URL, DATABASE_PUBLIC_URL o DATABASE_URL")
 
 # Modelo de datos para reservas (solo si hay base de datos)
 Reserva = None
