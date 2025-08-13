@@ -725,8 +725,12 @@ def _create_fresh_memory(user_id: str) -> ConversationBufferMemory:
         )
         
         assistant_response = (
-            "¡Hola! Soy María, tu asistente experta en Glamping Brillo de Luna. "
-            "Estoy aquí para ayudarte con cualquier pregunta sobre nuestro glamping, domos, servicios, políticas y actividades. ¿En qué puedo asistirte hoy?"
+            "¡Hola! Mi nombre es María y soy asistente del Glamping Brillo de Luna. "
+            "Es un placer saludarte y estar aquí para acompañarte. "
+            "Estoy especializada en brindarte información detallada sobre nuestros hermosos domos geodésicos, "
+            "servicios exclusivos, experiencias únicas y todo lo que necesites saber para planificar "
+            "una estadía inolvidable en nuestro glamping. "
+            "¿En qué puedo ayudarte hoy?"
         )
         
         # Intentar métodos compatibles con langchain 0.1.0
