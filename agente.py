@@ -254,24 +254,90 @@ if db:
     class Reserva(db.Model):
         __tablename__ = 'reservas'
         id = db.Column(db.Integer, primary_key=True)
-        numero_whatsapp = db.Column(db.String(50), nullable=False)
-        nombres_huespedes = db.Column(db.String(255), nullable=False)
-        cantidad_huespedes = db.Column(db.Integer, nullable=False)
-        domo = db.Column(db.String(50))
-        fecha_entrada = db.Column(db.Date)
-        fecha_salida = db.Column(db.Date)
-        servicio_elegido = db.Column(db.String(100))
-        adicciones = db.Column(db.String(255))
-        numero_contacto = db.Column(db.String(50))
-        email_contacto = db.Column(db.String(100))
-        # Nuevos campos para funcionalidad completa
-        metodo_pago = db.Column(db.String(50), default='Pendiente')
+
+        # CAMPOS IMPORTANTES (NOT NULL o con validaciones estrictas)
+        numero_whatsapp = db.Column(db.String(50), nullable=False)        # Teléfono - IMPORTANTE
+        email_contacto = db.Column(db.String(100), nullable=False)        # Email - IMPORTANTE
+        cantidad_huespedes = db.Column(db.Integer, nullable=False)        # Personas - IMPORTANTE
+        domo = db.Column(db.String(50), nullable=False)                   # Domo - IMPORTANTE
+        fecha_entrada = db.Column(db.Date, nullable=False)                # Estadía - IMPORTANTE
+        fecha_salida = db.Column(db.Date, nullable=False)                 # Estadía - IMPORTANTE
+        metodo_pago = db.Column(db.String(50), nullable=False, default='Pendiente')  # Método pago - IMPORTANTE
+
+        # CAMPOS OPCIONALES (nullable=True)
+        nombres_huespedes = db.Column(db.String(255))                     # Puede derivarse del teléfono
+        servicio_elegido = db.Column(db.String(100))                      # Servicios - OPCIONAL
+        adicciones = db.Column(db.String(255))                           # Adiciones - OPCIONAL
+        comentarios_especiales = db.Column(db.Text)                      # Comentarios - OPCIONAL
+        numero_contacto = db.Column(db.String(50))                       # Backup del teléfono
+
+        # CAMPOS DE CONTROL
         monto_total = db.Column(db.Numeric(10, 2), default=0.00)
-        comentarios_especiales = db.Column(db.Text)
         fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
 
         def __repr__(self):
-            return f'<Reserva {self.id}: {self.nombres_huespedes}>'
+            return f'<Reserva {self.id}: {self.nombres_huespedes or "Usuario"}>'
+
+def validar_campos_importantes_reserva(data):
+    """
+    Valida que todos los campos importantes estén presentes y sean válidos
+    """
+    errores = []
+    campos_importantes = {
+        'numero_whatsapp': 'Teléfono',
+        'email_contacto': 'Email',
+        'cantidad_huespedes': 'Número de personas',
+        'domo': 'Domo seleccionado',
+        'fecha_entrada': 'Fecha de entrada',
+        'fecha_salida': 'Fecha de salida',
+        'metodo_pago': 'Método de pago'
+    }
+
+    # Verificar campos obligatorios
+    for campo_bd, nombre_amigable in campos_importantes.items():
+        if not data.get(campo_bd):
+            errores.append(f"Campo importante faltante: {nombre_amigable}")
+
+    # Validaciones específicas
+    if data.get('cantidad_huespedes'):
+        try:
+            personas = int(data['cantidad_huespedes'])
+            if personas < 1 or personas > 10:  # Límites del glamping
+                errores.append("Número de personas debe estar entre 1 y 10")
+        except (ValueError, TypeError):
+            errores.append("Número de personas debe ser un número válido")
+
+    if data.get('domo'):
+        domos_validos = ['antares', 'polaris', 'sirius', 'centaury']
+        if data['domo'].lower() not in domos_validos:
+            errores.append(f"Domo debe ser uno de: {', '.join(domos_validos)}")
+
+    if data.get('email_contacto'):
+        import re
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, data['email_contacto']):
+            errores.append("Email no tiene formato válido")
+
+    if data.get('fecha_entrada') and data.get('fecha_salida'):
+        try:
+            from datetime import datetime
+            fecha_in = datetime.strptime(data['fecha_entrada'], '%Y-%m-%d').date() if isinstance(data['fecha_entrada'], str) else data['fecha_entrada']
+            fecha_out = datetime.strptime(data['fecha_salida'], '%Y-%m-%d').date() if isinstance(data['fecha_salida'], str) else data['fecha_salida']
+
+            if fecha_in >= fecha_out:
+                errores.append("Fecha de salida debe ser posterior a la fecha de entrada")
+
+            if fecha_in < datetime.now().date():
+                errores.append("Fecha de entrada no puede ser en el pasado")
+
+        except (ValueError, TypeError):
+            errores.append("Fechas deben tener formato válido (YYYY-MM-DD)")
+
+    return {
+        'valido': len(errores) == 0,
+        'errores': errores,
+        'campos_faltantes': [campo for campo, _ in campos_importantes.items() if not data.get(campo)]
+    }
 
 # Sistema de cálculo de precios para reservas
 def calcular_precio_reserva(domo, cantidad_huespedes, fecha_entrada, fecha_salida, servicios_adicionales=None):
@@ -2229,25 +2295,56 @@ def get_reservas():
                 domo_lower = (reserva.domo or '').lower()
                 monto_total = precios_base.get(domo_lower, 450000)
 
-            reserva_item = {
-                'id': reserva.id,
-                'nombre': reserva.nombres_huespedes or 'No especificado',
-                'email': reserva.email_contacto or 'No proporcionado',
-                'numero': reserva.numero_whatsapp or 'No proporcionado',
-                'domo': reserva.domo or 'No especificado',
+            # Clasificar campos por importancia
+            campos_importantes = {
+                'numero': reserva.numero_whatsapp,
+                'email': reserva.email_contacto,
+                'numeroPersonas': reserva.cantidad_huespedes,
+                'domo': reserva.domo,
                 'fechaEntrada': reserva.fecha_entrada.strftime('%Y-%m-%d') if reserva.fecha_entrada else None,
                 'fechaSalida': reserva.fecha_salida.strftime('%Y-%m-%d') if reserva.fecha_salida else None,
-                'numeroPersonas': reserva.cantidad_huespedes or 1,
-                'servicios': servicios_array,
-                'montoAPagar': monto_total,
-                'metodoPago': getattr(reserva, 'metodo_pago', 'Pendiente'),
-                'observaciones': getattr(reserva, 'comentarios_especiales', ''),
+                'metodoPago': getattr(reserva, 'metodo_pago', 'Pendiente')
+            }
+
+            campos_opcionales = {
                 'adicciones': reserva.adicciones or '',
+                'servicios': servicios_array,
+                'observaciones': getattr(reserva, 'comentarios_especiales', '')
+            }
+
+            # Validar campos importantes
+            validacion = validar_campos_importantes_reserva({
+                'numero_whatsapp': campos_importantes['numero'],
+                'email_contacto': campos_importantes['email'],
+                'cantidad_huespedes': campos_importantes['numeroPersonas'],
+                'domo': campos_importantes['domo'],
+                'fecha_entrada': campos_importantes['fechaEntrada'],
+                'fecha_salida': campos_importantes['fechaSalida'],
+                'metodo_pago': campos_importantes['metodoPago']
+            })
+
+            reserva_item = {
+                'id': reserva.id,
+                'nombre': reserva.nombres_huespedes or f"Usuario {reserva.numero_whatsapp}",
+
+                # CAMPOS IMPORTANTES - Con validación
+                **campos_importantes,
+
+                # CAMPOS OPCIONALES - Pueden estar vacíos
+                **campos_opcionales,
+
+                # METADATOS
+                'montoAPagar': monto_total,
                 'fecha_creacion': reserva.fecha_creacion.strftime('%Y-%m-%d %H:%M:%S') if hasattr(reserva, 'fecha_creacion') and reserva.fecha_creacion else None,
                 'estado': 'activa',
-                # Campos adicionales para compatibilidad
+
+                # VALIDACIÓN
+                'campos_completos': validacion['valido'],
+                'campos_faltantes': validacion['campos_faltantes'],
+
+                # RETROCOMPATIBILIDAD
                 'servicio_elegido': reserva.servicio_elegido or 'Ninguno',
-                'numero_contacto': reserva.numero_contacto or reserva.numero_whatsapp or 'No proporcionado'
+                'numero_contacto': reserva.numero_contacto or reserva.numero_whatsapp
             }
             reservas_data.append(reserva_item)
         
@@ -2341,46 +2438,61 @@ def health_check():
 
 @app.route('/api/reservas', methods=['POST'])
 def create_reserva():
-    """Crear nueva reserva desde panel admin"""
+    """Crear nueva reserva con validación de campos importantes"""
     if not database_available:
         return jsonify({'error': 'Base de datos no disponible'}), 503
 
     try:
         data = request.get_json()
 
-        # Calcular precio total si no se proporciona
-        monto_total = data.get('montoAPagar', 0)
-        if not monto_total and data.get('domo') and data.get('fechaEntrada') and data.get('fechaSalida'):
-            calculo_precio = calcular_precio_reserva(
-                domo=data['domo'],
-                cantidad_huespedes=data['numeroPersonas'],
-                fecha_entrada=data['fechaEntrada'],
-                fecha_salida=data['fechaSalida'],
-                servicios_adicionales=', '.join([s.get('nombre', '') for s in data.get('servicios', [])])
-            )
-            monto_total = calculo_precio['precio_total']
+        # VALIDAR CAMPOS IMPORTANTES PRIMERO
+        validacion = validar_campos_importantes_reserva(data)
 
+        if not validacion['valido']:
+            return jsonify({
+                'success': False,
+                'error': 'Campos importantes faltantes o inválidos',
+                'errores_detalle': validacion['errores'],
+                'campos_faltantes': validacion['campos_faltantes'],
+                'requeridos': [
+                    'numero_whatsapp (teléfono)',
+                    'email_contacto (email)',
+                    'cantidad_huespedes (personas)',
+                    'domo',
+                    'fecha_entrada',
+                    'fecha_salida',
+                    'metodo_pago'
+                ]
+            }), 400
+
+        # Si los campos importantes están OK, crear la reserva
         nueva_reserva = Reserva(
-            numero_whatsapp=data.get('numero', ''),
-            nombres_huespedes=data['nombre'],
-            cantidad_huespedes=data['numeroPersonas'],
+            # CAMPOS IMPORTANTES
+            numero_whatsapp=data['numero_whatsapp'],
+            email_contacto=data['email_contacto'],
+            cantidad_huespedes=int(data['cantidad_huespedes']),
             domo=data['domo'],
-            fecha_entrada=datetime.fromisoformat(data['fechaEntrada']).date(),
-            fecha_salida=datetime.fromisoformat(data['fechaSalida']).date(),
-            servicio_elegido=', '.join([s.get('nombre', '') for s in data.get('servicios', [])]),
-            numero_contacto=data.get('numero', ''),
-            email_contacto=data.get('email', ''),
-            metodo_pago=data.get('metodoPago', 'No especificado'),
-            monto_total=monto_total,
-            comentarios_especiales=data.get('comentariosEspeciales', '')
+            fecha_entrada=datetime.strptime(data['fecha_entrada'], '%Y-%m-%d').date(),
+            fecha_salida=datetime.strptime(data['fecha_salida'], '%Y-%m-%d').date(),
+            metodo_pago=data['metodo_pago'],
+
+            # CAMPOS OPCIONALES (con valores por defecto)
+            nombres_huespedes=data.get('nombres_huespedes', ''),
+            servicio_elegido=data.get('servicio_elegido', ''),
+            adicciones=data.get('adicciones', ''),
+            comentarios_especiales=data.get('comentarios_especiales', ''),
+            numero_contacto=data.get('numero_contacto', data['numero_whatsapp']),
+            monto_total=data.get('monto_total', 0)
         )
 
         db.session.add(nueva_reserva)
         db.session.commit()
 
         return jsonify({
-            'id': f"RSV-{nueva_reserva.id:03d}",
-            'message': 'Reserva creada exitosamente'
+            'success': True,
+            'message': 'Reserva creada exitosamente',
+            'reserva_id': nueva_reserva.id,
+            'campos_importantes_completos': True
         }), 201
 
     except Exception as e:
