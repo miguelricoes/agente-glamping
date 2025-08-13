@@ -835,7 +835,7 @@ def load_user_memory(user_id: str) -> ConversationBufferMemory:
             return memory
     
     # Intento 3: Si todo falló, crear memoria nueva
-    print(f"🆕 Creando memoria nueva para usuario: {user_id}")
+    print(f"Creando memoria nueva para usuario: {user_id}")
     memory = _create_fresh_memory(user_id)
     
     # Guardar la memoria nueva
@@ -1578,6 +1578,43 @@ def whatsapp_webhook():
     memory = user_memories[from_number]
     user_state = user_states[from_number]
 
+    # Detectar si es la primera interacción real del usuario (saludo inicial)
+    is_greeting = incoming_msg.lower().strip() in ['hola', 'holi', 'hello', 'hi', 'buenos días', 'buenas tardes', 'buenas noches']
+    
+    # Verificar si es una memoria nueva (solo tiene mensajes del sistema)
+    is_new_conversation = False
+    if hasattr(memory, 'chat_memory') and hasattr(memory.chat_memory, 'messages'):
+        # Si solo tiene 2 mensajes (system + assistant_response) es conversación nueva
+        if len(memory.chat_memory.messages) <= 2:
+            is_new_conversation = True
+    
+    # Si es un saludo en una conversación nueva, mostrar mensaje de bienvenida completo
+    if is_greeting and is_new_conversation:
+        welcome_message = (
+            "¡Hola! Mi nombre es María y soy asistente del Glamping Brillo de Luna. "
+            "Es un placer saludarte y estar aquí para acompañarte. "
+            "Estoy especializada en brindarte información detallada sobre nuestros hermosos domos geodésicos, "
+            "servicios exclusivos, experiencias únicas y todo lo que necesites saber para planificar "
+            "una estadía inolvidable en nuestro glamping. "
+            "¿En qué puedo ayudarte hoy?"
+        )
+        resp.message(welcome_message)
+        
+        # Agregar este intercambio a la memoria
+        try:
+            from langchain.schema import HumanMessage, AIMessage
+            memory.chat_memory.add_message(HumanMessage(content=incoming_msg))
+            memory.chat_memory.add_message(AIMessage(content=welcome_message))
+        except (ImportError, AttributeError):
+            try:
+                memory.chat_memory.add_user_message(incoming_msg)
+                memory.chat_memory.add_ai_message(welcome_message)
+            except:
+                pass
+        
+        save_user_memory(from_number, memory)
+        return str(resp)
+
     # Lógica de flujo de reserva (detecta intención o continúa flujo existente)
     if user_state["current_flow"] == "none" and \
        (("reserva" in incoming_msg.lower() and ("quiero" in incoming_msg.lower() or "hacer" in incoming_msg.lower() or "reservar" in incoming_msg.lower())) or \
@@ -1841,6 +1878,48 @@ def chat():
     user_state = user_states[session_id]
 
     response_output = "Lo siento, no pude procesar tu solicitud en este momento."
+    
+    # Detectar si es la primera interacción real del usuario (saludo inicial)
+    is_greeting = user_input.lower().strip() in ['hola', 'holi', 'hello', 'hi', 'buenos días', 'buenas tardes', 'buenas noches']
+    
+    # Verificar si es una memoria nueva (solo tiene mensajes del sistema)
+    is_new_conversation = False
+    if hasattr(memory, 'chat_memory') and hasattr(memory.chat_memory, 'messages'):
+        # Si solo tiene 2 mensajes (system + assistant_response) es conversación nueva
+        if len(memory.chat_memory.messages) <= 2:
+            is_new_conversation = True
+    
+    # Si es un saludo en una conversación nueva, mostrar mensaje de bienvenida completo
+    if is_greeting and is_new_conversation:
+        welcome_message = (
+            "¡Hola! Mi nombre es María y soy asistente del Glamping Brillo de Luna. "
+            "Es un placer saludarte y estar aquí para acompañarte. "
+            "Estoy especializada en brindarte información detallada sobre nuestros hermosos domos geodésicos, "
+            "servicios exclusivos, experiencias únicas y todo lo que necesites saber para planificar "
+            "una estadía inolvidable en nuestro glamping. "
+            "¿En qué puedo ayudarte hoy?"
+        )
+        response_output = welcome_message
+        
+        # Agregar este intercambio a la memoria
+        try:
+            from langchain.schema import HumanMessage, AIMessage
+            memory.chat_memory.add_message(HumanMessage(content=user_input))
+            memory.chat_memory.add_message(AIMessage(content=welcome_message))
+        except (ImportError, AttributeError):
+            try:
+                memory.chat_memory.add_user_message(user_input)
+                memory.chat_memory.add_ai_message(welcome_message)
+            except:
+                pass
+        
+        save_user_memory(session_id, memory)
+        
+        return jsonify({
+            "session_id": session_id,
+            "response": response_output,
+            "memory": messages_to_dict(memory.chat_memory.messages)
+        })
     
     # Lógica de flujo de reserva para el endpoint /chat
     if user_state["current_flow"] == "none" and \
