@@ -1167,6 +1167,8 @@ def parse_reservation_details(user_input):
     Línea 5: Adiciones especiales (mascotas, etc.)
     Línea 6: Número de teléfono
     Línea 7: Email
+    Línea 8: Método de pago (efectivo, transferencia, tarjeta)
+    Línea 9: Comentarios especiales u observaciones
     
     INSTRUCCIONES IMPORTANTES:
     - Los nombres de huéspedes están en la PRIMERA línea
@@ -1632,7 +1634,9 @@ def whatsapp_webhook():
             "-Servicios que quieras incluir\n"
             "-Adicciones (Servicios, mascota etc)\n"
             "-Número de teléfono de contacto\n"
-            "-Correo electrónico de contacto\n\n"
+            "-Correo electrónico de contacto\n"
+            "-Método de pago preferido (efectivo, transferencia, tarjeta)\n"
+            "-Comentarios especiales u observaciones adicionales\n\n"
             "Por favor, escribe toda la información en un solo mensaje."
         )
         save_user_memory(from_number, memory)
@@ -1851,7 +1855,9 @@ def whatsapp_webhook():
             "- Servicios adicionales que quieras incluir (ej. cena romántica, masajes)\n"
             "- Cualquier adición especial (ej. mascota, decoración específica)\n"
             "- Tu número de teléfono de contacto\n"
-            "- Tu correo electrónico de contacto\n\n"
+            "- Tu correo electrónico de contacto\n"
+            "- Método de pago preferido (efectivo, transferencia, tarjeta)\n"
+            "- Comentarios especiales u observaciones adicionales\n\n"
             "Por favor, envíame toda esta información en un solo mensaje para procesar tu solicitud."
         )
     else:
@@ -1935,7 +1941,9 @@ def chat():
             "-Servicios que quieras incluir\n"
             "-Adicciones (Servicios, mascota etc)\n"
             "-Número de teléfono de contacto\n"
-            "-Correo electrónico de contacto\n\n"
+            "-Correo electrónico de contacto\n"
+            "-Método de pago preferido (efectivo, transferencia, tarjeta)\n"
+            "-Comentarios especiales u observaciones adicionales\n\n"
             "Por favor, escribe toda la información en un solo mensaje."
         )
     elif user_state["current_flow"] == "reserva" and user_state["reserva_step"] == 1:
