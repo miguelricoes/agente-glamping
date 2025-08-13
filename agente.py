@@ -1289,10 +1289,10 @@ def validate_and_process_reservation_data(parsed_data, from_number) -> tuple[boo
             numero_acompanantes = parsed_data.get("numero_acompanantes")
             if numero_acompanantes and str(numero_acompanantes).isdigit():
                 processed_data["cantidad_huespedes"] = int(numero_acompanantes)
-                print(f"ℹ️  Número de acompañantes especificado: {numero_acompanantes}")
+                print(f"INFO: Número de acompañantes especificado: {numero_acompanantes}")
             else:
                 processed_data["cantidad_huespedes"] = len(validated_names)
-                print(f"ℹ️  {names_msg}")
+                print(f"INFO: {names_msg}")
         
         # 2. Validar domo
         domo = parsed_data.get("domo", "").strip()
@@ -1321,7 +1321,7 @@ def validate_and_process_reservation_data(parsed_data, from_number) -> tuple[boo
             else:
                 processed_data["fecha_entrada"] = fecha_entrada.isoformat()
                 processed_data["fecha_salida"] = fecha_salida.isoformat()
-                print(f"ℹ️  {range_msg}")
+                print(f"INFO: {range_msg}")
         
         # 4. Validar información de contacto
         phone = parsed_data.get("numero_contacto", "")
@@ -1344,6 +1344,13 @@ def validate_and_process_reservation_data(parsed_data, from_number) -> tuple[boo
         
         adicciones = parsed_data.get("adicciones", "ninguno").strip()
         processed_data["adicciones"] = adicciones if adicciones and adicciones.lower() not in ["n/a", "na"] else "ninguno"
+        
+        # 6. Procesar método de pago y comentarios especiales (CAMPOS FALTANTES)
+        metodo_pago = parsed_data.get("metodo_pago", "No especificado").strip()
+        processed_data["metodo_pago"] = metodo_pago if metodo_pago and metodo_pago.lower() not in ["n/a", "na"] else "No especificado"
+        
+        comentarios = parsed_data.get("comentarios_especiales", "Ninguno").strip()
+        processed_data["comentarios_especiales"] = comentarios if comentarios and comentarios.lower() not in ["n/a", "na", "ninguno"] else "Ninguno"
         
         # Determinar si la validación fue exitosa
         success = len(errors) == 0
