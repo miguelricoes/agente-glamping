@@ -185,9 +185,20 @@ else:
 # Flask config
 app = Flask(__name__)
 
-# Configurar CORS para el panel de control
-CORS_ORIGIN = os.getenv('CORS_ORIGIN', 'https://panel-con-react-production.up.railway.app')
-CORS(app, origins=[CORS_ORIGIN])
+# CORS configurado específicamente para el frontend
+CORS(app, resources={
+    r"/api/*": {
+        "origins": [
+            "http://localhost:5173",  # Desarrollo Vite
+            "http://localhost:4173",  # Preview Vite
+            "https://panel-con-react.vercel.app",  # Si despliegas en Vercel
+            "https://*.netlify.app",  # Si despliegas en Netlify
+            "*"  # Temporal para testing
+        ],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 
 # Configuración de la base de datos opcional con prioridad para URL privada
 DATABASE_PRIVATE_URL = os.getenv('DATABASE_PRIVATE_URL')
@@ -2173,65 +2184,94 @@ def chat():
 
 @app.route('/api/reservas', methods=['GET'])
 def get_reservas():
-    """Endpoint para obtener todas las reservas para el panel de control"""
+    """Endpoint simplificado para obtener reservas para el frontend"""
     try:
-        if not db or not Reserva:
-            return jsonify({'error': 'Base de datos no disponible'}), 503
-            
-        reservas = Reserva.query.order_by(Reserva.fecha_creacion.desc()).all()
-        reservas_json = []
+        # Verificar estado de la base de datos
+        if not database_available or not db:
+            return jsonify({
+                'success': False,
+                'error': 'Base de datos no disponible',
+                'reservas': []
+            }), 503
         
+        # Obtener todas las reservas ordenadas por fecha de creación
+        reservas = Reserva.query.order_by(Reserva.fecha_creacion.desc()).all()
+        
+        # Formatear datos para el frontend
+        reservas_data = []
         for reserva in reservas:
-            # Procesar servicios
-            servicios = []
-            if reserva.servicio_elegido and reserva.servicio_elegido.lower() != 'ninguno':
-                servicios = [reserva.servicio_elegido]
-            
-            # Usar el monto calculado si está disponible, o calcular en tiempo real
-            monto_total = 0
-            if hasattr(reserva, 'monto_total') and reserva.monto_total:
-                monto_total = reserva.monto_total
-            elif reserva.domo and reserva.fecha_entrada and reserva.fecha_salida:
-                # Calcular precio usando la función de pricing
-                calculo_precio = calcular_precio_reserva(
-                    domo=reserva.domo,
-                    cantidad_huespedes=reserva.cantidad_huespedes,
-                    fecha_entrada=reserva.fecha_entrada,
-                    fecha_salida=reserva.fecha_salida,
-                    servicios_adicionales=reserva.adicciones
-                )
-                monto_total = calculo_precio['precio_total']
-            
-            reserva_data = {
-                'id': f"RSV-{reserva.id:03d}",
-                'nombre': reserva.nombres_huespedes,
-                'numero': reserva.numero_whatsapp,
+            reserva_item = {
+                'id': reserva.id,
+                'nombre': reserva.nombres_huespedes or 'No especificado',
                 'email': reserva.email_contacto or 'No proporcionado',
-                'numeroPersonas': reserva.cantidad_huespedes,
-                'fechaEntrada': reserva.fecha_entrada.isoformat() if reserva.fecha_entrada else None,
-                'fechaSalida': reserva.fecha_salida.isoformat() if reserva.fecha_salida else None,
+                'numero': reserva.numero_whatsapp or 'No proporcionado',
                 'domo': reserva.domo or 'No especificado',
-                'servicios': servicios,
-                'montoAPagar': monto_total,
-                'metodoPago': getattr(reserva, 'metodo_pago', 'No especificado') or 'Pendiente',
-                'observaciones': reserva.adicciones or '',
-                'comentariosEspeciales': getattr(reserva, 'comentarios_especiales', '') or '',
-                'fechaCreacion': reserva.fecha_creacion.isoformat()
+                'fechaEntrada': reserva.fecha_entrada.strftime('%Y-%m-%d') if reserva.fecha_entrada else None,
+                'fechaSalida': reserva.fecha_salida.strftime('%Y-%m-%d') if reserva.fecha_salida else None,
+                'numeroPersonas': reserva.cantidad_huespedes or 1,
+                'servicio_elegido': reserva.servicio_elegido or 'Ninguno',
+                'servicios': [],
+                'montoAPagar': float(getattr(reserva, 'monto_total', 0)),
+                'metodoPago': getattr(reserva, 'metodo_pago', 'No especificado'),
+                'observaciones': getattr(reserva, 'comentarios_especiales', ''),
+                'adicciones': reserva.adicciones or 'Ninguno',
+                'fecha_creacion': reserva.fecha_creacion.strftime('%Y-%m-%d %H:%M:%S') if hasattr(reserva, 'fecha_creacion') and reserva.fecha_creacion else None,
+                'estado': 'activa'
             }
-            reservas_json.append(reserva_data)
-            
+            reservas_data.append(reserva_item)
+        
         return jsonify({
             'success': True,
-            'total': len(reservas_json),
-            'reservas': reservas_json
+            'count': len(reservas_data),
+            'reservas': reservas_data
         })
         
     except Exception as e:
-        print(f"ERROR en /api/reservas: {e}")
+        print(f"Error en endpoint GET /api/reservas: {str(e)}")
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'Error interno del servidor',
+            'reservas': []
         }), 500
+
+@app.route('/api/reservas/stats', methods=['GET'])
+def get_reservas_stats():
+    """
+    Endpoint para obtener estadísticas de reservas
+    """
+    if not db or not Reserva:
+        return jsonify({"error": "Base de datos no configurada"}), 500
+
+    try:
+        from sqlalchemy import func, extract
+        from datetime import datetime, timedelta
+
+        # Estadísticas básicas
+        total_reservas = db.session.query(func.count(Reserva.id)).scalar()
+
+        # Reservas por mes actual
+        mes_actual = datetime.now().month
+        año_actual = datetime.now().year
+        reservas_mes = db.session.query(func.count(Reserva.id)).filter(
+            extract('month', Reserva.fecha_creacion) == mes_actual,
+            extract('year', Reserva.fecha_creacion) == año_actual
+        ).scalar() if hasattr(Reserva, 'fecha_creacion') else 0
+
+        # Domos más populares
+        domos_populares = db.session.query(
+            Reserva.domo, func.count(Reserva.id).label('count')
+        ).filter(Reserva.domo.isnot(None)).group_by(Reserva.domo).all()
+
+        return jsonify({
+            "total_reservas": total_reservas or 0,
+            "reservas_mes_actual": reservas_mes or 0,
+            "domos_populares": [{"domo": d[0], "cantidad": d[1]} for d in domos_populares],
+            "status": "success"
+        }), 200
+
+    except Exception as e:
+        print(f"ERROR en get_reservas_stats: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/health', methods=['GET'])
 def health_check():
