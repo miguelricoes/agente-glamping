@@ -1160,22 +1160,53 @@ def parse_reservation_details(user_input):
     Extrae los siguientes datos de la solicitud de reserva del usuario. Analiza línea por línea.
     
     FORMATO TÍPICO DE ENTRADA:
-    Línea 1: Nombres de huéspedes (separados por comas o "y")
-    Línea 2: Tipo de domo (Luna, Sol, Centaury, etc.)
-    Línea 3: Fechas (formato DD/MM/AAAA hasta DD/MM/AAAA)
-    Línea 4: Servicios adicionales
-    Línea 5: Adiciones especiales (mascotas, etc.)
-    Línea 6: Número de teléfono
-    Línea 7: Email
-    Línea 8: Método de pago (efectivo, transferencia, tarjeta)
-    Línea 9: Comentarios especiales u observaciones
+    Los datos pueden estar en formato de líneas separadas. Analiza todo el texto línea por línea:
+    - Nombres de huéspedes: Pueden estar en una línea separados por comas, o en líneas separadas
+    - Tipo de domo: Antares, Polaris, Sirius, Centaury
+    - Fechas: formato DD/MM/AAAA hasta DD/MM/AAAA o similar
+    - Servicios adicionales: masajes, decoraciones, etc.
+    - Adiciones especiales: mascotas, etc.
+    - Número de teléfono: números de contacto
+    - Email: correo electrónico
+    - Método de pago: efectivo, transferencia, tarjeta, etc.
+    - Comentarios especiales: cualquier observación adicional del usuario
     
     INSTRUCCIONES IMPORTANTES:
-    - Los nombres de huéspedes están en la PRIMERA línea
-    - El tipo de domo está en una línea SEPARADA (Luna, Sol, Centaury, etc.)
+    - Los nombres pueden estar en múltiples líneas consecutivas al inicio
+    - Identifica el domo por los nombres: Antares, Polaris, Sirius, Centaury
     - Si dice "voy con X personas más", cuenta el solicitante + X acompañantes
     - Si dice "somos X personas", usa ese número total
+    - SIEMPRE incluye metodo_pago y comentarios_especiales aunque estén vacíos
+    - Si no encuentras método de pago, usa "No especificado"
+    - Si no encuentras comentarios, usa "Ninguno"
     - Responde SOLO con JSON válido, sin texto adicional
+
+    EJEMPLO DE ENTRADA:
+    "Juan Perez
+    Maria Lopez  
+    Centaury
+    24/08/2025 hasta 30/08/2025
+    Masajes
+    1 mascota
+    3001234567
+    correo@email.com
+    Efectivo
+    Tengo una persona en silla de ruedas"
+    
+    EJEMPLO DE SALIDA JSON:
+    {{
+        "nombres_huespedes": ["Juan Perez", "Maria Lopez"],
+        "numero_acompanantes": "2",
+        "domo": "Centaury",
+        "fecha_entrada": "24/08/2025",
+        "fecha_salida": "30/08/2025",
+        "servicio_elegido": "Masajes",
+        "adicciones": "1 mascota",
+        "numero_contacto": "3001234567",
+        "email_contacto": "correo@email.com",
+        "metodo_pago": "Efectivo",
+        "comentarios_especiales": "Tengo una persona en silla de ruedas"
+    }}
 
     Solicitud del usuario: "{user_input}"
 
@@ -1231,6 +1262,10 @@ def parse_reservation_details(user_input):
                 parsed_json[field] = "N/A"
             elif field in ["servicio_elegido", "adicciones"]:
                 parsed_json[field] = "ninguno"
+            elif field == "metodo_pago":
+                parsed_json[field] = "No especificado"
+            elif field == "comentarios_especiales":
+                parsed_json[field] = "Ninguno"
             else:
                 parsed_json[field] = "N/A"
     
