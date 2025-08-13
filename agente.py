@@ -2197,9 +2197,38 @@ def get_reservas():
         # Obtener todas las reservas ordenadas por fecha de creación
         reservas = Reserva.query.order_by(Reserva.fecha_creacion.desc()).all()
         
-        # Formatear datos para el frontend
+        # Formatear datos para el frontend con mapeo correcto
         reservas_data = []
         for reserva in reservas:
+            # Procesar servicios - convertir string a array de objetos
+            servicios_array = []
+            if reserva.servicio_elegido and reserva.servicio_elegido != 'Ninguno':
+                # Dividir servicios por comas y crear objetos
+                servicios_string = reserva.servicio_elegido
+                servicios_lista = [s.strip() for s in servicios_string.split(',') if s.strip()]
+
+                for servicio in servicios_lista:
+                    servicios_array.append({
+                        'nombre': servicio,
+                        'precio': 0,  # Por defecto, se puede mejorar después
+                        'descripcion': ''
+                    })
+
+            # Calcular monto total (usar monto_total de BD o calcular básico)
+            monto_total = 0
+            if hasattr(reserva, 'monto_total') and reserva.monto_total:
+                monto_total = float(reserva.monto_total)
+            else:
+                # Precio básico por domo (fallback)
+                precios_base = {
+                    'antares': 650000,
+                    'polaris': 550000,
+                    'sirius': 450000,
+                    'centaury': 450000
+                }
+                domo_lower = (reserva.domo or '').lower()
+                monto_total = precios_base.get(domo_lower, 450000)
+
             reserva_item = {
                 'id': reserva.id,
                 'nombre': reserva.nombres_huespedes or 'No especificado',
@@ -2209,21 +2238,24 @@ def get_reservas():
                 'fechaEntrada': reserva.fecha_entrada.strftime('%Y-%m-%d') if reserva.fecha_entrada else None,
                 'fechaSalida': reserva.fecha_salida.strftime('%Y-%m-%d') if reserva.fecha_salida else None,
                 'numeroPersonas': reserva.cantidad_huespedes or 1,
-                'servicio_elegido': reserva.servicio_elegido or 'Ninguno',
-                'servicios': [],
-                'montoAPagar': float(getattr(reserva, 'monto_total', 0)),
-                'metodoPago': getattr(reserva, 'metodo_pago', 'No especificado'),
+                'servicios': servicios_array,
+                'montoAPagar': monto_total,
+                'metodoPago': getattr(reserva, 'metodo_pago', 'Pendiente'),
                 'observaciones': getattr(reserva, 'comentarios_especiales', ''),
-                'adicciones': reserva.adicciones or 'Ninguno',
+                'adicciones': reserva.adicciones or '',
                 'fecha_creacion': reserva.fecha_creacion.strftime('%Y-%m-%d %H:%M:%S') if hasattr(reserva, 'fecha_creacion') and reserva.fecha_creacion else None,
-                'estado': 'activa'
+                'estado': 'activa',
+                # Campos adicionales para compatibilidad
+                'servicio_elegido': reserva.servicio_elegido or 'Ninguno',
+                'numero_contacto': reserva.numero_contacto or reserva.numero_whatsapp or 'No proporcionado'
             }
             reservas_data.append(reserva_item)
         
         return jsonify({
             'success': True,
             'count': len(reservas_data),
-            'reservas': reservas_data
+            'reservas': reservas_data,
+            'timestamp': datetime.utcnow().isoformat()
         })
         
     except Exception as e:
