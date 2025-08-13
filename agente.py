@@ -206,22 +206,36 @@ elif DATABASE_URL:
     print("INFO: Usando DATABASE_URL genérica")
 
 db = None
+database_available = False  # ← NUEVA VARIABLE QUE FALTABA
 
 if database_url:
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    
+
     # Inicializar SQLAlchemy con validación de conexión
     try:
         db = SQLAlchemy(app)
         print("OK: SQLAlchemy inicializado correctamente")
+
+        # ← NUEVO: Verificar que la conexión funcione realmente
+        with app.app_context():
+            try:
+                db.engine.connect()
+                database_available = True  # ← MARCAR COMO DISPONIBLE
+                print("✅ Conexión a base de datos verificada exitosamente")
+            except Exception as conn_error:
+                print(f"❌ Error de conexión a BD: {conn_error}")
+                database_available = False  # ← MARCAR COMO NO DISPONIBLE
+
     except Exception as e:
         warning_msg = f"WARNING: Error al inicializar la base de datos: {e}\n[TIP] Funcionalidad de base de datos deshabilitada"
         print(warning_msg)
         db = None
+        database_available = False  # ← MARCAR COMO NO DISPONIBLE
 else:
     print("WARNING: Ninguna DATABASE_URL configurada - Funcionalidad de base de datos deshabilitada")
     print("TIP: Configura DATABASE_PRIVATE_URL, DATABASE_PUBLIC_URL o DATABASE_URL")
+    database_available = False  # ← MARCAR COMO NO DISPONIBLE
 
 # Modelo de datos para reservas (solo si hay base de datos)
 Reserva = None
@@ -368,12 +382,7 @@ db_initialized = initialize_database()
 MEMORY_DIR = "user_memories_data"
 try:
     os.makedirs(MEMORY_DIR, exist_ok=True)
-    # Verificar permisos de escritura
-    test_file = os.path.join(MEMORY_DIR, "test_write.tmp")
-    with open(test_file, 'w') as f:
-        f.write("test")
-    os.remove(test_file)
-    print(f"OK: Directorio de memoria creado con permisos correctos: {MEMORY_DIR}")
+    print(f"OK: Directorio de memoria creado: {MEMORY_DIR}")
 except Exception as e:
     error_msg = f"ERROR: Error al crear directorio de memoria: {e}\n[TIP] Verifica permisos de escritura"
     print(error_msg)
@@ -941,10 +950,7 @@ def get_memory_system_health() -> dict:
         return {"status": "error", "message": f"Error al obtener estadísticas: {e}"}
 
 # Ejecutar validaciones de sistema al inicio
-print("[VERIFYING] Verificando salud del sistema de memoria...")
 cleanup_corrupted_memory_files()
-memory_health = get_memory_system_health()
-print(f"[STATUS] Estado memoria: {memory_health['status']} | Archivos: {memory_health.get('total_files', 0)} | Tamaño: {memory_health.get('total_size_mb', 0)} MB")
 
 
 # Funciones de validación robusta para datos de reserva
@@ -1361,21 +1367,6 @@ def validate_and_process_reservation_data(parsed_data, from_number) -> tuple[boo
         return False, {}, errors
 
 # Funciones de manejo robusto del LLM y agente conversacional
-def test_llm_connection() -> tuple[bool, str]:
-    """Prueba la conexión con OpenAI LLM"""
-    try:
-        # Hacer una consulta simple para probar la conexión
-        test_response = llm("Responde solo: 'OK'")
-        if test_response and len(test_response.strip()) > 0:
-            print("OK: Conexión LLM OpenAI verificada")
-            return True, "Conexión exitosa"
-        else:
-            print("WARNING:  Conexión LLM OpenAI: respuesta vacía")
-            return False, "Respuesta vacía del LLM"
-    except Exception as e:
-        error_msg = f"Error de conexión LLM: {str(e)}"
-        print(f"ERROR: {error_msg}")
-        return False, error_msg
 
 def call_llm_with_retry(prompt: str, max_retries: int = 3, temperature: float = 0) -> tuple[bool, str, str]:
     """Llama al LLM con reintentos automáticos y manejo de errores"""
@@ -1587,17 +1578,6 @@ def run_agent_safe(agent, user_input: str, max_retries: int = 2) -> tuple[bool, 
 
 # VALIDACIONES DE SISTEMA AL INICIALIZAR (después de definir todas las funciones)
 
-print("[TESTING] Probando conexión con LLM OpenAI...")
-try:
-    llm_success, llm_msg = test_llm_connection()
-    if llm_success:
-        print(f"[STATUS] Estado LLM: OK: {llm_msg}")
-    else:
-        print(f"[STATUS] Estado LLM: ERROR: {llm_msg}")
-        print("WARNING:  El sistema continuará, pero funcionalidad conversacional puede estar limitada")
-except Exception as e:
-    print(f"ERROR: Error inesperado probando LLM: {e}")
-    print("WARNING:  El sistema continuará, pero funcionalidad conversacional puede estar limitada")
 
 print("[STARTING] Sistema inicializado - Iniciando rutas Flask...")
 
@@ -2255,12 +2235,37 @@ def get_reservas():
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    """Health check endpoint para monitoreo"""
-    return jsonify({
-        'status': 'healthy',
-        'timestamp': datetime.utcnow().isoformat(),
-        'database': 'connected' if database_available else 'disconnected'
-    })
+    """Health check endpoint para monitoreo mejorado"""
+    try:
+        # Status general de la aplicación
+        app_status = 'healthy'
+
+        # Status específico de base de datos
+        db_status = 'connected' if database_available else 'disconnected'
+
+        # Información adicional para debugging
+        response = {
+            'status': app_status,
+            'timestamp': datetime.utcnow().isoformat(),
+            'database': db_status,
+            'database_url_configured': bool(database_url),
+            'sqlalchemy_initialized': db is not None
+        }
+
+        # Si la BD no está disponible, devolver 503 (Service Unavailable)
+        if not database_available:
+            response['status'] = 'degraded'
+            return jsonify(response), 503
+
+        return jsonify(response), 200
+
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'timestamp': datetime.utcnow().isoformat(),
+            'error': str(e),
+            'database': 'unknown'
+        }), 500
 
 @app.route('/api/reservas', methods=['POST'])
 def create_reserva():
