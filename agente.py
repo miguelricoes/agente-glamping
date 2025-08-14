@@ -23,6 +23,7 @@ except ImportError:
     raise ImportError("ERROR: No se pudo importar Flask-SQLAlchemy. Instala: pip install Flask-SQLAlchemy")
 
 from datetime import datetime, date
+from werkzeug.security import generate_password_hash, check_password_hash
 
 
 print("Puerto asignado:", os.environ.get("PORT"))
@@ -248,8 +249,9 @@ else:
     print("TIP: Configura DATABASE_PRIVATE_URL, DATABASE_PUBLIC_URL o DATABASE_URL")
     database_available = False  # ← MARCAR COMO NO DISPONIBLE
 
-# Modelo de datos para reservas (solo si hay base de datos)
+# Modelos de datos (solo si hay base de datos)
 Reserva = None
+Usuario = None
 if db:
     class Reserva(db.Model):
         __tablename__ = 'reservas'
@@ -277,6 +279,94 @@ if db:
 
         def __repr__(self):
             return f'<Reserva {self.id}: {self.nombres_huespedes or "Usuario"}>'
+
+    # Modelo de Usuario para sistema de autenticación
+    class Usuario(db.Model):
+        __tablename__ = 'usuarios'
+        id = db.Column(db.Integer, primary_key=True)
+        nombre = db.Column(db.String(100), nullable=False)
+        email = db.Column(db.String(100), unique=True, nullable=False)
+        password_hash = db.Column(db.String(255), nullable=False)
+        rol = db.Column(db.String(20), default='limitado', nullable=False)  # 'completo' o 'limitado'
+        fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
+        creado_por = db.Column(db.String(100), default='juan@example.com')
+        activo = db.Column(db.Boolean, default=True)
+        ultimo_acceso = db.Column(db.DateTime)
+
+        def __repr__(self):
+            return f'<Usuario {self.id}: {self.nombre} ({self.email})>'
+
+# === FUNCIONES DE GESTIÓN DE USUARIOS ===
+def get_all_users():
+    """Obtener todos los usuarios"""
+    if not db or not Usuario:
+        return []
+
+    usuarios = Usuario.query.order_by(Usuario.fecha_creacion.desc()).all()
+    return [{
+        'id': u.id,
+        'nombre': u.nombre,
+        'email': u.email,
+        'rol': u.rol,
+        'fecha_creacion': u.fecha_creacion.isoformat() if u.fecha_creacion else None,
+        'ultimo_acceso': u.ultimo_acceso.isoformat() if u.ultimo_acceso else None,
+        'activo': u.activo
+    } for u in usuarios]
+
+def create_user_function(nombre, email, password, rol='limitado'):
+    """Crear nuevo usuario"""
+    if not db or not Usuario:
+        raise Exception("Base de datos no disponible")
+
+    try:
+        password_hash = generate_password_hash(password)
+        nuevo_usuario = Usuario(
+            nombre=nombre,
+            email=email,
+            password_hash=password_hash,
+            rol=rol
+        )
+        db.session.add(nuevo_usuario)
+        db.session.commit()
+        return nuevo_usuario.id
+    except Exception as e:
+        db.session.rollback()
+        raise e
+
+def update_user_function(user_id, nombre, email, rol, activo=True):
+    """Actualizar usuario"""
+    if not db or not Usuario:
+        return False
+
+    try:
+        user = Usuario.query.get(user_id)
+        if user:
+            user.nombre = nombre
+            user.email = email
+            user.rol = rol
+            user.activo = activo
+            db.session.commit()
+            return True
+        return False
+    except Exception:
+        db.session.rollback()
+        return False
+
+def delete_user_function(user_id):
+    """Eliminar usuario (soft delete)"""
+    if not db or not Usuario:
+        return False
+
+    try:
+        user = Usuario.query.get(user_id)
+        if user:
+            user.activo = False
+            db.session.commit()
+            return True
+        return False
+    except Exception:
+        db.session.rollback()
+        return False
 
 def validar_campos_importantes_reserva(data):
     """
@@ -3360,6 +3450,70 @@ def delete_reserva(reserva_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+# === ENDPOINTS DE USUARIOS ===
+@app.route('/api/usuarios', methods=['GET'])
+def get_usuarios():
+    """Obtener lista de usuarios"""
+    try:
+        usuarios = get_all_users()
+        return jsonify(usuarios)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/usuarios', methods=['POST'])
+def create_user_endpoint():
+    """Crear nuevo usuario"""
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'Datos requeridos'}), 400
+
+        user_id = create_user_function(
+            data.get('nombre', ''),
+            data.get('email', ''),
+            data.get('password', ''),
+            data.get('rol', 'limitado')
+        )
+        return jsonify({
+            'success': True,
+            'id': user_id,
+            'message': 'Usuario creado exitosamente'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/api/usuarios/<int:user_id>', methods=['PUT'])
+def update_user_endpoint(user_id):
+    """Actualizar usuario"""
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'Datos requeridos'}), 400
+
+        success = update_user_function(
+            user_id,
+            data.get('nombre', ''),
+            data.get('email', ''),
+            data.get('rol', 'limitado'),
+            data.get('activo', True)
+        )
+        if success:
+            return jsonify({'success': True, 'message': 'Usuario actualizado'})
+        return jsonify({'error': 'Usuario no encontrado'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/api/usuarios/<int:user_id>', methods=['DELETE'])
+def delete_user_endpoint(user_id):
+    """Eliminar usuario"""
+    try:
+        success = delete_user_function(user_id)
+        if success:
+            return jsonify({'success': True, 'message': 'Usuario eliminado'})
+        return jsonify({'error': 'Usuario no encontrado'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 @app.route("/")
 def home():

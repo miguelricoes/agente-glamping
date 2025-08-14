@@ -14,3 +14,4 @@ sentence-transformers==2.2.2
 twilio==8.10.0
 tiktoken>=0.5.2,<1.0.0
 pinecone-client==3.0.0
+Werkzeug==2.3.7
