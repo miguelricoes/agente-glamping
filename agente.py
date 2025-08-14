@@ -623,6 +623,42 @@ def politicas_privacidad_func(query: str) -> str:
 def politicas_cancelacion_func(query: str) -> str:
     return call_chain_safe("politicas_cancelacion", query)
 
+# Herramienta para consultar disponibilidades
+def consultar_disponibilidades_glamping(consulta_usuario: str) -> str:
+    """
+    Consulta las disponibilidades de domos en el glamping
+
+    Args:
+        consulta_usuario: La consulta del usuario sobre disponibilidades
+
+    Returns:
+        Respuesta con información de disponibilidades
+    """
+    try:
+        # Hacer solicitud a nuestro propio endpoint
+        import requests
+        import json
+
+        # URL de nuestro propio servidor
+        base_url = os.getenv('BASE_URL', 'http://localhost:5000')
+
+        response = requests.post(
+            f"{base_url}/api/agente/disponibilidades",
+            json={'consulta': consulta_usuario},
+            headers={'Content-Type': 'application/json'},
+            timeout=10
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            return data['respuesta_agente']
+        else:
+            return "No pude consultar las disponibilidades en este momento. Inténtalo más tarde."
+
+    except Exception as e:
+        print(f"Error consultando disponibilidades: {e}")
+        return "Ocurrió un error al consultar las disponibilidades. Por favor inténtalo de nuevo."
+
 # Esta clase de Herramienta para solicitar datos de reserva es un buen enfoque.
 # El agente la "llama" y luego tu código Flask interpreta la respuesta
 # "REQUEST_RESERVATION_DETAILS" para iniciar el flujo.
@@ -639,6 +675,13 @@ class ReservationRequestTool(BaseTool):
 
 tools = [
     ReservationRequestTool(), # Herramienta para iniciar reservas
+    
+    # === NUEVA HERRAMIENTA DE DISPONIBILIDADES ===
+    Tool(
+        name="ConsultarDisponibilidades",
+        func=consultar_disponibilidades_glamping,
+        description="Útil para consultar disponibilidades de domos, fechas específicas, capacidad y precios. Úsala cuando el usuario pregunte sobre disponibilidad, fechas libres, domos disponibles, si hay espacio para cierta cantidad de personas, o quiera saber qué opciones tiene para hospedarse."
+    ),
     
     # === HERRAMIENTAS ORIGINALES ===
     Tool(
@@ -1964,6 +2007,30 @@ def whatsapp_webhook():
         print(f"[{from_number}] Respuesta: '{agent_answer}'")
     return str(resp)
 
+def detectar_intencion_consulta(user_input: str) -> dict:
+    """
+    Detecta si el usuario está consultando disponibilidades
+    """
+    user_input_lower = user_input.lower()
+
+    keywords_disponibilidad = [
+        'disponible', 'disponibles', 'disponibilidad',
+        'libre', 'libres', 'ocupado', 'ocupados',
+        'fechas', 'calendario', 'cuando',
+        'hay espacio', 'tienen cupo',
+        'que domos', 'cual domo', 'cuales domos',
+        'reservar para', 'puedo reservar',
+        'esta libre', 'estan libres'
+    ]
+
+    keywords_encontradas = [kw for kw in keywords_disponibilidad if kw in user_input_lower]
+
+    return {
+        'es_consulta_disponibilidad': len(keywords_encontradas) > 0,
+        'confianza': len(keywords_encontradas) / len(keywords_disponibilidad),
+        'keywords_detectadas': keywords_encontradas
+    }
+
 @app.route("/chat", methods=["POST"])
 def chat():
     data = request.get_json()
@@ -2200,6 +2267,30 @@ def chat():
             user_state["reserva_data"] = {}
     else:
         # Procesamiento normal con el agente robusto si no hay flujo de reserva activo
+        
+        # Detectar si es consulta de disponibilidad
+        intencion = detectar_intencion_consulta(user_input)
+
+        # Preparar el input para el agente
+        agent_input = user_input
+        
+        if intencion['es_consulta_disponibilidad'] and intencion['confianza'] > 0.1:
+            # Es muy probable que sea consulta de disponibilidad
+            print(f"🔍 Detectada consulta de disponibilidad: {intencion['keywords_detectadas']}")
+            
+            # Forzar el uso de la herramienta de disponibilidades
+            agent_input = f"""
+El usuario está consultando sobre disponibilidades del glamping: "{user_input}"
+
+INSTRUCCIÓN ESPECIAL: Debes usar la herramienta 'consultar_disponibilidades' para responder esta consulta.
+
+Contexto de la consulta:
+- Keywords detectadas: {intencion['keywords_detectadas']}
+- Confianza: {intencion['confianza']:.2%}
+
+Consulta original del usuario: {user_input}
+"""
+        
         # Inicializar agente con manejo robusto
         init_success, agent, init_error = initialize_agent_safe(tools, memory, max_retries=3)
         
@@ -2208,7 +2299,7 @@ def chat():
             response_output = "Disculpa, nuestro sistema conversacional está experimentando problemas temporales. Por favor, intenta de nuevo en un momento."
         else:
             # Ejecutar agente con manejo robusto
-            run_success, result, run_error = run_agent_safe(agent, user_input, max_retries=2)
+            run_success, result, run_error = run_agent_safe(agent, agent_input, max_retries=2)
             
             if run_success:
                 response_output = result
@@ -2401,6 +2492,402 @@ def get_reservas_stats():
     except Exception as e:
         print(f"ERROR en get_reservas_stats: {e}")
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/disponibilidades', methods=['GET'])
+def get_disponibilidades():
+    """
+    Endpoint especializado para consultar disponibilidades de domos y fechas
+    Optimizado para el agente IA
+    """
+    if not database_available or not db:
+        return jsonify({
+            'error': 'Base de datos no disponible',
+            'disponibilidades': {}
+        }), 503
+
+    try:
+        # Obtener parámetros de consulta
+        fecha_inicio = request.args.get('fecha_inicio')  # YYYY-MM-DD
+        fecha_fin = request.args.get('fecha_fin')        # YYYY-MM-DD
+        domo_especifico = request.args.get('domo')       # nombre del domo
+        personas = request.args.get('personas', type=int) # número de personas
+
+        # Si no se especifican fechas, usar el próximo mes
+        if not fecha_inicio:
+            from datetime import datetime, timedelta
+            hoy = datetime.now().date()
+            fecha_inicio = hoy.strftime('%Y-%m-%d')
+            fecha_fin = (hoy + timedelta(days=30)).strftime('%Y-%m-%d')
+        elif not fecha_fin:
+            from datetime import datetime, timedelta
+            fecha_inicio_obj = datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
+            fecha_fin = (fecha_inicio_obj + timedelta(days=7)).strftime('%Y-%m-%d')
+
+        # Obtener todas las reservas activas en el rango de fechas
+        reservas_activas = Reserva.query.filter(
+            Reserva.fecha_entrada <= fecha_fin,
+            Reserva.fecha_salida >= fecha_inicio
+        ).all()
+
+        # Información de domos disponibles
+        domos_info = {
+            'antares': {
+                'nombre': 'Antares',
+                'capacidad_maxima': 2,
+                'descripcion': 'Nido de amor con jacuzzi privado',
+                'precio_base': 650000,
+                'caracteristicas': ['Jacuzzi privado', 'Vista panorámica', 'Ideal para parejas']
+            },
+            'polaris': {
+                'nombre': 'Polaris',
+                'capacidad_maxima': 6,
+                'descripcion': 'Amplio domo familiar con sofá cama',
+                'precio_base': 550000,
+                'caracteristicas': ['Sofá cama', 'Espacio amplio', 'Ideal para familias']
+            },
+            'sirius': {
+                'nombre': 'Sirius',
+                'capacidad_maxima': 2,
+                'descripcion': 'Domo acogedor de un piso',
+                'precio_base': 450000,
+                'caracteristicas': ['Un piso', 'Acogedor', 'Vista al valle']
+            },
+            'centaury': {
+                'nombre': 'Centaury',
+                'capacidad_maxima': 2,
+                'descripcion': 'Domo íntimo con ambiente romántico',
+                'precio_base': 450000,
+                'caracteristicas': ['Ambiente romántico', 'Decoración especial', 'Privacidad']
+            }
+        }
+
+        # Calcular disponibilidades día por día
+        from datetime import datetime, timedelta
+        fecha_actual = datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
+        fecha_limite = datetime.strptime(fecha_fin, '%Y-%m-%d').date()
+
+        disponibilidades_por_fecha = {}
+        domos_disponibles_resumen = []
+        fechas_completamente_libres = []
+
+        while fecha_actual <= fecha_limite:
+            fecha_str = fecha_actual.strftime('%Y-%m-%d')
+
+            # Encontrar reservas que ocupan esta fecha
+            reservas_del_dia = [r for r in reservas_activas
+                              if r.fecha_entrada <= fecha_actual < r.fecha_salida]
+
+            domos_ocupados = [r.domo.lower() for r in reservas_del_dia if r.domo]
+            domos_disponibles = [domo for domo in domos_info.keys() if domo not in domos_ocupados]
+
+            # Filtrar por capacidad si se especifica número de personas
+            if personas:
+                domos_disponibles = [
+                    domo for domo in domos_disponibles
+                    if domos_info[domo]['capacidad_maxima'] >= personas
+                ]
+
+            # Filtrar por domo específico si se solicita
+            if domo_especifico:
+                domo_lower = domo_especifico.lower()
+                domos_disponibles = [domo for domo in domos_disponibles if domo == domo_lower]
+
+            disponibilidades_por_fecha[fecha_str] = {
+                'fecha': fecha_str,
+                'fecha_formateada': fecha_actual.strftime('%A, %d de %B de %Y'),
+                'domos_disponibles': domos_disponibles,
+                'domos_ocupados': domos_ocupados,
+                'total_disponibles': len(domos_disponibles),
+                'es_fin_de_semana': fecha_actual.weekday() >= 5,
+                'detalles_domos': {
+                    domo: domos_info[domo] for domo in domos_disponibles
+                }
+            }
+
+            # Recopilar información para resumen
+            for domo in domos_disponibles:
+                if domo not in [d['domo'] for d in domos_disponibles_resumen]:
+                    domos_disponibles_resumen.append({
+                        'domo': domo,
+                        'info': domos_info[domo],
+                        'fechas_disponibles': []
+                    })
+
+            # Agregar fechas a cada domo disponible
+            for item in domos_disponibles_resumen:
+                if item['domo'] in domos_disponibles:
+                    item['fechas_disponibles'].append(fecha_str)
+
+            # Identificar fechas completamente libres
+            if len(domos_disponibles) == len(domos_info):
+                fechas_completamente_libres.append(fecha_str)
+
+            fecha_actual += timedelta(days=1)
+
+        # Generar respuesta optimizada para el agente IA
+        respuesta = {
+            'success': True,
+            'parametros_consulta': {
+                'fecha_inicio': fecha_inicio,
+                'fecha_fin': fecha_fin,
+                'domo_solicitado': domo_especifico,
+                'personas': personas
+            },
+            'resumen_general': {
+                'total_domos': len(domos_info),
+                'domos_con_disponibilidad': len(domos_disponibles_resumen),
+                'fechas_completamente_libres': len(fechas_completamente_libres),
+                'periodo_consultado_dias': (datetime.strptime(fecha_fin, '%Y-%m-%d').date() -
+                                          datetime.strptime(fecha_inicio, '%Y-%m-%d').date()).days + 1
+            },
+            'domos_disponibles': domos_disponibles_resumen,
+            'fechas_completamente_libres': fechas_completamente_libres,
+            'disponibilidades_detalladas': disponibilidades_por_fecha,
+            'recomendaciones_agente': generar_recomendaciones_disponibilidad(
+                domos_disponibles_resumen,
+                fechas_completamente_libres,
+                personas,
+                domo_especifico
+            ),
+            'timestamp': datetime.utcnow().isoformat()
+        }
+
+        return jsonify(respuesta), 200
+
+    except Exception as e:
+        print(f"Error en endpoint /api/disponibilidades: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Error consultando disponibilidades: {str(e)}',
+            'disponibilidades': {}
+        }), 500
+
+
+def generar_recomendaciones_disponibilidad(domos_disponibles, fechas_libres, personas, domo_especifico):
+    """
+    Genera recomendaciones en lenguaje natural para el agente IA
+    """
+    recomendaciones = []
+
+    if not domos_disponibles:
+        return ["No hay disponibilidad en las fechas consultadas. Sugiere fechas alternativas al cliente."]
+
+    # Recomendaciones por número de personas
+    if personas:
+        if personas <= 2:
+            domos_pareja = [d for d in domos_disponibles if d['info']['capacidad_maxima'] == 2]
+            if domos_pareja:
+                recomendaciones.append(f"Para {personas} persona(s), recomiendo especialmente: {', '.join([d['info']['nombre'] for d in domos_pareja[:2]])}")
+
+        elif personas > 2:
+            domos_familiares = [d for d in domos_disponibles if d['info']['capacidad_maxima'] > 2]
+            if domos_familiares:
+                recomendaciones.append(f"Para {personas} personas, el domo ideal es: {domos_familiares[0]['info']['nombre']} (capacidad: {domos_familiares[0]['info']['capacidad_maxima']})")
+            else:
+                recomendaciones.append(f"Para {personas} personas, lamentablemente ningún domo tiene capacidad suficiente en estas fechas.")
+
+    # Recomendaciones por fechas
+    if fechas_libres:
+        if len(fechas_libres) >= 3:
+            recomendaciones.append(f"Excelente disponibilidad: {len(fechas_libres)} fechas con todos los domos libres.")
+        else:
+            recomendaciones.append(f"Disponibilidad limitada: solo {len(fechas_libres)} fechas con plena disponibilidad.")
+
+    # Recomendaciones específicas por domo
+    if domo_especifico:
+        domo_solicitado = next((d for d in domos_disponibles if d['domo'] == domo_especifico.lower()), None)
+        if domo_solicitado:
+            recomendaciones.append(f"¡Buenas noticias! El domo {domo_solicitado['info']['nombre']} está disponible en {len(domo_solicitado['fechas_disponibles'])} fechas.")
+        else:
+            recomendaciones.append(f"El domo {domo_especifico} no está disponible en estas fechas. Ofrece alternativas similares.")
+
+    # Recomendaciones generales
+    if len(domos_disponibles) > 0:
+        mejor_opcion = max(domos_disponibles, key=lambda x: len(x['fechas_disponibles']))
+        recomendaciones.append(f"Mayor disponibilidad: {mejor_opcion['info']['nombre']} ({len(mejor_opcion['fechas_disponibles'])} fechas disponibles)")
+
+    return recomendaciones
+
+@app.route('/api/agente/disponibilidades', methods=['POST'])
+def agente_consultar_disponibilidades():
+    """
+    Endpoint especializado para consultas del agente IA
+    Acepta consultas en lenguaje natural y devuelve respuestas estructuradas
+    """
+    if not database_available or not db:
+        return jsonify({
+            'respuesta_agente': 'Lo siento, no puedo consultar las disponibilidades en este momento. La base de datos no está disponible.',
+            'tiene_disponibilidad': False
+        }), 503
+
+    try:
+        data = request.get_json()
+        consulta_usuario = data.get('consulta', '')
+
+        # Extraer parámetros de la consulta (esto se puede mejorar con NLP)
+        parametros_extraidos = extraer_parametros_consulta(consulta_usuario)
+
+        # Realizar consulta de disponibilidades
+        query_params = {}
+        if parametros_extraidos['fecha_inicio']:
+            query_params['fecha_inicio'] = parametros_extraidos['fecha_inicio']
+        if parametros_extraidos['fecha_fin']:
+            query_params['fecha_fin'] = parametros_extraidos['fecha_fin']
+        if parametros_extraidos['domo']:
+            query_params['domo'] = parametros_extraidos['domo']
+        if parametros_extraidos['personas']:
+            query_params['personas'] = parametros_extraidos['personas']
+
+        # Simular llamada interna al endpoint de disponibilidades
+        with app.test_request_context(f'/api/disponibilidades', query_string=query_params):
+            respuesta_disponibilidades = get_disponibilidades()
+            data_disponibilidades = respuesta_disponibilidades[0].get_json()
+
+        if not data_disponibilidades['success']:
+            return jsonify({
+                'respuesta_agente': 'No pude consultar las disponibilidades. Inténtalo más tarde.',
+                'tiene_disponibilidad': False
+            }), 500
+
+        # Generar respuesta en lenguaje natural para el agente
+        respuesta_natural = generar_respuesta_natural_disponibilidades(
+            data_disponibilidades,
+            parametros_extraidos,
+            consulta_usuario
+        )
+
+        return jsonify({
+            'respuesta_agente': respuesta_natural,
+            'tiene_disponibilidad': len(data_disponibilidades['domos_disponibles']) > 0,
+            'datos_tecnicos': data_disponibilidades,
+            'parametros_detectados': parametros_extraidos,
+            'timestamp': datetime.utcnow().isoformat()
+        }), 200
+
+    except Exception as e:
+        print(f"Error en /api/agente/disponibilidades: {str(e)}")
+        return jsonify({
+            'respuesta_agente': 'Lo siento, ocurrió un error al consultar las disponibilidades. Por favor inténtalo de nuevo.',
+            'tiene_disponibilidad': False,
+            'error_tecnico': str(e)
+        }), 500
+
+
+def extraer_parametros_consulta(consulta):
+    """
+    Extrae parámetros de una consulta en lenguaje natural
+    """
+    import re
+    from datetime import datetime, timedelta
+
+    parametros = {
+        'fecha_inicio': None,
+        'fecha_fin': None,
+        'domo': None,
+        'personas': None
+    }
+
+    consulta_lower = consulta.lower()
+
+    # Detectar fechas
+    patrones_fecha = [
+        r'(\d{1,2})/(\d{1,2})/(\d{4})',  # DD/MM/YYYY
+        r'(\d{4})-(\d{1,2})-(\d{1,2})',  # YYYY-MM-DD
+        r'(\d{1,2}) de (\w+)',           # DD de MMMM
+    ]
+
+    for patron in patrones_fecha:
+        matches = re.findall(patron, consulta_lower)
+        if matches:
+            # Procesar primera fecha encontrada como inicio
+            # (simplificado - se puede mejorar)
+            break
+
+    # Detectar domos
+    domos_nombres = {
+        'antares': ['antares'],
+        'polaris': ['polaris'],
+        'sirius': ['sirius'],
+        'centaury': ['centaury', 'centary']
+    }
+
+    for domo_key, variantes in domos_nombres.items():
+        for variante in variantes:
+            if variante in consulta_lower:
+                parametros['domo'] = domo_key
+                break
+
+    # Detectar número de personas
+    patrones_personas = [
+        r'(\d+)\s*persona[s]?',
+        r'(\d+)\s*huésped[es]?',
+        r'somos\s*(\d+)',
+        r'para\s*(\d+)'
+    ]
+
+    for patron in patrones_personas:
+        match = re.search(patron, consulta_lower)
+        if match:
+            parametros['personas'] = int(match.group(1))
+            break
+
+    # Si no se especifican fechas, usar los próximos 30 días
+    if not parametros['fecha_inicio']:
+        hoy = datetime.now().date()
+        parametros['fecha_inicio'] = hoy.strftime('%Y-%m-%d')
+        parametros['fecha_fin'] = (hoy + timedelta(days=30)).strftime('%Y-%m-%d')
+
+    return parametros
+
+
+def generar_respuesta_natural_disponibilidades(data, parametros, consulta_original):
+    """
+    Genera una respuesta en lenguaje natural basada en los datos de disponibilidad
+    """
+    if not data['success']:
+        return "Lo siento, no pude consultar las disponibilidades en este momento."
+
+    resumen = data['resumen_general']
+    domos_disponibles = data['domos_disponibles']
+    recomendaciones = data['recomendaciones_agente']
+
+    respuesta = []
+
+    # Saludo y contexto
+    respuesta.append("¡Por supuesto! He revisado nuestro calendario de disponibilidades.")
+
+    # Información general
+    if resumen['domos_con_disponibilidad'] == 0:
+        respuesta.append("Lamentablemente, no tenemos disponibilidad en las fechas que consultas.")
+        respuesta.append("¿Te gustaría que revise fechas alternativas?")
+        return " ".join(respuesta)
+
+    # Disponibilidad encontrada
+    if resumen['fechas_completamente_libres'] > 0:
+        respuesta.append(f"¡Excelente! Tenemos {resumen['fechas_completamente_libres']} fechas con disponibilidad completa.")
+
+    respuesta.append(f"En total, {resumen['domos_con_disponibilidad']} de nuestros {resumen['total_domos']} domos tienen disponibilidad.")
+
+    # Detalles por domo
+    if len(domos_disponibles) <= 2:
+        for domo in domos_disponibles:
+            info = domo['info']
+            dias_disponibles = len(domo['fechas_disponibles'])
+            respuesta.append(f"\n🏠 **{info['nombre']}**: {info['descripcion']} - Disponible {dias_disponibles} días (capacidad: {info['capacidad_maxima']} personas, desde ${info['precio_base']:,}/noche)")
+    else:
+        respuesta.append(f"\nTenemos varios domos disponibles:")
+        for domo in domos_disponibles[:3]:  # Mostrar solo los primeros 3
+            info = domo['info']
+            respuesta.append(f"• {info['nombre']} (${info['precio_base']:,}/noche)")
+
+    # Agregar recomendaciones del sistema
+    if recomendaciones:
+        respuesta.append(f"\n💡 **Mi recomendación**: {recomendaciones[0]}")
+
+    # Llamada a la acción
+    respuesta.append("\n¿Te gustaría que te ayude con algún domo en particular o prefieres que te reserve fechas específicas?")
+
+    return " ".join(respuesta)
 
 @app.route('/health', methods=['GET'])
 def health_check():
