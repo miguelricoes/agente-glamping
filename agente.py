@@ -234,9 +234,9 @@ if database_url:
             try:
                 db.engine.connect()
                 database_available = True  # ← MARCAR COMO DISPONIBLE
-                print("✅ Conexión a base de datos verificada exitosamente")
+                print("OK: Conexion a base de datos verificada exitosamente")
             except Exception as conn_error:
-                print(f"❌ Error de conexión a BD: {conn_error}")
+                print(f"ERROR: Error de conexion a BD: {conn_error}")
                 database_available = False  # ← MARCAR COMO NO DISPONIBLE
 
     except Exception as e:
