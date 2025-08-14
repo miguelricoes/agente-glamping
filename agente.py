@@ -24,6 +24,8 @@ except ImportError:
 
 from datetime import datetime, date
 from werkzeug.security import generate_password_hash, check_password_hash
+import random
+import string
 
 
 print("Puerto asignado:", os.environ.get("PORT"))
@@ -287,48 +289,95 @@ if db:
         nombre = db.Column(db.String(100), nullable=False)
         email = db.Column(db.String(100), unique=True, nullable=False)
         password_hash = db.Column(db.String(255), nullable=False)
-        rol = db.Column(db.String(20), default='limitado', nullable=False)  # 'completo' o 'limitado'
+        temp_password = db.Column(db.String(50))  # NUEVO: Contraseña temporal visible
+        rol = db.Column(db.String(20), default='limitado', nullable=False)
         fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
         creado_por = db.Column(db.String(100), default='juan@example.com')
         activo = db.Column(db.Boolean, default=True)
         ultimo_acceso = db.Column(db.DateTime)
+        password_changed = db.Column(db.Boolean, default=False)  # NUEVO: Si cambió contraseña
 
         def __repr__(self):
             return f'<Usuario {self.id}: {self.nombre} ({self.email})>'
 
+# === FUNCIONES DE GENERACIÓN DE CONTRASEÑAS ===
+def generate_random_password(length=8):
+    """Generar contraseña aleatoria segura"""
+    # Caracteres permitidos: letras mayúsculas, minúsculas y números
+    characters = string.ascii_letters + string.digits
+    # Evitar caracteres confusos como 0, O, l, I
+    characters = characters.replace('0', '').replace('O', '').replace('l', '').replace('I', '')
+
+    password = ''.join(random.choice(characters) for _ in range(length))
+    return password
+
+def generate_simple_password():
+    """Generar contraseña simple pero segura"""
+    # Formato: palabra + número (ej: Mesa2024, Casa5847)
+    words = ['Mesa', 'Casa', 'Luna', 'Sol', 'Mar', 'Rio', 'Pan', 'Flor', 'Luz', 'Ave']
+    word = random.choice(words)
+    number = random.randint(1000, 9999)
+    return f"{word}{number}"
+
 # === FUNCIONES DE GESTIÓN DE USUARIOS ===
-def get_all_users():
-    """Obtener todos los usuarios"""
+def get_all_users(include_passwords=False):
+    """Obtener todos los usuarios (con contraseñas solo para admin)"""
     if not db or not Usuario:
         return []
 
     usuarios = Usuario.query.order_by(Usuario.fecha_creacion.desc()).all()
-    return [{
-        'id': u.id,
-        'nombre': u.nombre,
-        'email': u.email,
-        'rol': u.rol,
-        'fecha_creacion': u.fecha_creacion.isoformat() if u.fecha_creacion else None,
-        'ultimo_acceso': u.ultimo_acceso.isoformat() if u.ultimo_acceso else None,
-        'activo': u.activo
-    } for u in usuarios]
+    result = []
 
-def create_user_function(nombre, email, password, rol='limitado'):
-    """Crear nuevo usuario"""
+    for u in usuarios:
+        user_data = {
+            'id': u.id,
+            'nombre': u.nombre,
+            'email': u.email,
+            'rol': u.rol,
+            'fecha_creacion': u.fecha_creacion.isoformat() if u.fecha_creacion else None,
+            'ultimo_acceso': u.ultimo_acceso.isoformat() if u.ultimo_acceso else None,
+            'activo': u.activo,
+            'password_changed': u.password_changed or False
+        }
+
+        # Solo incluir contraseña si se solicita (solo para admin)
+        if include_passwords and u.temp_password:
+            user_data['temp_password'] = u.temp_password
+
+        result.append(user_data)
+
+    return result
+
+def create_user_function(nombre, email, password=None, rol='limitado'):
+    """Crear nuevo usuario con contraseña generada automáticamente"""
     if not db or not Usuario:
         raise Exception("Base de datos no disponible")
 
     try:
-        password_hash = generate_password_hash(password)
+        # Si no se proporciona contraseña, generar una automáticamente
+        if not password:
+            temp_password = generate_simple_password()
+        else:
+            temp_password = password
+
+        password_hash = generate_password_hash(temp_password)
+
         nuevo_usuario = Usuario(
             nombre=nombre,
             email=email,
             password_hash=password_hash,
-            rol=rol
+            temp_password=temp_password,  # Guardar contraseña temporal
+            rol=rol,
+            password_changed=False  # Contraseña generada por admin
         )
+
         db.session.add(nuevo_usuario)
         db.session.commit()
-        return nuevo_usuario.id
+
+        return {
+            'id': nuevo_usuario.id,
+            'temp_password': temp_password  # Devolver para mostrar al admin
+        }
     except Exception as e:
         db.session.rollback()
         raise e
@@ -3456,28 +3505,34 @@ def delete_reserva(reserva_id):
 def get_usuarios():
     """Obtener lista de usuarios"""
     try:
-        usuarios = get_all_users()
+        # Verificar si se solicitan contraseñas (solo para admin)
+        include_passwords = request.args.get('include_passwords', 'false').lower() == 'true'
+
+        usuarios = get_all_users(include_passwords=include_passwords)
         return jsonify(usuarios)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/usuarios', methods=['POST'])
 def create_user_endpoint():
-    """Crear nuevo usuario"""
+    """Crear nuevo usuario con contraseña generada"""
     try:
         data = request.json
         if not data:
             return jsonify({'error': 'Datos requeridos'}), 400
 
-        user_id = create_user_function(
+        # No requerir contraseña - se genera automáticamente
+        result = create_user_function(
             data.get('nombre', ''),
             data.get('email', ''),
-            data.get('password', ''),
+            data.get('password'),  # Opcional
             data.get('rol', 'limitado')
         )
+
         return jsonify({
             'success': True,
-            'id': user_id,
+            'id': result['id'],
+            'temp_password': result['temp_password'],  # Devolver para mostrar
             'message': 'Usuario creado exitosamente'
         })
     except Exception as e:
@@ -3582,6 +3637,35 @@ def verify_user():
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/usuarios/<int:user_id>/regenerate-password', methods=['POST'])
+def regenerate_password(user_id):
+    """Regenerar contraseña para un usuario"""
+    try:
+        if not db or not Usuario:
+            return jsonify({'error': 'Base de datos no disponible'}), 500
+
+        user = Usuario.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'Usuario no encontrado'}), 404
+
+        # Generar nueva contraseña
+        new_password = generate_simple_password()
+        user.password_hash = generate_password_hash(new_password)
+        user.temp_password = new_password
+        user.password_changed = False
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'temp_password': new_password,
+            'message': 'Contraseña regenerada exitosamente'
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
 
 @app.route("/")
 def home():
