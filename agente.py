@@ -626,38 +626,237 @@ def politicas_cancelacion_func(query: str) -> str:
 # Herramienta para consultar disponibilidades
 def consultar_disponibilidades_glamping(consulta_usuario: str) -> str:
     """
-    Consulta las disponibilidades de domos en el glamping
-
-    Args:
-        consulta_usuario: La consulta del usuario sobre disponibilidades
-
-    Returns:
-        Respuesta con información de disponibilidades
+    Consulta las disponibilidades de domos - VERSIÓN CORREGIDA
     """
     try:
-        # Hacer solicitud a nuestro propio endpoint
-        import requests
-        import json
+        print(f"🔍 [AGENTE] Consultando disponibilidades: {consulta_usuario}")
 
-        # URL de nuestro propio servidor
-        base_url = os.getenv('BASE_URL', 'http://localhost:5000')
+        # Verificar BD disponible
+        if not database_available or not db:
+            return "Lo siento, no puedo consultar las disponibilidades en este momento. La base de datos no está disponible."
 
-        response = requests.post(
-            f"{base_url}/api/agente/disponibilidades",
-            json={'consulta': consulta_usuario},
-            headers={'Content-Type': 'application/json'},
-            timeout=10
+        # Extraer parámetros de la consulta
+        parametros = extraer_parametros_consulta(consulta_usuario)
+        print(f"📊 [AGENTE] Parámetros extraídos: {parametros}")
+
+        # Si no hay fecha específica, usar próximos 30 días
+        if not parametros['fecha_inicio']:
+            from datetime import datetime, timedelta
+            hoy = datetime.now().date()
+            parametros['fecha_inicio'] = hoy.strftime('%Y-%m-%d')
+            parametros['fecha_fin'] = (hoy + timedelta(days=30)).strftime('%Y-%m-%d')
+        elif not parametros['fecha_fin']:
+            from datetime import datetime, timedelta
+            fecha_obj = datetime.strptime(parametros['fecha_inicio'], '%Y-%m-%d').date()
+            parametros['fecha_fin'] = (fecha_obj + timedelta(days=1)).strftime('%Y-%m-%d')
+
+        # CONSULTAR DIRECTAMENTE LA BD (sin HTTP)
+        disponibilidades = obtener_disponibilidades_calendario(
+            fecha_inicio=parametros['fecha_inicio'],
+            fecha_fin=parametros['fecha_fin'],
+            domo_especifico=parametros['domo'],
+            personas=parametros['personas']
         )
 
-        if response.status_code == 200:
-            data = response.json()
-            return data['respuesta_agente']
-        else:
-            return "No pude consultar las disponibilidades en este momento. Inténtalo más tarde."
+        # Generar respuesta natural
+        respuesta = generar_respuesta_disponibilidades(disponibilidades, parametros, consulta_usuario)
+
+        print(f"✅ [AGENTE] Respuesta: {respuesta[:100]}...")
+        return respuesta
 
     except Exception as e:
-        print(f"Error consultando disponibilidades: {e}")
-        return "Ocurrió un error al consultar las disponibilidades. Por favor inténtalo de nuevo."
+        print(f"❌ [AGENTE] Error en consulta: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return f"Disculpa, tuve un problema técnico consultando las disponibilidades. Error: {str(e)}"
+
+def obtener_disponibilidades_calendario(fecha_inicio, fecha_fin, domo_especifico=None, personas=None):
+    """
+    Obtiene disponibilidades consultando directamente la BD
+    Misma lógica que usa el calendario del panel
+    """
+    try:
+        print(f"🗄️ [BD] Consultando reservas desde {fecha_inicio} hasta {fecha_fin}")
+
+        # Obtener reservas activas en el rango (IGUAL QUE EL CALENDARIO)
+        reservas_activas = Reserva.query.filter(
+            Reserva.fecha_entrada <= fecha_fin,
+            Reserva.fecha_salida >= fecha_inicio
+        ).all()
+
+        print(f"📊 [BD] Encontradas {len(reservas_activas)} reservas activas")
+
+        # Información de domos (IGUAL QUE EL PANEL)
+        domos_info = {
+            'antares': {
+                'nombre': 'Antares',
+                'capacidad_maxima': 2,
+                'precio_base': 650000,
+                'descripcion': 'Nido de amor con jacuzzi privado'
+            },
+            'polaris': {
+                'nombre': 'Polaris',
+                'capacidad_maxima': 6,
+                'precio_base': 550000,
+                'descripcion': 'Amplio domo familiar'
+            },
+            'sirius': {
+                'nombre': 'Sirius',
+                'capacidad_maxima': 2,
+                'precio_base': 450000,
+                'descripcion': 'Domo acogedor de un piso'
+            },
+            'centaury': {
+                'nombre': 'Centaury',
+                'capacidad_maxima': 2,
+                'precio_base': 450000,
+                'descripcion': 'Domo íntimo romántico'
+            }
+        }
+
+        # Calcular disponibilidades día por día (LÓGICA DEL CALENDARIO)
+        from datetime import datetime, timedelta
+        fecha_actual = datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
+        fecha_limite = datetime.strptime(fecha_fin, '%Y-%m-%d').date()
+
+        disponibilidades = []
+        domos_disponibles_total = []
+
+        while fecha_actual <= fecha_limite:
+            # Encontrar qué domos están ocupados este día
+            reservas_del_dia = [r for r in reservas_activas
+                              if r.fecha_entrada <= fecha_actual < r.fecha_salida]
+
+            domos_ocupados = [r.domo.lower() for r in reservas_del_dia if r.domo]
+            domos_disponibles_dia = [domo for domo in domos_info.keys()
+                                   if domo not in domos_ocupados]
+
+            # Filtrar por capacidad si se especifica
+            if personas:
+                domos_disponibles_dia = [
+                    domo for domo in domos_disponibles_dia
+                    if domos_info[domo]['capacidad_maxima'] >= personas
+                ]
+
+            # Filtrar por domo específico si se solicita
+            if domo_especifico:
+                domo_lower = domo_especifico.lower()
+                domos_disponibles_dia = [domo for domo in domos_disponibles_dia
+                                       if domo == domo_lower]
+
+            disponibilidades.append({
+                'fecha': fecha_actual.strftime('%Y-%m-%d'),
+                'fecha_formateada': fecha_actual.strftime('%d de %B de %Y'),
+                'domos_disponibles': domos_disponibles_dia,
+                'domos_ocupados': domos_ocupados,
+                'total_disponibles': len(domos_disponibles_dia)
+            })
+
+            # Agregar a disponibles totales
+            for domo in domos_disponibles_dia:
+                if not any(d['domo'] == domo for d in domos_disponibles_total):
+                    domos_disponibles_total.append({
+                        'domo': domo,
+                        'info': domos_info[domo],
+                        'fechas_disponibles': []
+                    })
+
+                # Agregar fecha al domo
+                for item in domos_disponibles_total:
+                    if item['domo'] == domo:
+                        item['fechas_disponibles'].append(fecha_actual.strftime('%Y-%m-%d'))
+
+            fecha_actual += timedelta(days=1)
+
+        resultado = {
+            'success': True,
+            'disponibilidades_por_fecha': disponibilidades,
+            'domos_disponibles': domos_disponibles_total,
+            'parametros': {
+                'fecha_inicio': fecha_inicio,
+                'fecha_fin': fecha_fin,
+                'domo_especifico': domo_especifico,
+                'personas': personas
+            }
+        }
+
+        print(f"✅ [BD] Consulta exitosa: {len(domos_disponibles_total)} domos disponibles")
+        return resultado
+
+    except Exception as e:
+        print(f"❌ [BD] Error en consulta: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e),
+            'disponibilidades_por_fecha': [],
+            'domos_disponibles': []
+        }
+
+def generar_respuesta_disponibilidades(datos, parametros, consulta_original):
+    """
+    Genera respuesta natural para WhatsApp basada en disponibilidades
+    """
+    try:
+        if not datos.get('success'):
+            return f"Lo siento, tuve un problema consultando las disponibilidades: {datos.get('error', 'Error desconocido')}"
+
+        domos_disponibles = datos.get('domos_disponibles', [])
+        disponibilidades_por_fecha = datos.get('disponibilidades_por_fecha', [])
+
+        if not domos_disponibles:
+            if parametros.get('fecha_inicio'):
+                try:
+                    fecha_obj = datetime.strptime(parametros['fecha_inicio'], '%Y-%m-%d')
+                    fecha_formateada = fecha_obj.strftime('%d de %B de %Y')
+                    return f"Lo siento, no tenemos domos disponibles para el {fecha_formateada}. ¿Te gustaría consultar otras fechas? 📅"
+                except:
+                    return "No encontré domos disponibles para la fecha consultada. ¿Podrías intentar con otras fechas? 📅"
+            else:
+                return "No encontré domos disponibles para las fechas consultadas. ¿Podrías especificar fechas diferentes? 📅"
+
+        # RESPUESTA POSITIVA
+        respuesta = "¡Excelente! 🎉 "
+
+        # Mencionar fecha específica si la hay
+        if parametros.get('fecha_inicio') and parametros.get('fecha_fin'):
+            try:
+                fecha_inicio_obj = datetime.strptime(parametros['fecha_inicio'], '%Y-%m-%d')
+                fecha_fin_obj = datetime.strptime(parametros['fecha_fin'], '%Y-%m-%d')
+
+                if fecha_inicio_obj.date() == fecha_fin_obj.date() - timedelta(days=1):
+                    # Un solo día
+                    fecha_formateada = fecha_inicio_obj.strftime('%d de %B de %Y')
+                    respuesta += f"Para el *{fecha_formateada}* "
+                else:
+                    # Rango de fechas
+                    fecha_inicio_str = fecha_inicio_obj.strftime('%d de %B')
+                    fecha_fin_str = fecha_fin_obj.strftime('%d de %B de %Y')
+                    respuesta += f"Entre el *{fecha_inicio_str}* y *{fecha_fin_str}* "
+            except:
+                respuesta += "Para las fechas consultadas "
+
+        # Listar domos disponibles
+        if len(domos_disponibles) == 1:
+            domo = domos_disponibles[0]
+            respuesta += f"tenemos disponible el domo *{domo['info']['nombre']}*:\n\n"
+            respuesta += f"👥 Capacidad: {domo['info']['capacidad_maxima']} personas\n"
+            respuesta += f"💰 Precio: ${domo['info']['precio_base']:,}\n"
+            respuesta += f"🏡 {domo['info']['descripcion']}\n\n"
+        else:
+            respuesta += f"tenemos *{len(domos_disponibles)} domos disponibles*:\n\n"
+            for i, domo in enumerate(domos_disponibles, 1):
+                respuesta += f"*{i}. {domo['info']['nombre']}*\n"
+                respuesta += f"   👥 {domo['info']['capacidad_maxima']} personas - 💰 ${domo['info']['precio_base']:,}\n"
+                respuesta += f"   🏡 {domo['info']['descripcion']}\n"
+                respuesta += f"   📅 {len(domo['fechas_disponibles'])} fechas disponibles\n\n"
+
+        respuesta += "¿Te gustaría hacer una reserva o necesitas más información sobre algún domo específico? 😊"
+
+        return respuesta
+
+    except Exception as e:
+        print(f"❌ Error generando respuesta: {e}")
+        return "Tenemos domos disponibles. ¿Te gustaría hacer una reserva? 😊"
 
 # Esta clase de Herramienta para solicitar datos de reserva es un buen enfoque.
 # El agente la "llama" y luego tu código Flask interpreta la respuesta
@@ -2493,25 +2692,21 @@ def get_reservas_stats():
         print(f"ERROR en get_reservas_stats: {e}")
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/disponibilidades', methods=['GET'])
-def get_disponibilidades():
+def consultar_disponibilidades_interna(fecha_inicio=None, fecha_fin=None, domo=None, personas=None):
     """
-    Endpoint especializado para consultar disponibilidades de domos y fechas
-    Optimizado para el agente IA
+    Función interna para consultar disponibilidades sin HTTP
+    Reutilizable tanto por la herramienta del agente como por el endpoint REST
     """
     if not database_available or not db:
-        return jsonify({
+        return {
+            'success': False,
             'error': 'Base de datos no disponible',
-            'disponibilidades': {}
-        }), 503
+            'disponibilidades_por_fecha': {},
+            'domos_disponibles': [],
+            'mensaje': 'La base de datos no está disponible'
+        }
 
     try:
-        # Obtener parámetros de consulta
-        fecha_inicio = request.args.get('fecha_inicio')  # YYYY-MM-DD
-        fecha_fin = request.args.get('fecha_fin')        # YYYY-MM-DD
-        domo_especifico = request.args.get('domo')       # nombre del domo
-        personas = request.args.get('personas', type=int) # número de personas
-
         # Si no se especifican fechas, usar el próximo mes
         if not fecha_inicio:
             from datetime import datetime, timedelta
@@ -2588,8 +2783,8 @@ def get_disponibilidades():
                 ]
 
             # Filtrar por domo específico si se solicita
-            if domo_especifico:
-                domo_lower = domo_especifico.lower()
+            if domo:
+                domo_lower = domo.lower()
                 domos_disponibles = [domo for domo in domos_disponibles if domo == domo_lower]
 
             disponibilidades_por_fecha[fecha_str] = {
@@ -2624,42 +2819,60 @@ def get_disponibilidades():
 
             fecha_actual += timedelta(days=1)
 
-        # Generar respuesta optimizada para el agente IA
-        respuesta = {
+        return {
             'success': True,
-            'parametros_consulta': {
-                'fecha_inicio': fecha_inicio,
-                'fecha_fin': fecha_fin,
-                'domo_solicitado': domo_especifico,
-                'personas': personas
-            },
-            'resumen_general': {
-                'total_domos': len(domos_info),
-                'domos_con_disponibilidad': len(domos_disponibles_resumen),
-                'fechas_completamente_libres': len(fechas_completamente_libres),
-                'periodo_consultado_dias': (datetime.strptime(fecha_fin, '%Y-%m-%d').date() -
-                                          datetime.strptime(fecha_inicio, '%Y-%m-%d').date()).days + 1
-            },
+            'disponibilidades_por_fecha': disponibilidades_por_fecha,
             'domos_disponibles': domos_disponibles_resumen,
             'fechas_completamente_libres': fechas_completamente_libres,
-            'disponibilidades_detalladas': disponibilidades_por_fecha,
-            'recomendaciones_agente': generar_recomendaciones_disponibilidad(
-                domos_disponibles_resumen,
-                fechas_completamente_libres,
-                personas,
-                domo_especifico
-            ),
+            'parametros_busqueda': {
+                'fecha_inicio': fecha_inicio,
+                'fecha_fin': fecha_fin,
+                'domo_especifico': domo,
+                'personas': personas
+            },
+            'resumen': generar_recomendaciones_disponibilidades(domos_disponibles_resumen),
             'timestamp': datetime.utcnow().isoformat()
         }
 
-        return jsonify(respuesta), 200
+    except Exception as e:
+        print(f"❌ Error en consultar_disponibilidades_interna: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e),
+            'disponibilidades_por_fecha': {},
+            'domos_disponibles': [],
+            'mensaje': f'Error técnico: {str(e)}'
+        }
+
+@app.route('/api/disponibilidades', methods=['GET'])
+def get_disponibilidades():
+    """
+    Endpoint REST para consultar disponibilidades (ACTUALIZADO)
+    """
+    try:
+        # Obtener parámetros
+        fecha_inicio = request.args.get('fecha_inicio')
+        fecha_fin = request.args.get('fecha_fin')
+        domo_especifico = request.args.get('domo')
+        personas = request.args.get('personas', type=int)
+
+        # Usar función interna compartida
+        resultado = consultar_disponibilidades_interna(
+            fecha_inicio=fecha_inicio,
+            fecha_fin=fecha_fin,
+            domo=domo_especifico,
+            personas=personas
+        )
+
+        return jsonify(resultado), 200
 
     except Exception as e:
-        print(f"Error en endpoint /api/disponibilidades: {str(e)}")
+        print(f"❌ Error en get_disponibilidades: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Error consultando disponibilidades: {str(e)}',
-            'disponibilidades': {}
+            'error': str(e),
+            'disponibilidades_por_fecha': {},
+            'domos_disponibles': []
         }), 500
 
 
@@ -2775,7 +2988,7 @@ def agente_consultar_disponibilidades():
 
 def extraer_parametros_consulta(consulta):
     """
-    Extrae parámetros de una consulta en lenguaje natural
+    Extrae parámetros de una consulta en lenguaje natural (MEJORADO)
     """
     import re
     from datetime import datetime, timedelta
@@ -2788,20 +3001,86 @@ def extraer_parametros_consulta(consulta):
     }
 
     consulta_lower = consulta.lower()
+    print(f"🔍 Analizando consulta: '{consulta_lower}'")
 
-    # Detectar fechas
+    # PATRONES DE FECHA MEJORADOS PARA WHATSAPP
     patrones_fecha = [
-        r'(\d{1,2})/(\d{1,2})/(\d{4})',  # DD/MM/YYYY
-        r'(\d{4})-(\d{1,2})-(\d{1,2})',  # YYYY-MM-DD
-        r'(\d{1,2}) de (\w+)',           # DD de MMMM
+        # DD/MM/YYYY o DD-MM-YYYY
+        (r'(\d{1,2})[/-](\d{1,2})[/-](\d{4})', 'dmy'),
+        # YYYY-MM-DD
+        (r'(\d{4})-(\d{1,2})-(\d{1,2})', 'ymd'),
+        # "24 de diciembre del 2025" - NUEVO PATRÓN ESPECÍFICO
+        (r'(\d{1,2})\s+de\s+(\w+)\s+del?\s+(\d{4})', 'dmy_texto_con_año'),
+        # "24 de diciembre" (sin año)
+        (r'(\d{1,2})\s+de\s+(\w+)(?!\s+del?\s+\d)', 'dmy_texto_sin_año'),
+        # "diciembre 24, 2025"
+        (r'(\w+)\s+(\d{1,2}),?\s+(\d{4})', 'mdy_texto'),
     ]
 
-    for patron in patrones_fecha:
+    meses_espanol = {
+        'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4,
+        'mayo': 5, 'junio': 6, 'julio': 7, 'agosto': 8,
+        'septiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12,
+        'ene': 1, 'feb': 2, 'mar': 3, 'abr': 4, 'may': 5, 'jun': 6,
+        'jul': 7, 'ago': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dic': 12
+    }
+
+    # Buscar fechas
+    for patron, tipo in patrones_fecha:
         matches = re.findall(patron, consulta_lower)
         if matches:
-            # Procesar primera fecha encontrada como inicio
-            # (simplificado - se puede mejorar)
-            break
+            try:
+                match = matches[0]
+                print(f"📅 Fecha encontrada: {match}, tipo: {tipo}")
+
+                if tipo == 'dmy':
+                    dia, mes, año = int(match[0]), int(match[1]), int(match[2])
+                    fecha_obj = datetime(año, mes, dia).date()
+                elif tipo == 'ymd':
+                    año, mes, dia = int(match[0]), int(match[1]), int(match[2])
+                    fecha_obj = datetime(año, mes, dia).date()
+                elif tipo == 'dmy_texto_con_año':
+                    dia = int(match[0])
+                    mes_nombre = match[1].lower()
+                    año = int(match[2])
+                    
+                    if mes_nombre in meses_espanol:
+                        mes = meses_espanol[mes_nombre]
+                        fecha_obj = datetime(año, mes, dia).date()
+                    else:
+                        continue
+                elif tipo == 'dmy_texto_sin_año':
+                    dia = int(match[0])
+                    mes_nombre = match[1].lower()
+                    año = datetime.now().year
+                    
+                    if mes_nombre in meses_espanol:
+                        mes = meses_espanol[mes_nombre]
+                        # Si la fecha ya pasó este año, usar el próximo año
+                        fecha_tentativa = datetime(año, mes, dia).date()
+                        if fecha_tentativa < datetime.now().date():
+                            año += 1
+                        fecha_obj = datetime(año, mes, dia).date()
+                    else:
+                        continue
+                elif tipo == 'mdy_texto':
+                    mes_nombre = match[0].lower()
+                    dia = int(match[1])
+                    año = int(match[2])
+                    
+                    if mes_nombre in meses_espanol:
+                        mes = meses_espanol[mes_nombre]
+                        fecha_obj = datetime(año, mes, dia).date()
+                    else:
+                        continue
+
+                parametros['fecha_inicio'] = fecha_obj.strftime('%Y-%m-%d')
+                print(f"✅ Fecha procesada: {parametros['fecha_inicio']}")
+                break
+
+            except Exception as e:
+                print(f"❌ Error procesando fecha {match}: {e}")
+                continue
 
     # Detectar domos
     domos_nombres = {
@@ -2811,24 +3090,26 @@ def extraer_parametros_consulta(consulta):
         'centaury': ['centaury', 'centary']
     }
 
-    for domo_key, variantes in domos_nombres.items():
-        for variante in variantes:
-            if variante in consulta_lower:
-                parametros['domo'] = domo_key
+    for domo, aliases in domos_nombres.items():
+        for alias in aliases:
+            if alias in consulta_lower:
+                parametros['domo'] = domo
+                print(f"🏠 Domo detectado: {domo}")
                 break
 
     # Detectar número de personas
     patrones_personas = [
-        r'(\d+)\s*persona[s]?',
-        r'(\d+)\s*huésped[es]?',
-        r'somos\s*(\d+)',
-        r'para\s*(\d+)'
+        r'(\d+)\s+persona[s]?',
+        r'para\s+(\d+)',
+        r'somos\s+(\d+)',
+        r'(\d+)\s+huespedes?'
     ]
 
     for patron in patrones_personas:
         match = re.search(patron, consulta_lower)
         if match:
             parametros['personas'] = int(match.group(1))
+            print(f"👥 Personas detectadas: {parametros['personas']}")
             break
 
     # Si no se especifican fechas, usar los próximos 30 días
@@ -2837,57 +3118,68 @@ def extraer_parametros_consulta(consulta):
         parametros['fecha_inicio'] = hoy.strftime('%Y-%m-%d')
         parametros['fecha_fin'] = (hoy + timedelta(days=30)).strftime('%Y-%m-%d')
 
+    print(f"📊 Parámetros finales extraídos: {parametros}")
     return parametros
 
 
-def generar_respuesta_natural_disponibilidades(data, parametros, consulta_original):
+def generar_respuesta_natural_disponibilidades(datos_disponibilidades, parametros_extraidos, consulta_original):
     """
-    Genera una respuesta en lenguaje natural basada en los datos de disponibilidad
+    Genera respuesta natural basada en datos de disponibilidades (MEJORADA)
     """
-    if not data['success']:
-        return "Lo siento, no pude consultar las disponibilidades en este momento."
+    try:
+        if not datos_disponibilidades.get('success'):
+            return "Lo siento, no pude consultar las disponibilidades en este momento debido a un problema técnico."
 
-    resumen = data['resumen_general']
-    domos_disponibles = data['domos_disponibles']
-    recomendaciones = data['recomendaciones_agente']
+        domos_disponibles = datos_disponibilidades.get('domos_disponibles', [])
+        disponibilidades_por_fecha = datos_disponibilidades.get('disponibilidades_por_fecha', {})
 
-    respuesta = []
+        if not domos_disponibles:
+            fecha_consultada = parametros_extraidos.get('fecha_inicio')
+            if fecha_consultada:
+                try:
+                    fecha_formateada = datetime.strptime(fecha_consultada, '%Y-%m-%d').strftime('%d de %B de %Y')
+                    return f"No tenemos domos disponibles para el {fecha_formateada}. ¿Te gustaría consultar otras fechas?"
+                except:
+                    return f"No tenemos domos disponibles para la fecha {fecha_consultada}. ¿Te gustaría consultar otras fechas?"
+            else:
+                return "No encontré domos disponibles para las fechas consultadas. ¿Podrías especificar otras fechas?"
 
-    # Saludo y contexto
-    respuesta.append("¡Por supuesto! He revisado nuestro calendario de disponibilidades.")
+        # Construir respuesta positiva
+        respuesta = "¡Excelente! "
 
-    # Información general
-    if resumen['domos_con_disponibilidad'] == 0:
-        respuesta.append("Lamentablemente, no tenemos disponibilidad en las fechas que consultas.")
-        respuesta.append("¿Te gustaría que revise fechas alternativas?")
-        return " ".join(respuesta)
+        # Si hay fecha específica
+        if parametros_extraidos.get('fecha_inicio'):
+            try:
+                fecha_formateada = datetime.strptime(parametros_extraidos['fecha_inicio'], '%Y-%m-%d').strftime('%d de %B de %Y')
+                respuesta += f"Para el {fecha_formateada} "
+            except:
+                respuesta += "Para la fecha consultada "
+        else:
+            respuesta += "Tenemos "
 
-    # Disponibilidad encontrada
-    if resumen['fechas_completamente_libres'] > 0:
-        respuesta.append(f"¡Excelente! Tenemos {resumen['fechas_completamente_libres']} fechas con disponibilidad completa.")
+        # Listar domos disponibles
+        if len(domos_disponibles) == 1:
+            domo = domos_disponibles[0]
+            respuesta += f"tenemos disponible el domo {domo['info']['nombre']} "
+            respuesta += f"(capacidad para {domo['info']['capacidad_maxima']} personas, "
+            respuesta += f"precio desde ${domo['info']['precio_base']:,}). "
+            respuesta += f"{domo['info']['descripcion']}."
+        else:
+            respuesta += f"tenemos {len(domos_disponibles)} domos disponibles:\n\n"
+            for i, domo in enumerate(domos_disponibles, 1):
+                respuesta += f"{i}. *{domo['info']['nombre']}* - "
+                respuesta += f"Capacidad: {domo['info']['capacidad_maxima']} personas, "
+                respuesta += f"Precio: ${domo['info']['precio_base']:,}\n"
+                respuesta += f"   {domo['info']['descripcion']}\n\n"
 
-    respuesta.append(f"En total, {resumen['domos_con_disponibilidad']} de nuestros {resumen['total_domos']} domos tienen disponibilidad.")
+        # Agregar llamada a la acción
+        respuesta += "\n¿Te gustaría hacer una reserva o necesitas más información sobre algún domo específico?"
 
-    # Detalles por domo
-    if len(domos_disponibles) <= 2:
-        for domo in domos_disponibles:
-            info = domo['info']
-            dias_disponibles = len(domo['fechas_disponibles'])
-            respuesta.append(f"\n🏠 **{info['nombre']}**: {info['descripcion']} - Disponible {dias_disponibles} días (capacidad: {info['capacidad_maxima']} personas, desde ${info['precio_base']:,}/noche)")
-    else:
-        respuesta.append(f"\nTenemos varios domos disponibles:")
-        for domo in domos_disponibles[:3]:  # Mostrar solo los primeros 3
-            info = domo['info']
-            respuesta.append(f"• {info['nombre']} (${info['precio_base']:,}/noche)")
+        return respuesta
 
-    # Agregar recomendaciones del sistema
-    if recomendaciones:
-        respuesta.append(f"\n💡 **Mi recomendación**: {recomendaciones[0]}")
-
-    # Llamada a la acción
-    respuesta.append("\n¿Te gustaría que te ayude con algún domo en particular o prefieres que te reserve fechas específicas?")
-
-    return " ".join(respuesta)
+    except Exception as e:
+        print(f"❌ Error generando respuesta natural: {e}")
+        return "Tenemos domos disponibles. ¿Te gustaría hacer una reserva?"
 
 @app.route('/health', methods=['GET'])
 def health_check():
