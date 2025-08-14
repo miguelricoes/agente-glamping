@@ -3515,6 +3515,74 @@ def delete_user_endpoint(user_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
+# === FUNCIÓN DE AUTENTICACIÓN ===
+def authenticate_user(email, password):
+    """Autenticar usuario contra PostgreSQL"""
+    if not db or not Usuario:
+        return None
+
+    try:
+        user = Usuario.query.filter_by(email=email, activo=True).first()
+        if user and check_password_hash(user.password_hash, password):
+            # Actualizar último acceso
+            user.ultimo_acceso = datetime.utcnow()
+            db.session.commit()
+            return {
+                'id': user.id,
+                'nombre': user.nombre,
+                'email': user.email,
+                'rol': user.rol
+            }
+        return None
+    except Exception as e:
+        print(f"Error en authenticate_user: {e}")
+        return None
+
+# === ENDPOINT DE LOGIN ===
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    """Login de usuario con validación de PostgreSQL"""
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'Datos requeridos'}), 400
+
+        email = data.get('email', '').strip()
+        password = data.get('password', '')
+
+        if not email or not password:
+            return jsonify({'error': 'Email y contraseña requeridos'}), 400
+
+        # Autenticar contra PostgreSQL
+        user = authenticate_user(email, password)
+        if user:
+            return jsonify({
+                'success': True,
+                'user': user,
+                'message': 'Login exitoso'
+            })
+
+        return jsonify({'error': 'Credenciales inválidas'}), 401
+
+    except Exception as e:
+        print(f"Error en login endpoint: {e}")
+        return jsonify({'error': 'Error interno del servidor'}), 500
+
+@app.route('/api/auth/verify', methods=['GET'])
+def verify_user():
+    """Verificar que el sistema de usuarios funciona"""
+    try:
+        if not db or not Usuario:
+            return jsonify({'error': 'Base de datos no disponible'}), 500
+
+        total_users = Usuario.query.count()
+        return jsonify({
+            'total_users': total_users,
+            'database_connected': True
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route("/")
 def home():
     return "Servidor Flask con Agente RAG y WhatsApp conectado. La memoria del agente ahora es persistente."
