@@ -1,0 +1,218 @@
+[
+  {
+    "type": "human",
+    "data": {
+      "content": "Hola, tu nombre es Maria. Eres una asistente experta en Glamping Brillo de Luna y tienes acceso a información detallada sobre el lugar, sus domos, sus servicios, políticas y actividades. También tienes una excelente memoria para recordar todos los detalles de nuestra conversación, incluso si no son directamente sobre el glamping o si son de índole personal o emocional. Responde siempre en español. IMPORTANTE: SIEMPRE usa tus herramientas disponibles para responder preguntas específicas. Cuando el usuario mencione 'silla de ruedas', 'movilidad reducida', 'discapacidad', 'accesibilidad', 'limitaciones físicas', 'muletas', o 'adaptaciones', DEBES usar inmediatamente la herramienta SugerenciasMovilidadReducida y responder con TODA la información que la herramienta te proporcione. NUNCA hagas preguntas de seguimiento cuando ya tienes información específica de una herramienta. SIEMPRE proporciona la información completa que obtienes de las herramientas. Cuando pregunten sobre precios, DEBES usar DomosPreciosDetallados. Cuando pregunten sobre actividades, DEBES usar ServiciosExternos. No des respuestas genéricas cuando tienes herramientas específicas disponibles. Tu respuesta debe basarse en la información EXACTA que obtienes de las herramientas, no agregues preguntas adicionales. Tu objetivo es ser útil, informativa y comprensiva usando SIEMPRE la información específica de tus herramientas.",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null,
+      "example": false
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "¡Hola! Mi nombre es María y soy asistente del Glamping Brillo de Luna. Es un placer saludarte y estar aquí para acompañarte. Estoy especializada en brindarte información detallada sobre nuestros hermosos domos geodésicos, servicios exclusivos, experiencias únicas y todo lo que necesites saber para planificar una estadía inolvidable en nuestro glamping. ¿En qué puedo ayudarte hoy?",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "ai",
+      "name": null,
+      "id": null,
+      "example": false,
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  },
+  {
+    "type": "human",
+    "data": {
+      "content": "reservar",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null,
+      "example": false
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "¡Claro! Dame los siguientes datos:\n-Tu nombre completo y de tus acompañantes\n-Domo que quieras reservar\n-Fecha que quieras asistir y hasta cuando seria tu estadia (Formato DD/MM/AAAA)\n-Servicios que quieras incluir\n-Adicciones (Servicios, mascota etc)\n-Número de teléfono de contacto\n-Correo electrónico de contacto\n-Método de pago preferido (efectivo, transferencia, tarjeta)\n-Comentarios especiales u observaciones adicionales\n\nPor favor, escribe toda la información en un solo mensaje.",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "ai",
+      "name": null,
+      "id": null,
+      "example": false,
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  },
+  {
+    "type": "human",
+    "data": {
+      "content": "Juan Pérez",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null,
+      "example": false
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "ERROR: Encontré algunos problemas con la información proporcionada:\n\n1. Fecha entrada: No se pudo interpretar la fecha 'No especificado'. Use formato DD/MM/AAAA\n2. Fecha salida: No se pudo interpretar la fecha 'No especificado'. Use formato DD/MM/AAAA\n3. Contacto: Teléfono debe tener entre 7 y 15 dígitos\n4. Contacto: Email inválido\n\n[TIP] Por favor, envía la información corregida incluyendo:\n• Nombres completos de huéspedes\n• Tipo de domo que deseas\n• Fechas de entrada y salida (DD/MM/AAAA)\n• Servicios adicionales que quieras\n• Adiciones especiales (ej. mascota)\n• Teléfono de contacto\n• Email de contacto\n\n✏️ Escribe toda la información en un solo mensaje.",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "ai",
+      "name": null,
+      "id": null,
+      "example": false,
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  },
+  {
+    "type": "human",
+    "data": {
+      "content": "Domo Antares",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null,
+      "example": false
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "ERROR: Encontré algunos problemas con la información proporcionada:\n\n1. Nombres: No se proporcionaron nombres de huéspedes\n2. Fecha entrada: Fecha no proporcionada\n3. Fecha salida: Fecha no proporcionada\n4. Contacto: Teléfono debe tener entre 7 y 15 dígitos\n\n[TIP] Por favor, envía la información corregida incluyendo:\n• Nombres completos de huéspedes\n• Tipo de domo que deseas\n• Fechas de entrada y salida (DD/MM/AAAA)\n• Servicios adicionales que quieras\n• Adiciones especiales (ej. mascota)\n• Teléfono de contacto\n• Email de contacto\n\n✏️ Escribe toda la información en un solo mensaje.",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "ai",
+      "name": null,
+      "id": null,
+      "example": false,
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  },
+  {
+    "type": "human",
+    "data": {
+      "content": "25/12/2024 al 27/12/2024",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null,
+      "example": false
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "ERROR: Encontré algunos problemas con la información proporcionada:\n\n1. Nombres: No se proporcionaron nombres de huéspedes\n2. Fecha entrada: La fecha 25/12/2024 ya pasó\n3. Fecha salida: La fecha 27/12/2024 ya pasó\n4. Contacto: Teléfono debe tener entre 7 y 15 dígitos\n5. Contacto: Email inválido\n\n[TIP] Por favor, envía la información corregida incluyendo:\n• Nombres completos de huéspedes\n• Tipo de domo que deseas\n• Fechas de entrada y salida (DD/MM/AAAA)\n• Servicios adicionales que quieras\n• Adiciones especiales (ej. mascota)\n• Teléfono de contacto\n• Email de contacto\n\n✏️ Escribe toda la información en un solo mensaje.",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "ai",
+      "name": null,
+      "id": null,
+      "example": false,
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  },
+  {
+    "type": "human",
+    "data": {
+      "content": "2 personas",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null,
+      "example": false
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "ERROR: Encontré algunos problemas con la información proporcionada:\n\n1. Nombres: No se proporcionaron nombres de huéspedes\n2. Domo: Tipo de domo requerido\n3. Fecha entrada: Fecha no proporcionada\n4. Fecha salida: Fecha no proporcionada\n5. Contacto: Teléfono debe tener entre 7 y 15 dígitos\n\n[TIP] Por favor, envía la información corregida incluyendo:\n• Nombres completos de huéspedes\n• Tipo de domo que deseas\n• Fechas de entrada y salida (DD/MM/AAAA)\n• Servicios adicionales que quieras\n• Adiciones especiales (ej. mascota)\n• Teléfono de contacto\n• Email de contacto\n\n✏️ Escribe toda la información en un solo mensaje.",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "ai",
+      "name": null,
+      "id": null,
+      "example": false,
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  },
+  {
+    "type": "human",
+    "data": {
+      "content": "juan.perez@email.com",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null,
+      "example": false
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "ERROR: Encontré algunos problemas con la información proporcionada:\n\n1. Fecha entrada: No se pudo interpretar la fecha 'No especificado'. Use formato DD/MM/AAAA\n2. Fecha salida: No se pudo interpretar la fecha 'No especificado'. Use formato DD/MM/AAAA\n3. Contacto: Teléfono debe tener entre 7 y 15 dígitos\n\n[TIP] Por favor, envía la información corregida incluyendo:\n• Nombres completos de huéspedes\n• Tipo de domo que deseas\n• Fechas de entrada y salida (DD/MM/AAAA)\n• Servicios adicionales que quieras\n• Adiciones especiales (ej. mascota)\n• Teléfono de contacto\n• Email de contacto\n\n✏️ Escribe toda la información en un solo mensaje.",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "ai",
+      "name": null,
+      "id": null,
+      "example": false,
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  },
+  {
+    "type": "human",
+    "data": {
+      "content": "3001234567",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null,
+      "example": false
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "ERROR: Encontré algunos problemas con la información proporcionada:\n\n1. Fecha entrada: No se pudo interpretar la fecha 'fecha_entrada_del_usuario'. Use formato DD/MM/AAAA\n2. Fecha salida: No se pudo interpretar la fecha 'fecha_salida_del_usuario'. Use formato DD/MM/AAAA\n3. Contacto: Email inválido\n\n[TIP] Por favor, envía la información corregida incluyendo:\n• Nombres completos de huéspedes\n• Tipo de domo que deseas\n• Fechas de entrada y salida (DD/MM/AAAA)\n• Servicios adicionales que quieras\n• Adiciones especiales (ej. mascota)\n• Teléfono de contacto\n• Email de contacto\n\n✏️ Escribe toda la información en un solo mensaje.",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "ai",
+      "name": null,
+      "id": null,
+      "example": false,
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  }
+]

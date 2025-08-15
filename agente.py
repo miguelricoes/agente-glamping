@@ -35,18 +35,18 @@ print("Puerto asignado:", os.environ.get("PORT"))
 
 # Importaciones de Pinecone con manejo de errores
 try:
-    # Opción 1: Import completo (pinecone v3.0+)
+    # Import completo (pinecone v3.0+)
     from pinecone import Pinecone, ServerlessSpec
     PINECONE_SERVERLESS_AVAILABLE = True
     print("OK: Pinecone importado con ServerlessSpec")
 except ImportError:
     try:
-        # Opción 2: Import básico sin ServerlessSpec
+        # Import básico sin ServerlessSpec
         from pinecone import Pinecone
         PINECONE_SERVERLESS_AVAILABLE = False
         print("OK: Pinecone importado sin ServerlessSpec")
     except ImportError:
-        # Opción 3: Import legacy
+        #  Import legacy
         try:
             import pinecone as pinecone_legacy
             Pinecone = pinecone_legacy
@@ -72,7 +72,7 @@ def validate_environment_variables():
         'OPENAI_API_KEY': 'API Key de OpenAI para LLM',
     }
     
-    # Variables opcionales (funcionalidades específicas)
+    # Variables funcionalidades específicas)
     optional_vars = {
         'DATABASE_URL': 'URL de conexión a PostgreSQL',
         'PINECONE_API_KEY': 'API Key de Pinecone para vectorstore',
@@ -119,7 +119,7 @@ PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "reservas-glamping-v2")
 pc = None
 pinecone_index = None
 
-# Inicializar cliente Pinecone con manejo de errores (opcional)
+# Inicializar cliente Pinecone con manejo de errores 
 if PINECONE_API_KEY:
     try:
         if hasattr(Pinecone, '__call__'):
@@ -138,12 +138,12 @@ if PINECONE_API_KEY:
 else:
     print("WARNING: PINECONE_API_KEY no configurada - Funcionalidad Pinecone deshabilitada")
 
-# Validar que el índice exista con mejor manejo de errores (opcional)
+# Validar que el índice exista con mejor manejo de errores 
 if pc:
     try:
         # Obtener lista de índices según la versión de Pinecone
         try:
-            # Pinecone v3.0+
+            
             if hasattr(pc, 'list_indexes') and callable(pc.list_indexes):
                 indexes_response = pc.list_indexes()
                 if isinstance(indexes_response, dict) and "indexes" in indexes_response:
@@ -152,7 +152,7 @@ if pc:
                     # Respuesta directa (lista)
                     indexes = [index.name for index in indexes_response] if hasattr(indexes_response[0], 'name') else [str(index) for index in indexes_response]
             else:
-                # Pinecone legacy
+                # Pinecone 
                 indexes = pc.list_indexes()
         except Exception as list_error:
             print(f"WARNING: No se pudo obtener lista de índices: {list_error}")
@@ -203,12 +203,12 @@ CORS(app, resources={
     }
 })
 
-# Configuración de la base de datos opcional con prioridad para URL privada
+# Configuración de la base de datos URL privada
 DATABASE_PRIVATE_URL = os.getenv('DATABASE_PRIVATE_URL')
 DATABASE_PUBLIC_URL = os.getenv('DATABASE_PUBLIC_URL')
 DATABASE_URL = os.getenv('DATABASE_URL')
 
-# Prioridad: PRIVATE > PUBLIC > URL genérica
+
 database_url = DATABASE_PRIVATE_URL or DATABASE_PUBLIC_URL or DATABASE_URL
 
 if DATABASE_PRIVATE_URL:
@@ -220,7 +220,7 @@ elif DATABASE_URL:
     print("INFO: Usando DATABASE_URL genérica")
 
 db = None
-database_available = False  # ← NUEVA VARIABLE QUE FALTABA
+database_available = False 
 
 if database_url:
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
@@ -231,7 +231,7 @@ if database_url:
         db = SQLAlchemy(app)
         print("OK: SQLAlchemy inicializado correctamente")
 
-        # ← NUEVO: Verificar que la conexión funcione realmente
+        #Verificar que la conexión funcione realmente
         with app.app_context():
             try:
                 db.engine.connect()
@@ -251,33 +251,33 @@ else:
     print("TIP: Configura DATABASE_PRIVATE_URL, DATABASE_PUBLIC_URL o DATABASE_URL")
     database_available = False  # ← MARCAR COMO NO DISPONIBLE
 
-# Modelos de datos (solo si hay base de datos)
-Reserva = None
+# Modelos de datos de reservas y usuarios
+Reserva = None # Inicializar como None para evitar errores de referencia
 Usuario = None
 if db:
     class Reserva(db.Model):
         __tablename__ = 'reservas'
         id = db.Column(db.Integer, primary_key=True)
 
-        # CAMPOS IMPORTANTES (NOT NULL o con validaciones estrictas)
-        numero_whatsapp = db.Column(db.String(50), nullable=False)        # Teléfono - IMPORTANTE
-        email_contacto = db.Column(db.String(100), nullable=False)        # Email - IMPORTANTE
-        cantidad_huespedes = db.Column(db.Integer, nullable=False)        # Personas - IMPORTANTE
-        domo = db.Column(db.String(50), nullable=False)                   # Domo - IMPORTANTE
-        fecha_entrada = db.Column(db.Date, nullable=False)                # Estadía - IMPORTANTE
-        fecha_salida = db.Column(db.Date, nullable=False)                 # Estadía - IMPORTANTE
-        metodo_pago = db.Column(db.String(50), nullable=False, default='Pendiente')  # Método pago - IMPORTANTE
+        # CAMPOS IMPORTANTES 
+        numero_whatsapp = db.Column(db.String(50), nullable=False)        
+        email_contacto = db.Column(db.String(100), nullable=False)        
+        cantidad_huespedes = db.Column(db.Integer, nullable=False)        
+        domo = db.Column(db.String(50), nullable=False)                   
+        fecha_entrada = db.Column(db.Date, nullable=False)                
+        fecha_salida = db.Column(db.Date, nullable=False)                 
+        metodo_pago = db.Column(db.String(50), nullable=False, default='Pendiente')  
 
-        # CAMPOS OPCIONALES (nullable=True)
-        nombres_huespedes = db.Column(db.String(255))                     # Puede derivarse del teléfono
-        servicio_elegido = db.Column(db.String(100))                      # Servicios - OPCIONAL
-        adicciones = db.Column(db.String(255))                           # Adiciones - OPCIONAL
-        comentarios_especiales = db.Column(db.Text)                      # Comentarios - OPCIONAL
-        numero_contacto = db.Column(db.String(50))                       # Backup del teléfono
+        # CAMPOS OPCIONALES 
+        nombres_huespedes = db.Column(db.String(255))                    
+        servicio_elegido = db.Column(db.String(100))                     
+        adicciones = db.Column(db.String(255))                           
+        comentarios_especiales = db.Column(db.Text)                      
+        numero_contacto = db.Column(db.String(50))                       
 
-        # CAMPOS DE CONTROL
-        monto_total = db.Column(db.Numeric(10, 2), default=0.00)
-        fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
+        
+        monto_total = db.Column(db.Numeric(10, 2), default=0.00) # Precio total calculado
+        fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow) # Fecha de creación
 
         def __repr__(self):
             return f'<Reserva {self.id}: {self.nombres_huespedes or "Usuario"}>'
@@ -300,10 +300,9 @@ if db:
         def __repr__(self):
             return f'<Usuario {self.id}: {self.nombre} ({self.email})>'
 
-# === FUNCIONES DE GENERACIÓN DE CONTRASEÑAS ===
+#  FUNCIONES DE GENERACIÓN DE CONTRASEÑAS 
 def generate_random_password(length=8):
     """Generar contraseña aleatoria segura"""
-    # Caracteres permitidos: letras mayúsculas, minúsculas y números
     characters = string.ascii_letters + string.digits
     # Evitar caracteres confusos como 0, O, l, I
     characters = characters.replace('0', '').replace('O', '').replace('l', '').replace('I', '')
@@ -319,7 +318,7 @@ def generate_simple_password():
     number = random.randint(1000, 9999)
     return f"{word}{number}"
 
-# === FUNCIONES DE GESTIÓN DE USUARIOS ===
+# FUNCIONES DE GESTIÓN DE USUARIOS 
 def get_all_users(include_passwords=False):
     """Obtener todos los usuarios (con contraseñas solo para admin)"""
     if not db or not Usuario:
@@ -484,21 +483,21 @@ def calcular_precio_reserva(domo, cantidad_huespedes, fecha_entrada, fecha_salid
     
     # Precios base por domo por noche (para pareja)
     precios_domos = {
-        'antares': 650000,    # Nido de amor con jacuzzi - $650.000/noche
-        'polaris': 550000,    # Amplio con sofá cama - $550.000/noche + $100.000 por persona extra
-        'sirius': 450000,     # Un piso, pareja - $450.000/noche
-        'centaury': 450000    # Similar a Sirius - $450.000/noche
+        'antares': 650000,   
+        'polaris': 550000,    
+        'sirius': 450000,     
+        'centaury': 450000    
     }
     
     # Servicios adicionales disponibles
     precios_servicios = {
-        'decoraciones': 60000,      # Desde $60.000
-        'masajes': 90000,           # $90.000 por persona
-        'masajes_pareja': 180000,   # Masajes para pareja
-        'velero': 150000,           # Estimado para paseo en velero
-        'lancha': 80000,            # Estimado para lancha compartida
-        'caminata_montecillo': 50000,  # Estimado para caminata guiada
-        'caminata_pozo_azul': 70000    # Estimado para caminata más larga
+        'decoraciones': 60000,      
+        'masajes': 90000,           
+        'masajes_pareja': 180000,   
+        'velero': 150000,           
+        'lancha': 80000,            
+        'caminata_montecillo': 50000, 
+        'caminata_pozo_azul': 70000    
     }
     
     try:
@@ -571,7 +570,7 @@ def calcular_precio_reserva(domo, cantidad_huespedes, fecha_entrada, fecha_salid
             'error': str(e)
         }
 
-# Crear tablas de base de datos y validar conexión (opcional)
+# Crear tablas de base de datos y validar conexión 
 def initialize_database():
     """Inicializa la base de datos y crea las tablas necesarias"""
     if not db:
@@ -595,7 +594,8 @@ def initialize_database():
 # Inicializar base de datos si está disponible
 db_initialized = initialize_database()
 
-MEMORY_DIR = "user_memories_data"
+# Directorio de memoria del usuario
+MEMORY_DIR = "user_memories_data" # Directorio de archivos de memoria
 try:
     os.makedirs(MEMORY_DIR, exist_ok=True)
     print(f"OK: Directorio de memoria creado: {MEMORY_DIR}")
@@ -642,7 +642,7 @@ except Exception as e:
     # NO asignamos None - lanzamos la excepción para fallar rápido
     raise ConnectionError(error_msg)
 
-# Inicializar LLM con validación de OpenAI API Key
+# Inicializar LLM de OpenAI API Key
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     error_msg = "ERROR: OPENAI_API_KEY no configurada\n[TIP] Configura tu API Key de OpenAI"
@@ -652,28 +652,28 @@ if not OPENAI_API_KEY:
 try:
     # En langchain 0.1.0, OpenAI puede estar en diferentes ubicaciones
     import os
-    os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY  # Asegurar que esté en env
+    os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY  
     
     # Intentar diferentes imports para compatibilidad con langchain 0.1.0
     llm = None
     try:
-        # Opción 1: Import tradicional (ya importado arriba)
+        #  Import tradicional (ya importado arriba)
         llm = OpenAI(temperature=0)
         print("OK: LLM OpenAI inicializado con import tradicional")
     except (NameError, ImportError, TypeError) as e:
         try:
-            # Opción 2: Import nuevo en langchain 0.1.0
+            # Import nuevo en langchain 0.1.0
             from langchain_openai import OpenAI as OpenAI_New
             llm = OpenAI_New(temperature=0)
             print("OK: LLM OpenAI inicializado con nuevo import langchain_openai")
         except ImportError:
             try:
-                # Opción 3: Import legacy
+                # Import legacy
                 from langchain.llms.openai import OpenAI as OpenAI_Legacy
                 llm = OpenAI_Legacy(temperature=0)
                 print("OK: LLM OpenAI inicializado con import legacy")
             except ImportError:
-                # Opción 4: ChatOpenAI como fallback
+                #  ChatOpenAI como fallback
                 try:
                     from langchain.chat_models import ChatOpenAI
                     llm = ChatOpenAI(temperature=0, model="gpt-3.5-turbo")
@@ -695,9 +695,9 @@ except Exception as e:
     print(error_msg)
     raise ConnectionError(error_msg)
 
-# --- Herramientas RAG para el Agente ---
+#  Herramientas RAG para el Agente 
 
-# Funciones wrapper para usar invoke() en lugar del deprecado run()
+# Funciones wrapper para usar invoke() 
 def call_chain_safe(chain_name: str, query: str) -> str:
     """Llama a una cadena QA usando el método invoke() moderno"""
     try:
@@ -705,7 +705,7 @@ def call_chain_safe(chain_name: str, query: str) -> str:
             return "Lo siento, esa información no está disponible en este momento."
         
         chain = qa_chains[chain_name]
-        # Usar invoke() en lugar del deprecado run()
+        # Usar invoke() 
         result = chain.invoke({"query": query})
         
         # El resultado puede estar en diferentes campos dependiendo de la cadena
@@ -718,7 +718,7 @@ def call_chain_safe(chain_name: str, query: str) -> str:
         print(f"ERROR: Error en cadena {chain_name}: {e}")
         return "Disculpa, tuve un problema accediendo a esa información. ¿Podrías reformular tu pregunta?"
 
-# Funciones específicas para cada herramienta - Archivos originales
+# Funciones específicas para archivos originales 
 def concepto_glamping_func(query: str) -> str:
     return call_chain_safe("concepto_glamping", query)
 
@@ -765,12 +765,12 @@ def politicas_cancelacion_func(query: str) -> str:
 # Herramienta para consultar disponibilidades
 def consultar_disponibilidades_glamping(consulta_usuario: str) -> str:
     """
-    Consulta las disponibilidades de domos - VERSIÓN CORREGIDA
+    Consulta las disponibilidades de domos 
     """
     try:
-        print(f"🔍 [AGENTE] Consultando disponibilidades: {consulta_usuario}")
+        print(f"[AGENTE] Consultando disponibilidades: {consulta_usuario}")
 
-        # Verificar BD disponible
+        #  BD disponible
         if not database_available or not db:
             return "Lo siento, no puedo consultar las disponibilidades en este momento. La base de datos no está disponible."
 
@@ -789,7 +789,7 @@ def consultar_disponibilidades_glamping(consulta_usuario: str) -> str:
             fecha_obj = datetime.strptime(parametros['fecha_inicio'], '%Y-%m-%d').date()
             parametros['fecha_fin'] = (fecha_obj + timedelta(days=1)).strftime('%Y-%m-%d')
 
-        # CONSULTAR DIRECTAMENTE LA BD (sin HTTP)
+        # CONSULTAR DIRECTAMENTE LA BD 
         disponibilidades = obtener_disponibilidades_calendario(
             fecha_inicio=parametros['fecha_inicio'],
             fecha_fin=parametros['fecha_fin'],
@@ -797,14 +797,14 @@ def consultar_disponibilidades_glamping(consulta_usuario: str) -> str:
             personas=parametros['personas']
         )
 
-        # Generar respuesta natural
+        # Generar respuesta 
         respuesta = generar_respuesta_disponibilidades(disponibilidades, parametros, consulta_usuario)
 
         print(f"✅ [AGENTE] Respuesta: {respuesta[:100]}...")
         return respuesta
 
     except Exception as e:
-        print(f"❌ [AGENTE] Error en consulta: {str(e)}")
+        print(f"ERROR [AGENTE] Error en consulta: {str(e)}")
         import traceback
         traceback.print_exc()
         return f"Disculpa, tuve un problema técnico consultando las disponibilidades. Error: {str(e)}"
@@ -812,7 +812,7 @@ def consultar_disponibilidades_glamping(consulta_usuario: str) -> str:
 def obtener_disponibilidades_calendario(fecha_inicio, fecha_fin, domo_especifico=None, personas=None):
     """
     Obtiene disponibilidades consultando directamente la BD
-    Misma lógica que usa el calendario del panel
+    Misma lógica que usa el calendario del panel de control
     """
     try:
         print(f"🗄️ [BD] Consultando reservas desde {fecha_inicio} hasta {fecha_fin}")
@@ -825,7 +825,7 @@ def obtener_disponibilidades_calendario(fecha_inicio, fecha_fin, domo_especifico
 
         print(f"📊 [BD] Encontradas {len(reservas_activas)} reservas activas")
 
-        # Información de domos (IGUAL QUE EL PANEL)
+        # Información de domos 
         domos_info = {
             'antares': {
                 'nombre': 'Antares',
@@ -853,7 +853,7 @@ def obtener_disponibilidades_calendario(fecha_inicio, fecha_fin, domo_especifico
             }
         }
 
-        # Calcular disponibilidades día por día (LÓGICA DEL CALENDARIO)
+        # Calcular disponibilidades día por día.  CALENDARIO
         from datetime import datetime, timedelta
         fecha_actual = datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
         fecha_limite = datetime.strptime(fecha_fin, '%Y-%m-%d').date()
@@ -923,7 +923,7 @@ def obtener_disponibilidades_calendario(fecha_inicio, fecha_fin, domo_especifico
         return resultado
 
     except Exception as e:
-        print(f"❌ [BD] Error en consulta: {str(e)}")
+        print(f"ERROR [BD] Error en consulta: {str(e)}")
         return {
             'success': False,
             'error': str(e),
@@ -953,10 +953,10 @@ def generar_respuesta_disponibilidades(datos, parametros, consulta_original):
             else:
                 return "No encontré domos disponibles para las fechas consultadas. ¿Podrías especificar fechas diferentes? 📅"
 
-        # RESPUESTA POSITIVA
+        
         respuesta = "¡Excelente! 🎉 "
 
-        # Mencionar fecha específica si la hay
+        # Mencionar fecha específica que haya
         if parametros.get('fecha_inicio') and parametros.get('fecha_fin'):
             try:
                 fecha_inicio_obj = datetime.strptime(parametros['fecha_inicio'], '%Y-%m-%d')
@@ -994,12 +994,11 @@ def generar_respuesta_disponibilidades(datos, parametros, consulta_original):
         return respuesta
 
     except Exception as e:
-        print(f"❌ Error generando respuesta: {e}")
+        print(f"ERROR Error generando respuesta: {e}")
         return "Tenemos domos disponibles. ¿Te gustaría hacer una reserva? 😊"
 
-# Esta clase de Herramienta para solicitar datos de reserva es un buen enfoque.
-# El agente la "llama" y luego tu código Flask interpreta la respuesta
-# "REQUEST_RESERVATION_DETAILS" para iniciar el flujo.
+
+# iniciar el flujo de reserva.
 class ReservationRequestTool(BaseTool):
     name: str = "SolicitarDatosReserva"
     description: str = "Útil para iniciar el proceso de recolección de datos de reserva. Úsala cuando el usuario exprese claramente su deseo de hacer una reserva (ej. 'quiero reservar', 'hacer una reserva', 'reservar un domo', 'cómo reservo')."
@@ -1012,16 +1011,14 @@ class ReservationRequestTool(BaseTool):
         return self._run(query)
 
 tools = [
-    ReservationRequestTool(), # Herramienta para iniciar reservas
+    ReservationRequestTool(), 
     
-    # === NUEVA HERRAMIENTA DE DISPONIBILIDADES ===
     Tool(
         name="ConsultarDisponibilidades",
         func=consultar_disponibilidades_glamping,
         description="Útil para consultar disponibilidades de domos, fechas específicas, capacidad y precios. Úsala cuando el usuario pregunte sobre disponibilidad, fechas libres, domos disponibles, si hay espacio para cierta cantidad de personas, o quiera saber qué opciones tiene para hospedarse."
     ),
     
-    # === HERRAMIENTAS ORIGINALES ===
     Tool(
         name="ConceptoGlamping",
         func=concepto_glamping_func,
@@ -1096,8 +1093,7 @@ tools = [
     )
 ]
 
-# --- Manejo de Memoria ---
-
+# Manejo de Memoria 
 def _get_memory_file_path(user_id: str) -> str:
     # Sanitizar user_id para evitar path traversal attacks
     safe_user_id = "".join(c for c in user_id if c.isalnum() or c in ('-', '_', '.'))[:50]
@@ -1140,15 +1136,15 @@ def save_user_memory(user_id: str, memory: ConversationBufferMemory):
                 print(f"WARNING:  Archivo de memoria actual corrupto para usuario {user_id}: {e}")
                 # No creamos backup de archivo corrupto
         
-        # Escribir a archivo temporal primero (atomic write)
+        # archivo temporal primero 
         with open(temp_path, 'w', encoding='utf-8') as f:
             json.dump(serialized_messages, f, ensure_ascii=False, indent=2)
         
-        # Validar que el archivo temporal es un JSON válido
+        # temporal es un JSON válido 
         with open(temp_path, 'r', encoding='utf-8') as f:
             json.load(f)  # Validar formato
         
-        # Mover archivo temporal al destino final (operación atómica)
+        # Mover archivo temporal al destino final
         import shutil
         shutil.move(temp_path, memory_path)
         
@@ -1200,24 +1196,23 @@ def _create_fresh_memory(user_id: str) -> ConversationBufferMemory:
             "¿En qué puedo ayudarte hoy?"
         )
         
-        # Intentar métodos compatibles con langchain 0.1.0
+        
         try:
-            # Método 1: API nueva de langchain 0.1.0
+            #  API de langchain 0.1.0
             from langchain.schema import HumanMessage, AIMessage
             memory.chat_memory.add_message(HumanMessage(content=system_message))
             memory.chat_memory.add_message(AIMessage(content=assistant_response))
             print(f"OK: Memoria creada con API nueva para usuario: {user_id}")
         except (ImportError, AttributeError):
             try:
-                # Método 2: API legacy
+            
                 memory.chat_memory.add_user_message(system_message)
                 memory.chat_memory.add_ai_message(assistant_response)
                 print(f"OK: Memoria creada con API legacy para usuario: {user_id}")
             except AttributeError:
-                # Método 3: Fallback - memoria básica sin mensajes iniciales
+                
                 print(f"WARNING:  Creando memoria básica sin mensajes iniciales para usuario: {user_id}")
-                # La memoria se inicializará vacía y se llenará con la primera conversación
-        
+                
         return memory
         
     except Exception as e:
@@ -1230,7 +1225,7 @@ def _create_fresh_memory(user_id: str) -> ConversationBufferMemory:
         )
 
 def _try_load_memory_from_file(file_path: str, user_id: str) -> tuple[bool, ConversationBufferMemory]:
-    """Intenta cargar memoria desde un archivo específico"""
+    """cargar memoria desde un archivo específico""" 
     try:
         if not os.path.exists(file_path):
             return False, None
@@ -1256,10 +1251,10 @@ def _try_load_memory_from_file(file_path: str, user_id: str) -> tuple[bool, Conv
         try:
             # Intentar cargar mensajes con API compatible
             try:
-                # Método 1: API nueva de langchain 0.1.0
+                # API de langchain 
                 memory.chat_memory.messages = messages_from_dict(serialized_messages)
             except Exception:
-                # Método 2: Fallback - recrear memoria vacía si falla
+                # Fallback - recrear memoria vacía si falla
                 print(f"WARNING:  No se pudieron cargar mensajes históricos para usuario {user_id}")
                 return True, memory  # Retornar memoria vacía pero válida
         except Exception as e:
@@ -1301,7 +1296,7 @@ def load_user_memory(user_id: str) -> ConversationBufferMemory:
                 print(f"WARNING:  No se pudo restaurar archivo principal para usuario {user_id}: {e}")
             return memory
     
-    # Intento 3: Si todo falló, crear memoria nueva
+    #   crear memoria nueva si falla algo
     print(f"Creando memoria nueva para usuario: {user_id}")
     memory = _create_fresh_memory(user_id)
     
@@ -1313,7 +1308,7 @@ def load_user_memory(user_id: str) -> ConversationBufferMemory:
     
     return memory
 
-# Funciones utilitarias para mantenimiento del sistema de memoria
+# Mantenimiento del sistema de memoria
 def cleanup_corrupted_memory_files():
     """Limpia archivos de memoria corruptos y crea logs de problemas encontrados"""
     if not os.path.exists(MEMORY_DIR):
@@ -1354,7 +1349,7 @@ def cleanup_corrupted_memory_files():
         print(f"ERROR: Error durante limpieza de archivos de memoria: {e}")
 
 def get_memory_system_health() -> dict:
-    """Obtiene estadísticas de salud del sistema de memoria"""
+    """Obtiene estadísticas sobre el estado de sistema de memoria"""
     if not os.path.exists(MEMORY_DIR):
         return {"status": "error", "message": "Directorio de memoria no existe"}
     
@@ -1411,7 +1406,7 @@ def get_memory_system_health() -> dict:
 cleanup_corrupted_memory_files()
 
 
-# Funciones de validación robusta para datos de reserva
+# Funciones de validación para datos de reserva
 import re
 from datetime import datetime, date, timedelta
 
@@ -1503,12 +1498,12 @@ def parse_flexible_date(date_str: str) -> tuple[bool, date, str]:
         except ValueError:
             continue
     
-    # Si ningún formato funcionó, intentar parsing inteligente
+    # Extraer numeros
     try:
         # Buscar números en el string
         numbers = re.findall(r'\d+', clean_date)
         if len(numbers) == 3:
-            # Intentar diferentes combinaciones
+            # Diferentes combinaciones
             day, month, year = int(numbers[0]), int(numbers[1]), int(numbers[2])
             
             # Determinar el año completo si es de 2 dígitos
@@ -1518,7 +1513,7 @@ def parse_flexible_date(date_str: str) -> tuple[bool, date, str]:
                 else:
                     year += 1900
             
-            # Intentar día/mes/año y mes/día/año
+            #  día/mes/año y mes/día/año
             possible_dates = []
             try:
                 if 1 <= day <= 31 and 1 <= month <= 12:
@@ -1593,23 +1588,20 @@ def validate_contact_info(phone: str, email: str) -> tuple[bool, str, str, list]
     success = len(errors) == 0
     return success, clean_phone, clean_email, errors
 
-#Funcion para guardar los datos de reserva en Pinecone con manejo de errores
+# Guardar los datos de reserva. Pinecone 
 def save_reservation_to_pinecone(user_phone_number, reservation_data):
-    """Guarda reserva en Pinecone con manejo robusto de errores"""
     try:
-        # Validar datos antes de guardar
         if not reservation_data or not user_phone_number:
             print(f"WARNING:  Datos de reserva incompletos para Pinecone")
             return False
         
-        # Convierte los datos de reserva a un string para vectorizar
         reserva_text = json.dumps(reservation_data, ensure_ascii=False)
         
-        # Obtén el embedding del texto de la reserva
+        
         embedder = OpenAIEmbeddings()
         vector = embedder.embed_query(reserva_text)
         
-        # Usa el número de teléfono como ID único
+        
         pinecone_index.upsert([(user_phone_number, vector, reservation_data)])
         print(f"OK: Reserva guardada en Pinecone para {user_phone_number}")
         return True
@@ -1619,7 +1611,7 @@ def save_reservation_to_pinecone(user_phone_number, reservation_data):
         return False
 
 def parse_reservation_details(user_input):
-    """Parsea detalles de reserva con LLM robusto y manejo de errores"""
+    # Usar LLM para extraer fechas y detalles
     prompt = f"""
     Extrae los siguientes datos de la solicitud de reserva del usuario. Analiza línea por línea.
     
@@ -1690,7 +1682,7 @@ def parse_reservation_details(user_input):
     }}
     """
     
-    # Usar función robusta para llamar al LLM
+    # Funcion para llamar al LLM 
     success, response_text, error_msg = call_llm_with_retry(prompt, max_retries=3)
     
     if not success:
@@ -1704,7 +1696,6 @@ def parse_reservation_details(user_input):
         print(f"ERROR: Error al parsear JSON: {json_error}")
         return None
     
-    # Validar estructura básica del JSON
     required_fields = ["nombres_huespedes", "domo", "fecha_entrada", "fecha_salida"]
     optional_fields = ["numero_acompanantes", "servicio_elegido", "adicciones", "numero_contacto", "email_contacto", "metodo_pago", "comentarios_especiales"]
     
@@ -1737,7 +1728,7 @@ def parse_reservation_details(user_input):
     return parsed_json
 
 def validate_and_process_reservation_data(parsed_data, from_number) -> tuple[bool, dict, list]:
-    """Valida y procesa datos de reserva usando funciones robustas"""
+    """Valida y procesa datos de reserva"""
     errors = []
     processed_data = {}
     
@@ -1874,14 +1865,12 @@ def call_llm_with_retry(prompt: str, max_retries: int = 3, temperature: float = 
 def parse_llm_json_safe(llm_response: str) -> tuple[bool, dict, str]:
     """Parsea JSON del LLM con múltiples estrategias de recuperación"""
     try:
-        # Estrategia 1: JSON directo
         try:
             parsed = json.loads(llm_response)
             return True, parsed, "JSON parseado exitosamente"
         except json.JSONDecodeError:
             pass
         
-        # Estrategia 2: Buscar JSON entre llaves
         import re
         json_pattern = r'\{[^{}]*\}'
         json_matches = re.findall(json_pattern, llm_response, re.DOTALL)
@@ -1894,7 +1883,6 @@ def parse_llm_json_safe(llm_response: str) -> tuple[bool, dict, str]:
             except json.JSONDecodeError:
                 continue
         
-        # Estrategia 3: Buscar JSON más complejo (con objetos anidados)
         json_pattern_nested = r'\{.*\}'
         match = re.search(json_pattern_nested, llm_response, re.DOTALL)
         if match:
@@ -1905,7 +1893,6 @@ def parse_llm_json_safe(llm_response: str) -> tuple[bool, dict, str]:
             except json.JSONDecodeError:
                 pass
         
-        # Estrategia 4: Limpiar y reintentar
         cleaned_response = llm_response.replace('\n', '').replace('\r', '').strip()
         try:
             parsed = json.loads(cleaned_response)
@@ -1914,14 +1901,13 @@ def parse_llm_json_safe(llm_response: str) -> tuple[bool, dict, str]:
         except json.JSONDecodeError:
             pass
         
-        # Si todo falla, retornar error descriptivo
         return False, {}, f"No se pudo parsear JSON. Respuesta LLM: '{llm_response[:200]}...'"
         
     except Exception as e:
         return False, {}, f"Error inesperado parseando JSON: {str(e)}"
 
 def initialize_agent_safe(tools, memory, max_retries: int = 3):
-    """Inicializa el agente conversacional con manejo robusto de errores"""
+    """Inicializa el agente conversacional con manejo de errores"""
     last_error = ""
     
     for attempt in range(max_retries):
@@ -2033,17 +2019,11 @@ def run_agent_safe(agent, user_input: str, max_retries: int = 2) -> tuple[bool, 
     # Si todos los intentos fallaron
     return False, "", last_error
 
-
-# VALIDACIONES DE SISTEMA AL INICIALIZAR (después de definir todas las funciones)
-
-
 print("[STARTING] Sistema inicializado - Iniciando rutas Flask...")
 
-# Rutas Flask para manejo de WhatsApp
-# ==================== SISTEMA DE MENÚ PRINCIPAL ====================
+# SISTEMA DE MENÚ PRINCIPAL 
 
 def get_welcome_menu():
-    """Retorna el mensaje de bienvenida con menú principal"""
     return (
         "¡Hola! 👋 Mi nombre es *María* y soy la asistente virtual del *Glamping Brillo de Luna*. "
         "Es un placer saludarte y estar aquí para acompañarte. ✨\n\n"
@@ -2176,14 +2156,14 @@ def handle_availability_request(message):
                     "*Ejemplo:* _15/12/2024 al 17/12/2024, 2 personas_"
                 )
             
-            # Si tenemos fechas válidas, consultar disponibilidad
+            # fechas válidas, consultar disponibilidad
             fecha_inicio = parsed_data.get("fecha_inicio")
             fecha_fin = parsed_data.get("fecha_fin")
             personas = parsed_data.get("personas")
             domo_tipo = parsed_data.get("domo_tipo")
             
             if fecha_inicio and fecha_fin:
-                # Aquí podríamos usar la función obtener_disponibilidades_calendario que ya existe
+                # obtener_disponibilidades_calendario 
                 disponibilidades = obtener_disponibilidades_calendario(
                     fecha_inicio, fecha_fin, domo_tipo, personas
                 )
@@ -2198,7 +2178,7 @@ def handle_availability_request(message):
                         if domos_disponibles:
                             response += f"✅ *{fecha}*: {', '.join(domos_disponibles)}\n"
                         else:
-                            response += f"❌ *{fecha}*: Sin disponibilidad\n"
+                            response += f"X *{fecha}*: Sin disponibilidad\n"
                     
                     if disponibilidades.get("domos_disponibles_resumen"):
                         response += "\n🏠 *DOMOS DISPONIBLES EN EL PERÍODO:*\n"
@@ -2210,7 +2190,7 @@ def handle_availability_request(message):
                     response += "\n¿Te gustaría hacer una reserva o necesitas más información? 🤔"
                     return response
                 else:
-                    return f"❌ No hay disponibilidad para las fechas {fecha_inicio} al {fecha_fin}.\n\n¿Te gustaría consultar otras fechas?"
+                    return f"X No hay disponibilidad para las fechas {fecha_inicio} al {fecha_fin}.\n\n¿Te gustaría consultar otras fechas?"
             
         except json.JSONDecodeError:
             pass
@@ -2225,6 +2205,120 @@ def handle_availability_request(message):
         "• *Domo*: Tipo preferido (opcional)\n\n"
         "*Ejemplo:* _15/12/2024 al 17/12/2024, 2 personas, domo romántico_"
     )
+
+# ==================== SISTEMA DE FILTRADO DE TEMAS ====================
+
+def is_glamping_related(message):
+    """
+    Detecta si el mensaje está relacionado con el glamping usando IA
+    """
+    try:
+        # Usar LLM para determinar si la pregunta es sobre glamping
+        prompt = f"""
+        Analiza este mensaje del usuario y determina si está relacionado con glamping, turismo, alojamiento, reservas o viajes:
+
+        Mensaje: "{message}"
+
+        El mensaje ESTÁ relacionado si habla sobre:
+        - Glamping, camping, domos, alojamiento
+        - Reservas, disponibilidad, precios, servicios
+        - Turismo, viajes, vacaciones, hospedaje
+        - Instalaciones, actividades, comida, ubicación
+        - Políticas, cancelaciones, mascotas
+        - Accesibilidad, movilidad reducida
+        - Cualquier pregunta sobre el establecimiento
+
+        El mensaje NO ESTÁ relacionado si habla sobre:
+        - Política, deportes, noticias, entretenimiento
+        - Tecnología no relacionada con reservas
+        - Recetas de cocina, consejos de salud
+        - Matemáticas, ciencias, educación
+        - Chistes, conversación casual no relacionada
+        - Cualquier tema personal no relacionado con viajes
+
+        Responde únicamente:
+        - "SI" si está relacionado con glamping/turismo
+        - "NO" si no está relacionado
+
+        Respuesta:"""
+        
+        try:
+            filter_llm = ChatOpenAI(
+                model="gpt-4o",
+                temperature=0,
+                api_key=os.getenv("OPENAI_API_KEY")
+            )
+        except NameError:
+            # Fallback en caso de que ChatOpenAI no esté disponible
+            from langchain_openai import ChatOpenAI
+            filter_llm = ChatOpenAI(
+                model="gpt-4o",
+                temperature=0,
+                api_key=os.getenv("OPENAI_API_KEY")
+            )
+        
+        response_text = filter_llm.invoke(prompt).content.strip().upper()
+        
+        # Determinar si está relacionado
+        is_related = response_text == "SI" or "SI" in response_text
+        
+        print(f"[FILTRO] Mensaje: '{message[:50]}...' -> Relacionado: {is_related}")
+        return is_related
+        
+    except Exception as e:
+        print(f"Error en filtro de temas: {e}")
+        # En caso de error, asumimos que está relacionado para no bloquear conversaciones legítimas
+        return True
+
+def get_off_topic_response():
+    """
+    Retorna la respuesta para temas no relacionados con glamping
+    """
+    return (
+        "🏕️ Soy María, la asistente especializada de *Glamping Brillo de Luna*.\n\n"
+        "Solo puedo ayudarte con información sobre:\n"
+        "• Nuestros domos y servicios\n"
+        "• Reservas y disponibilidad\n"
+        "• Precios y políticas\n"
+        "• Ubicación y actividades\n"
+        "• Cualquier consulta relacionada con tu estadía\n\n"
+        "*¿Te gustaría saber algo sobre nuestro glamping?*\n\n"
+        "Puedes seleccionar una opción:\n"
+        "1️⃣ *Domos* - Tipos y características\n"
+        "2️⃣ *Servicios* - Todo lo que ofrecemos\n"
+        "3️⃣ *Disponibilidad* - Consultar fechas\n"
+        "4️⃣ *Información General* - Ubicación y políticas\n\n"
+        "O escribir *'reservar'* si deseas hacer una reserva. ✨"
+    )
+
+def should_bypass_filter(message):
+    """
+    Determina si ciertos mensajes deben evitar el filtro
+    """
+    message_lower = message.lower().strip()
+    
+    # Mensajes que siempre pasan (saludos, números de menú, etc.)
+    bypass_patterns = [
+        # Saludos
+        'hola', 'hi', 'hello', 'buenos días', 'buenas tardes', 'buenas noches',
+        # Comandos de reserva
+        'reservar', 'reserva', 'quiero reservar',
+        # Respuestas simples
+        'si', 'sí', 'no', 'gracias', 'ok',
+        # Despedidas
+        'adiós', 'chao', 'hasta luego', 'bye'
+    ]
+    
+    # Verificar patrones de bypass
+    for pattern in bypass_patterns:
+        if pattern in message_lower:
+            return True
+    
+    # Verificar números de menú exactos (solo si es exactamente el número)
+    if message_lower.strip() in ['1', '2', '3', '4']:
+        return True
+    
+    return False
 
 # ==================== WEBHOOK DE WHATSAPP ====================
 
@@ -2933,6 +3027,35 @@ def chat():
             user_state["reserva_step"] = 0
             user_state["reserva_data"] = {}
     else:
+        # ==================== FILTRO DE TEMAS PARA /chat ====================
+        
+        # Verificar si el mensaje está relacionado con glamping (excepto bypass)
+        if not should_bypass_filter(user_input):
+            if not is_glamping_related(user_input):
+                print(f"[FILTRO] Mensaje off-topic bloqueado en /chat: '{user_input}'")
+                off_topic_response = get_off_topic_response()
+                response_output = off_topic_response
+                
+                # Agregar a la memoria
+                try:
+                    from langchain.schema import HumanMessage, AIMessage
+                    memory.chat_memory.add_message(HumanMessage(content=user_input))
+                    memory.chat_memory.add_message(AIMessage(content=off_topic_response))
+                except (ImportError, AttributeError):
+                    try:
+                        memory.chat_memory.add_user_message(user_input)
+                        memory.chat_memory.add_ai_message(off_topic_response)
+                    except:
+                        pass
+                
+                save_user_memory(session_id, memory)
+                
+                return jsonify({
+                    "session_id": session_id,
+                    "response": response_output,
+                    "memory": messages_to_dict(memory.chat_memory.messages)
+                })
+        
         # Procesamiento normal con el agente robusto si no hay flujo de reserva activo
         
         # Detectar si es consulta de disponibilidad
@@ -2943,7 +3066,7 @@ def chat():
         
         if intencion['es_consulta_disponibilidad'] and intencion['confianza'] > 0.1:
             # Es muy probable que sea consulta de disponibilidad
-            print(f"🔍 Detectada consulta de disponibilidad: {intencion['keywords_detectadas']}")
+            print(f"[CONSULTA] Detectada consulta de disponibilidad: {intencion['keywords_detectadas']}")
             
             # Forzar el uso de la herramienta de disponibilidades
             agent_input = f"""
@@ -3303,7 +3426,7 @@ def consultar_disponibilidades_interna(fecha_inicio=None, fecha_fin=None, domo=N
         }
 
     except Exception as e:
-        print(f"❌ Error en consultar_disponibilidades_interna: {str(e)}")
+        print(f"ERROR Error en consultar_disponibilidades_interna: {str(e)}")
         return {
             'success': False,
             'error': str(e),
@@ -3335,7 +3458,7 @@ def get_disponibilidades():
         return jsonify(resultado), 200
 
     except Exception as e:
-        print(f"❌ Error en get_disponibilidades: {str(e)}")
+        print(f"ERROR Error en get_disponibilidades: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e),
@@ -3469,7 +3592,7 @@ def extraer_parametros_consulta(consulta):
     }
 
     consulta_lower = consulta.lower()
-    print(f"🔍 Analizando consulta: '{consulta_lower}'")
+    print(f"[ANALISIS] Analizando consulta: '{consulta_lower}'")
 
     # PATRONES DE FECHA MEJORADOS PARA WHATSAPP
     patrones_fecha = [
@@ -3547,7 +3670,7 @@ def extraer_parametros_consulta(consulta):
                 break
 
             except Exception as e:
-                print(f"❌ Error procesando fecha {match}: {e}")
+                print(f"ERROR Error procesando fecha {match}: {e}")
                 continue
 
     # Detectar domos
@@ -3646,7 +3769,7 @@ def generar_respuesta_natural_disponibilidades(datos_disponibilidades, parametro
         return respuesta
 
     except Exception as e:
-        print(f"❌ Error generando respuesta natural: {e}")
+        print(f"ERROR Error generando respuesta natural: {e}")
         return "Tenemos domos disponibles. ¿Te gustaría hacer una reserva?"
 
 @app.route('/health', methods=['GET'])
@@ -3922,7 +4045,7 @@ def authenticate_user(email, password):
         print(f"Error en authenticate_user: {e}")
         return None
 
-# === ENDPOINT DE LOGIN ===
+# Backend Panel login
 @app.route('/api/auth/login', methods=['POST'])
 def login():
     """Login de usuario con validación de PostgreSQL"""
