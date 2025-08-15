@@ -2040,6 +2040,194 @@ def run_agent_safe(agent, user_input: str, max_retries: int = 2) -> tuple[bool, 
 print("[STARTING] Sistema inicializado - Iniciando rutas Flask...")
 
 # Rutas Flask para manejo de WhatsApp
+# ==================== SISTEMA DE MENÚ PRINCIPAL ====================
+
+def get_welcome_menu():
+    """Retorna el mensaje de bienvenida con menú principal"""
+    return (
+        "¡Hola! 👋 Mi nombre es *María* y soy la asistente virtual del *Glamping Brillo de Luna*. "
+        "Es un placer saludarte y estar aquí para acompañarte. ✨\n\n"
+        "Estoy especializada en brindarte información detallada sobre nuestros hermosos domos geodésicos, "
+        "servicios exclusivos y experiencias únicas. 🏕️\n\n"
+        "*Selecciona el número de la opción que te interese:*\n\n"
+        "1️⃣ *Domos* - Tipos, características y precios\n"
+        "2️⃣ *Servicios* - Todo lo que ofrecemos\n" 
+        "3️⃣ *Disponibilidad* - Fechas disponibles\n"
+        "4️⃣ *Información General* - Ubicación, políticas y más\n\n"
+        "También puedes escribir *'reservar'* si ya sabes lo que quieres y deseas hacer una reserva directamente. 📝"
+    )
+
+def handle_menu_selection(selection, qa_chains):
+    """Maneja la selección del menú principal"""
+    selection = selection.strip()
+    
+    if selection == "1":
+        try:
+            # Información sobre domos usando múltiples RAG
+            domos_info = qa_chains["domos_info"].run("¿Qué tipos de domos tienen y cuáles son sus características?")
+            precios_info = qa_chains.get("domos_precios", {}).run("¿Cuáles son los precios de los domos?") if "domos_precios" in qa_chains else ""
+            
+            response = f"🏠 *INFORMACIÓN DE DOMOS*\n\n{domos_info}"
+            if precios_info:
+                response += f"\n\n💰 *PRECIOS*\n{precios_info}"
+            
+            response += "\n\n¿Te gustaría saber algo más específico sobre algún domo? 🤔"
+            return response
+        except Exception as e:
+            return "🏠 *DOMOS DISPONIBLES*\n\nTenemos hermosos domos geodésicos únicos. ¿Te gustaría que te cuente más detalles sobre alguno en particular?"
+    
+    elif selection == "2":
+        try:
+            # Información sobre servicios
+            servicios_incluidos = qa_chains["servicios_incluidos"].run("¿Qué servicios están incluidos?")
+            servicios_adicionales = qa_chains["actividades_adicionales"].run("¿Qué servicios adicionales y actividades ofrecen?")
+            
+            response = f"🎯 *NUESTROS SERVICIOS*\n\n*SERVICIOS INCLUIDOS:*\n{servicios_incluidos}\n\n*SERVICIOS ADICIONALES:*\n{servicios_adicionales}"
+            response += "\n\n¿Hay algún servicio específico que te interese? ✨"
+            return response
+        except Exception as e:
+            return "🎯 *SERVICIOS*\n\nOfrecemos una amplia gama de servicios incluidos y adicionales. ¿Te gustaría saber sobre algo en particular?"
+    
+    elif selection == "3":
+        return {
+            "message": (
+                "📅 *CONSULTA DE DISPONIBILIDAD*\n\n"
+                "Para consultar fechas disponibles, por favor compárteme:\n"
+                "• Las fechas que te interesan (formato DD/MM/AAAA)\n"
+                "• Número de personas\n"
+                "• Tipo de domo preferido (opcional)\n\n"
+                "Ejemplo: _'15/09/2024 al 17/09/2024, 2 personas, domo romántico'_"
+            ),
+            "set_waiting_for_availability": True
+        }
+    
+    elif selection == "4":
+        try:
+            # Información general del glamping
+            ubicacion_info = qa_chains["ubicacion_contacto"].run("¿Dónde están ubicados y cómo contactarlos?")
+            concepto_info = qa_chains["concepto_glamping"].run("¿Qué es Glamping Brillo de Luna?")
+            politicas_info = qa_chains["politicas_glamping"].run("¿Cuáles son las políticas del glamping?")
+            
+            response = f"ℹ️ *INFORMACIÓN GENERAL*\n\n*CONCEPTO:*\n{concepto_info}\n\n*UBICACIÓN Y CONTACTO:*\n{ubicacion_info}\n\n*POLÍTICAS:*\n{politicas_info}"
+            response += "\n\n¿Hay algo más específico que te gustaría saber? 🌟"
+            return response
+        except Exception as e:
+            return "ℹ️ *INFORMACIÓN GENERAL*\n\nSomos un glamping ubicado en un entorno natural único. ¿Te gustaría saber algo específico?"
+    
+    else:
+        return (
+            "🤔 No entendí tu selección. Por favor elige un número del 1 al 4:\n\n"
+            "1️⃣ *Domos*\n"
+            "2️⃣ *Servicios*\n" 
+            "3️⃣ *Disponibilidad*\n"
+            "4️⃣ *Información General*\n\n"
+            "O escribe *'reservar'* para hacer una reserva."
+        )
+
+def is_menu_selection(message):
+    """Verifica si el mensaje es una selección válida del menú"""
+    return message.strip() in ["1", "2", "3", "4"]
+
+def is_greeting_message(message):
+    """Verifica si el mensaje es un saludo inicial"""
+    greetings = ['hola', 'holi', 'hello', 'hi', 'buenos días', 'buenas tardes', 'buenas noches', 'buenas', 'saludos']
+    return message.lower().strip() in greetings
+
+def handle_availability_request(message):
+    """Maneja consultas de disponibilidad cuando el usuario responde después de seleccionar opción 3"""
+    try:
+        # Usar LLM para extraer fechas y detalles
+        prompt = f"""
+        Extrae la información de disponibilidad de este mensaje del usuario: "{message}"
+        
+        Busca:
+        - Fechas (formato DD/MM/AAAA o similar)
+        - Número de personas
+        - Tipo de domo (si lo menciona)
+        
+        Responde en JSON:
+        {{
+            "fecha_inicio": "YYYY-MM-DD",
+            "fecha_fin": "YYYY-MM-DD", 
+            "personas": número,
+            "domo_tipo": "tipo o null"
+        }}
+        
+        Si no puedes extraer fechas válidas, responde con: {{"error": "fechas_no_claras"}}
+        """
+        
+        parsing_llm = ChatOpenAI(
+            model="gpt-4o",
+            temperature=0,
+            api_key=os.getenv("OPENAI_API_KEY")
+        )
+        
+        response_text = parsing_llm.invoke(prompt).content
+        try:
+            parsed_data = json.loads(response_text)
+            
+            if "error" in parsed_data:
+                return (
+                    "🤔 No pude entender las fechas claramente.\n\n"
+                    "Por favor, compárteme la información así:\n"
+                    "• *Fechas*: DD/MM/AAAA al DD/MM/AAAA\n"
+                    "• *Personas*: Número de huéspedes\n"
+                    "• *Domo*: Tipo preferido (opcional)\n\n"
+                    "*Ejemplo:* _15/12/2024 al 17/12/2024, 2 personas_"
+                )
+            
+            # Si tenemos fechas válidas, consultar disponibilidad
+            fecha_inicio = parsed_data.get("fecha_inicio")
+            fecha_fin = parsed_data.get("fecha_fin")
+            personas = parsed_data.get("personas")
+            domo_tipo = parsed_data.get("domo_tipo")
+            
+            if fecha_inicio and fecha_fin:
+                # Aquí podríamos usar la función obtener_disponibilidades_calendario que ya existe
+                disponibilidades = obtener_disponibilidades_calendario(
+                    fecha_inicio, fecha_fin, domo_tipo, personas
+                )
+                
+                if disponibilidades and "disponibilidades_por_dia" in disponibilidades:
+                    response = f"📅 *DISPONIBILIDAD para {fecha_inicio} al {fecha_fin}*\n\n"
+                    
+                    for dia in disponibilidades["disponibilidades_por_dia"]:
+                        fecha = dia["fecha_formateada"]
+                        domos_disponibles = dia["domos_disponibles"]
+                        
+                        if domos_disponibles:
+                            response += f"✅ *{fecha}*: {', '.join(domos_disponibles)}\n"
+                        else:
+                            response += f"❌ *{fecha}*: Sin disponibilidad\n"
+                    
+                    if disponibilidades.get("domos_disponibles_resumen"):
+                        response += "\n🏠 *DOMOS DISPONIBLES EN EL PERÍODO:*\n"
+                        for domo_info in disponibilidades["domos_disponibles_resumen"]:
+                            domo = domo_info["domo"]
+                            info = domo_info["info"]
+                            response += f"• *{info['nombre']}*: {info['descripcion']} (${info['precio_base']:,})\n"
+                    
+                    response += "\n¿Te gustaría hacer una reserva o necesitas más información? 🤔"
+                    return response
+                else:
+                    return f"❌ No hay disponibilidad para las fechas {fecha_inicio} al {fecha_fin}.\n\n¿Te gustaría consultar otras fechas?"
+            
+        except json.JSONDecodeError:
+            pass
+            
+    except Exception as e:
+        print(f"Error procesando consulta de disponibilidad: {e}")
+    
+    return (
+        "Para consultar disponibilidad, por favor compárteme:\n"
+        "• *Fechas*: DD/MM/AAAA al DD/MM/AAAA\n"
+        "• *Personas*: Número de huéspedes\n"
+        "• *Domo*: Tipo preferido (opcional)\n\n"
+        "*Ejemplo:* _15/12/2024 al 17/12/2024, 2 personas, domo romántico_"
+    )
+
+# ==================== WEBHOOK DE WHATSAPP ====================
+
 @app.route("/whatsapp_webhook", methods=["POST"])
 def whatsapp_webhook():
     incoming_msg = request.values.get('Body', '').strip()
@@ -2055,13 +2243,12 @@ def whatsapp_webhook():
         user_memories[from_number] = load_user_memory(from_number)
     
     if from_number not in user_states:
-        user_states[from_number] = {"current_flow": "none", "reserva_step": 0, "reserva_data": {}}
+        user_states[from_number] = {"current_flow": "none", "reserva_step": 0, "reserva_data": {}, "waiting_for_availability": False}
             
     memory = user_memories[from_number]
     user_state = user_states[from_number]
 
-    # Detectar si es la primera interacción real del usuario (saludo inicial)
-    is_greeting = incoming_msg.lower().strip() in ['hola', 'holi', 'hello', 'hi', 'buenos días', 'buenas tardes', 'buenas noches']
+    # ==================== SISTEMA DE MENÚ PRINCIPAL ====================
     
     # Verificar si es una memoria nueva (solo tiene mensajes del sistema)
     is_new_conversation = False
@@ -2070,16 +2257,9 @@ def whatsapp_webhook():
         if len(memory.chat_memory.messages) <= 2:
             is_new_conversation = True
     
-    # Si es un saludo en una conversación nueva, mostrar mensaje de bienvenida completo
-    if is_greeting and is_new_conversation:
-        welcome_message = (
-            "¡Hola! Mi nombre es María y soy asistente del Glamping Brillo de Luna. "
-            "Es un placer saludarte y estar aquí para acompañarte. "
-            "Estoy especializada en brindarte información detallada sobre nuestros hermosos domos geodésicos, "
-            "servicios exclusivos, experiencias únicas y todo lo que necesites saber para planificar "
-            "una estadía inolvidable en nuestro glamping. "
-            "¿En qué puedo ayudarte hoy?"
-        )
+    # Si es un saludo en una conversación nueva, mostrar menú de bienvenida
+    if is_greeting_message(incoming_msg) and is_new_conversation:
+        welcome_message = get_welcome_menu()
         resp.message(welcome_message)
         
         # Agregar este intercambio a la memoria
@@ -2096,6 +2276,81 @@ def whatsapp_webhook():
         
         save_user_memory(from_number, memory)
         return str(resp)
+    
+    # Manejar selecciones del menú principal (números 1-4)
+    if is_menu_selection(incoming_msg) and user_state["current_flow"] == "none":
+        try:
+            menu_response = handle_menu_selection(incoming_msg, qa_chains)
+            
+            # Si la respuesta es un diccionario (opción 3), manejar estado especial
+            if isinstance(menu_response, dict):
+                message_text = menu_response["message"]
+                if menu_response.get("set_waiting_for_availability"):
+                    user_state["waiting_for_availability"] = True
+                resp.message(message_text)
+                
+                # Agregar a la memoria
+                try:
+                    from langchain.schema import HumanMessage, AIMessage
+                    memory.chat_memory.add_message(HumanMessage(content=incoming_msg))
+                    memory.chat_memory.add_message(AIMessage(content=message_text))
+                except (ImportError, AttributeError):
+                    try:
+                        memory.chat_memory.add_user_message(incoming_msg)
+                        memory.chat_memory.add_ai_message(message_text)
+                    except:
+                        pass
+            else:
+                # Respuesta normal (string)
+                resp.message(menu_response)
+                
+                # Agregar a la memoria
+                try:
+                    from langchain.schema import HumanMessage, AIMessage
+                    memory.chat_memory.add_message(HumanMessage(content=incoming_msg))
+                    memory.chat_memory.add_message(AIMessage(content=menu_response))
+                except (ImportError, AttributeError):
+                    try:
+                        memory.chat_memory.add_user_message(incoming_msg)
+                        memory.chat_memory.add_ai_message(menu_response)
+                    except:
+                        pass
+            
+            save_user_memory(from_number, memory)
+            return str(resp)
+        except Exception as e:
+            print(f"Error en manejo de menú: {e}")
+            resp.message("Disculpa, hubo un error procesando tu selección. ¿Podrías intentar de nuevo?")
+            return str(resp)
+
+    # Manejar consultas de disponibilidad cuando el usuario está en modo "esperando disponibilidad"
+    if user_state.get("waiting_for_availability", False) and user_state["current_flow"] == "none":
+        try:
+            availability_response = handle_availability_request(incoming_msg)
+            resp.message(availability_response)
+            
+            # Resetear el estado de espera
+            user_state["waiting_for_availability"] = False
+            
+            # Agregar a la memoria
+            try:
+                from langchain.schema import HumanMessage, AIMessage
+                memory.chat_memory.add_message(HumanMessage(content=incoming_msg))
+                memory.chat_memory.add_message(AIMessage(content=availability_response))
+            except (ImportError, AttributeError):
+                try:
+                    memory.chat_memory.add_user_message(incoming_msg)
+                    memory.chat_memory.add_ai_message(availability_response)
+                except:
+                    pass
+            
+            save_user_memory(from_number, memory)
+            return str(resp)
+        except Exception as e:
+            print(f"Error procesando consulta de disponibilidad: {e}")
+            resp.message("Disculpa, hubo un error procesando tu consulta. ¿Podrías intentar de nuevo?")
+            user_state["waiting_for_availability"] = False
+            return str(resp)
 
     # Lógica de flujo de reserva (detecta intención o continúa flujo existente)
     if user_state["current_flow"] == "none" and \
@@ -2382,15 +2637,14 @@ def chat():
         user_memories[session_id] = load_user_memory(session_id)
     
     if session_id not in user_states:
-        user_states[session_id] = {"current_flow": "none", "reserva_step": 0, "reserva_data": {}}
+        user_states[session_id] = {"current_flow": "none", "reserva_step": 0, "reserva_data": {}, "waiting_for_availability": False}
 
     memory = user_memories[session_id]
     user_state = user_states[session_id]
 
     response_output = "Lo siento, no pude procesar tu solicitud en este momento."
     
-    # Detectar si es la primera interacción real del usuario (saludo inicial)
-    is_greeting = user_input.lower().strip() in ['hola', 'holi', 'hello', 'hi', 'buenos días', 'buenas tardes', 'buenas noches']
+    # ==================== SISTEMA DE MENÚ PRINCIPAL PARA /chat ====================
     
     # Verificar si es una memoria nueva (solo tiene mensajes del sistema)
     is_new_conversation = False
@@ -2399,16 +2653,9 @@ def chat():
         if len(memory.chat_memory.messages) <= 2:
             is_new_conversation = True
     
-    # Si es un saludo en una conversación nueva, mostrar mensaje de bienvenida completo
-    if is_greeting and is_new_conversation:
-        welcome_message = (
-            "¡Hola! Mi nombre es María y soy asistente del Glamping Brillo de Luna. "
-            "Es un placer saludarte y estar aquí para acompañarte. "
-            "Estoy especializada en brindarte información detallada sobre nuestros hermosos domos geodésicos, "
-            "servicios exclusivos, experiencias únicas y todo lo que necesites saber para planificar "
-            "una estadía inolvidable en nuestro glamping. "
-            "¿En qué puedo ayudarte hoy?"
-        )
+    # Si es un saludo en una conversación nueva, mostrar menú de bienvenida
+    if is_greeting_message(user_input) and is_new_conversation:
+        welcome_message = get_welcome_menu()
         response_output = welcome_message
         
         # Agregar este intercambio a la memoria
@@ -2430,6 +2677,88 @@ def chat():
             "response": response_output,
             "memory": messages_to_dict(memory.chat_memory.messages)
         })
+    
+    # Manejar selecciones del menú principal (números 1-4)
+    if is_menu_selection(user_input) and user_state["current_flow"] == "none":
+        try:
+            menu_response = handle_menu_selection(user_input, qa_chains)
+            
+            # Si la respuesta es un diccionario (opción 3), manejar estado especial
+            if isinstance(menu_response, dict):
+                response_output = menu_response["message"]
+                if menu_response.get("set_waiting_for_availability"):
+                    user_state["waiting_for_availability"] = True
+            else:
+                # Respuesta normal (string)
+                response_output = menu_response
+            
+            # Agregar a la memoria
+            try:
+                from langchain.schema import HumanMessage, AIMessage
+                memory.chat_memory.add_message(HumanMessage(content=user_input))
+                memory.chat_memory.add_message(AIMessage(content=response_output))
+            except (ImportError, AttributeError):
+                try:
+                    memory.chat_memory.add_user_message(user_input)
+                    memory.chat_memory.add_ai_message(response_output)
+                except:
+                    pass
+            
+            save_user_memory(session_id, memory)
+            
+            return jsonify({
+                "session_id": session_id,
+                "response": response_output,
+                "memory": messages_to_dict(memory.chat_memory.messages)
+            })
+        except Exception as e:
+            print(f"Error en manejo de menú en /chat: {e}")
+            response_output = "Disculpa, hubo un error procesando tu selección. ¿Podrías intentar de nuevo?"
+            
+            return jsonify({
+                "session_id": session_id,
+                "response": response_output,
+                "memory": messages_to_dict(memory.chat_memory.messages)
+            })
+
+    # Manejar consultas de disponibilidad cuando el usuario está en modo "esperando disponibilidad"
+    if user_state.get("waiting_for_availability", False) and user_state["current_flow"] == "none":
+        try:
+            availability_response = handle_availability_request(user_input)
+            response_output = availability_response
+            
+            # Resetear el estado de espera
+            user_state["waiting_for_availability"] = False
+            
+            # Agregar a la memoria
+            try:
+                from langchain.schema import HumanMessage, AIMessage
+                memory.chat_memory.add_message(HumanMessage(content=user_input))
+                memory.chat_memory.add_message(AIMessage(content=availability_response))
+            except (ImportError, AttributeError):
+                try:
+                    memory.chat_memory.add_user_message(user_input)
+                    memory.chat_memory.add_ai_message(availability_response)
+                except:
+                    pass
+            
+            save_user_memory(session_id, memory)
+            
+            return jsonify({
+                "session_id": session_id,
+                "response": response_output,
+                "memory": messages_to_dict(memory.chat_memory.messages)
+            })
+        except Exception as e:
+            print(f"Error procesando consulta de disponibilidad en /chat: {e}")
+            response_output = "Disculpa, hubo un error procesando tu consulta. ¿Podrías intentar de nuevo?"
+            user_state["waiting_for_availability"] = False
+            
+            return jsonify({
+                "session_id": session_id,
+                "response": response_output,
+                "memory": messages_to_dict(memory.chat_memory.messages)
+            })
     
     # Lógica de flujo de reserva para el endpoint /chat
     if user_state["current_flow"] == "none" and \
