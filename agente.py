@@ -46,7 +46,7 @@ except ImportError:
         PINECONE_SERVERLESS_AVAILABLE = False
         print("OK: Pinecone importado sin ServerlessSpec")
     except ImportError:
-        #  Import legacy
+        #  Import de legacy
         try:
             import pinecone as pinecone_legacy
             Pinecone = pinecone_legacy
