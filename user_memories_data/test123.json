@@ -106,5 +106,59 @@
       "invalid_tool_calls": [],
       "usage_metadata": null
     }
+  },
+  {
+    "type": "human",
+    "data": {
+      "content": "Quiero ver fotos de los domos",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null,
+      "example": false
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "¡Genial! Espero que las fotos te hayan gustado y te hayan dado una idea de cómo son nuestros domos. ¿Te gustaría saber más sobre los servicios y actividades que ofrecemos en Glamping Brillo de Luna?",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "ai",
+      "name": null,
+      "id": null,
+      "example": false,
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  },
+  {
+    "type": "human",
+    "data": {
+      "content": "Quiero ver fotos de los domos",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null,
+      "example": false
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "¡Genial! Espero que las fotos te hayan gustado y te hayan dado una idea de cómo son nuestros domos. ¿Te gustaría saber más sobre los servicios y actividades que ofrecemos en Glamping Brillo de Luna?",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "ai",
+      "name": null,
+      "id": null,
+      "example": false,
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
   }
 ]

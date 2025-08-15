@@ -29,7 +29,7 @@
   {
     "type": "human",
     "data": {
-      "content": "hello",
+      "content": "quiero ver fotos de los domos",
       "additional_kwargs": {},
       "response_metadata": {},
       "type": "human",
@@ -41,7 +41,7 @@
   {
     "type": "ai",
     "data": {
-      "content": "¡Hola! Mi nombre es María y soy asistente del Glamping Brillo de Luna. Es un placer saludarte y estar aquí para acompañarte. Estoy especializada en brindarte información detallada sobre nuestros hermosos domos geodésicos, servicios exclusivos, experiencias únicas y todo lo que necesites saber para planificar una estadía inolvidable en nuestro glamping. ¿En qué puedo ayudarte hoy?",
+      "content": "Aquí tienes los enlaces a la galería de imágenes de los domos y a nuestra página web oficial. ¡Espero que disfrutes viendo las fotos y conozcas más sobre nuestro glamping! ¿Hay algo más en lo que pueda ayudarte?",
       "additional_kwargs": {},
       "response_metadata": {},
       "type": "ai",
@@ -56,7 +56,7 @@
   {
     "type": "human",
     "data": {
-      "content": "hello",
+      "content": "quiero ver fotos de los domos",
       "additional_kwargs": {},
       "response_metadata": {},
       "type": "human",
@@ -68,34 +68,7 @@
   {
     "type": "ai",
     "data": {
-      "content": "¡Hola! Mi nombre es María y soy asistente del Glamping Brillo de Luna. Es un placer saludarte y estar aquí para acompañarte. Estoy especializada en brindarte información detallada sobre nuestros hermosos domos geodésicos, servicios exclusivos, experiencias únicas y todo lo que necesites saber para planificar una estadía inolvidable en nuestro glamping. ¿En qué puedo ayudarte hoy?",
-      "additional_kwargs": {},
-      "response_metadata": {},
-      "type": "ai",
-      "name": null,
-      "id": null,
-      "example": false,
-      "tool_calls": [],
-      "invalid_tool_calls": [],
-      "usage_metadata": null
-    }
-  },
-  {
-    "type": "human",
-    "data": {
-      "content": "hello",
-      "additional_kwargs": {},
-      "response_metadata": {},
-      "type": "human",
-      "name": null,
-      "id": null,
-      "example": false
-    }
-  },
-  {
-    "type": "ai",
-    "data": {
-      "content": "¡Hola! Mi nombre es María y soy asistente del Glamping Brillo de Luna. Es un placer saludarte y estar aquí para acompañarte. Estoy especializada en brindarte información detallada sobre nuestros hermosos domos geodésicos, servicios exclusivos, experiencias únicas y todo lo que necesites saber para planificar una estadía inolvidable en nuestro glamping. ¿En qué puedo ayudarte hoy?",
+      "content": "Aquí tienes los enlaces a la galería de imágenes de los domos y a nuestra página web oficial. ¡Espero que disfrutes viendo las fotos y conozcas más sobre nuestro glamping! ¿Hay algo más en lo que pueda ayudarte?",
       "additional_kwargs": {},
       "response_metadata": {},
       "type": "ai",

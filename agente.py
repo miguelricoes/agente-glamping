@@ -763,17 +763,23 @@ def politicas_cancelacion_func(query: str) -> str:
     return call_chain_safe("politicas_cancelacion", query)
 
 def links_imagenes_func(query: str = None) -> str:
+    """Función robusta que SIEMPRE devuelve los links"""
     if query is None:
-        query = "Links para ver imágenes de los domos"
+        query = "Enlaces para ver imágenes de los domos"
+    
+    # Usar RAG para contexto, pero siempre incluir los links
     response = call_chain_safe("links_imagenes", query)
     
-    # Asegurarnos de que los links estén en la respuesta
-    if "glampingbrillodeluna.com" not in response:
-        response += "\n\n**Enlaces útiles:**\n"
-        response += "- **Galería de imágenes de domos**: https://www.glampingbrillodeluna.com/domos\n"
-        response += "- **Página web oficial**: https://www.glampingbrillodeluna.com"
+    # Crear respuesta que SIEMPRE incluya los links
+    links_response = (
+        "Aquí tienes los enlaces que necesitas:\n\n"
+        "**Para ver imágenes de los domos**: https://www.glampingbrillodeluna.com/domos\n\n"
+        "**Página web oficial**: https://www.glampingbrillodeluna.com\n\n"
+        "En estos enlaces podrás ver todas las fotos de nuestros hermosos domos geodésicos, "
+        "conocer las instalaciones y realizar reservas directamente."
+    )
     
-    return response
+    return links_response
 
 # Herramienta para consultar disponibilidades
 def consultar_disponibilidades_glamping(consulta_usuario: str) -> str:
@@ -1023,6 +1029,10 @@ class ReservationRequestTool(BaseTool):
     async def _arun(self, query: str = None) -> str:
         return self._run(query)
 
+def menu_principal_func(query: str = None) -> str:
+    """Muestra el menú principal de navegación cuando el usuario lo solicita"""
+    return get_welcome_menu()
+
 tools = [
     ReservationRequestTool(), 
     
@@ -1107,7 +1117,12 @@ tools = [
     Tool(
         name="LinksImagenesWeb",
         func=links_imagenes_func,
-        description="USAR CUANDO el usuario quiera ver imágenes de los domos, fotos, galería, página web, sitio web, o pida links. Proporciona los enlaces directos a la galería de imágenes de los domos y el sitio web oficial de Glamping Brillo de Luna."
+        description="OBLIGATORIO: Usar cuando usuario pida: 'fotos', 'imágenes', 'galería', 'página web', 'sitio web', 'links', 'enlaces', 'ver domos'. SIEMPRE devuelve los links reales de la página web."
+    ),
+    Tool(
+        name="MenuPrincipal",
+        func=menu_principal_func,
+        description="OBLIGATORIO: Usar cuando usuario pida: 'menú', 'menús', 'opciones', 'guía', 'ayuda', 'navegación', 'qué puedo hacer', 'cómo navegar'. Muestra el menú principal de opciones disponibles."
     )
 ]
 
@@ -1196,10 +1211,12 @@ def _create_fresh_memory(user_id: str) -> ConversationBufferMemory:
             "IMPORTANTE: SIEMPRE usa tus herramientas disponibles para responder preguntas específicas. "
             "Cuando el usuario mencione 'silla de ruedas', 'movilidad reducida', 'discapacidad', 'accesibilidad', 'limitaciones físicas', 'muletas', o 'adaptaciones', "
             "DEBES usar inmediatamente la herramienta SugerenciasMovilidadReducida y responder con TODA la información que la herramienta te proporcione. "
-            "NUNCA hagas preguntas de seguimiento cuando ya tienes información específica de una herramienta. "
-            "SIEMPRE proporciona la información completa que obtienes de las herramientas. "
             "Cuando pregunten sobre precios, DEBES usar DomosPreciosDetallados. "
             "Cuando pregunten sobre actividades, DEBES usar ServiciosExternos. "
+            "Cuando pregunten por fotos, imágenes, galería, página web, sitio web, o links, DEBES usar LinksImagenesWeb inmediatamente. "
+            "Cuando pregunten por menú, menús, opciones, guía, ayuda, navegación, DEBES usar MenuPrincipal inmediatamente. "
+            "NUNCA hagas preguntas de seguimiento cuando ya tienes información específica de una herramienta. "
+            "SIEMPRE proporciona la información completa que obtienes de las herramientas. "
             "No des respuestas genéricas cuando tienes herramientas específicas disponibles. "
             "Tu respuesta debe basarse en la información EXACTA que obtienes de las herramientas, no agregues preguntas adicionales. "
             "Tu objetivo es ser útil, informativa y comprensiva usando SIEMPRE la información específica de tus herramientas."
