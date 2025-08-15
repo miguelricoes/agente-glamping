@@ -183,6 +183,7 @@ files_to_process = {
     "sugerencias_movilidad_reducida": "SugerenciasPersonasMovilidadReducida.txt",
     "politicas_privacidad": "PoliticasDePrivaciadad.txt",
     "politicas_cancelacion": "Políticas de Cancelación.txt",
+    "links_imagenes": "Links.txt",
 }
 
 # Procesamiento robusto de archivos de datos

@@ -762,6 +762,19 @@ def politicas_privacidad_func(query: str) -> str:
 def politicas_cancelacion_func(query: str) -> str:
     return call_chain_safe("politicas_cancelacion", query)
 
+def links_imagenes_func(query: str = None) -> str:
+    if query is None:
+        query = "Links para ver imágenes de los domos"
+    response = call_chain_safe("links_imagenes", query)
+    
+    # Asegurarnos de que los links estén en la respuesta
+    if "glampingbrillodeluna.com" not in response:
+        response += "\n\n**Enlaces útiles:**\n"
+        response += "- **Galería de imágenes de domos**: https://www.glampingbrillodeluna.com/domos\n"
+        response += "- **Página web oficial**: https://www.glampingbrillodeluna.com"
+    
+    return response
+
 # Herramienta para consultar disponibilidades
 def consultar_disponibilidades_glamping(consulta_usuario: str) -> str:
     """
@@ -1090,6 +1103,11 @@ tools = [
         name="PoliticasCancelacion",
         func=politicas_cancelacion_func,
         description="Políticas específicas de cancelación, términos y condiciones de reserva."
+    ),
+    Tool(
+        name="LinksImagenesWeb",
+        func=links_imagenes_func,
+        description="USAR CUANDO el usuario quiera ver imágenes de los domos, fotos, galería, página web, sitio web, o pida links. Proporciona los enlaces directos a la galería de imágenes de los domos y el sitio web oficial de Glamping Brillo de Luna."
     )
 ]
 
@@ -2206,7 +2224,7 @@ def handle_availability_request(message):
         "*Ejemplo:* _15/12/2024 al 17/12/2024, 2 personas, domo romántico_"
     )
 
-# ==================== SISTEMA DE FILTRADO DE TEMAS ====================
+#FILTRADO DE TEMAS CONDICIONALES
 
 def is_glamping_related(message):
     """
@@ -2320,13 +2338,13 @@ def should_bypass_filter(message):
     
     return False
 
-# ==================== WEBHOOK DE WHATSAPP ====================
+# WEBHOOK DE WHATSAPP 
 
 @app.route("/whatsapp_webhook", methods=["POST"])
 def whatsapp_webhook():
-    incoming_msg = request.values.get('Body', '').strip()
-    from_number = request.values.get('From', '')
-    button_payload = request.values.get('ButtonPayload') 
+    incoming_msg = request.values.get('Body', '').strip() # Mensaje del usuario
+    from_number = request.values.get('From', '') # Número del usuario 
+    button_payload = request.values.get('ButtonPayload') # payload del botón
 
     print(f"[{from_number}] Mensaje recibido: '{incoming_msg}' (Payload: '{button_payload}')")
 
@@ -2342,7 +2360,7 @@ def whatsapp_webhook():
     memory = user_memories[from_number]
     user_state = user_states[from_number]
 
-    # ==================== SISTEMA DE MENÚ PRINCIPAL ====================
+    # Verificar si el mensaje es un saludo o una consulta de menú
     
     # Verificar si es una memoria nueva (solo tiene mensajes del sistema)
     is_new_conversation = False
@@ -2356,7 +2374,6 @@ def whatsapp_webhook():
         welcome_message = get_welcome_menu()
         resp.message(welcome_message)
         
-        # Agregar este intercambio a la memoria
         try:
             from langchain.schema import HumanMessage, AIMessage
             memory.chat_memory.add_message(HumanMessage(content=incoming_msg))
@@ -2470,19 +2487,19 @@ def whatsapp_webhook():
         )
         save_user_memory(from_number, memory)
         return str(resp)
-
+    
+    # Si el usuario ya está en el flujo de reserva y está en el paso 1, procesar la solicitud de reserva
     if user_state["current_flow"] == "reserva" and user_state["reserva_step"] == 1:
         resp.message("🔄 Procesando tu solicitud de reserva, por favor espera un momento...")
         
-        # Parsear datos con LLM
         parsed_data = parse_reservation_details(incoming_msg)
 
         if parsed_data:
-            # Validar y procesar datos con funciones robustas
+        
             validation_success, processed_data, validation_errors = validate_and_process_reservation_data(parsed_data, from_number)
             
             if validation_success:
-                # Datos válidos - mostrar confirmación
+                # Datos válidos - mostrar confirmación de reserva
                 user_state["reserva_data"] = processed_data
                 
                 # Calcular precio para mostrar en confirmación
@@ -2539,10 +2556,10 @@ def whatsapp_webhook():
                 )
                 
                 resp.message(error_msg)
-                # No resetear el flujo - dar otra oportunidad
+                
                 
         else:
-            # Error en el parsing del LLM
+            # Error en el LLM
             resp.message(
                 "ERROR: **No pude interpretar tu solicitud de reserva.**\n\n"
                 "[TIP] **Por favor, asegúrate de incluir toda la información:**\n"
@@ -2601,7 +2618,6 @@ def whatsapp_webhook():
                     db.session.commit()
                     print(f"OK: Reserva guardada en PostgreSQL - ID: {nueva_reserva.id}")
                     
-                    # También guardar en Pinecone
                     pinecone_success = save_reservation_to_pinecone(from_number, reservation_data)
                     
                     success_msg = "🎉 ¡Reserva confirmada y guardada exitosamente!\n\n"
@@ -2640,7 +2656,7 @@ def whatsapp_webhook():
         save_user_memory(from_number, memory)
         return str(resp)
 
-    # Procesamiento normal con el Agente Conversacional robusto (si no hay flujo activo)
+    # Procesamiento normal con el Agente Conversacional si no hay flujo activo
     try:
         # Inicializar agente con manejo robusto
         init_success, custom_agent, init_error = initialize_agent_safe(tools, memory, max_retries=3)
@@ -2718,19 +2734,20 @@ def detectar_intencion_consulta(user_input: str) -> dict:
         'keywords_detectadas': keywords_encontradas
     }
 
+# ENDPOINT PRINCIPAL PARA CHAT WEB DE WHATSAPP 
 @app.route("/chat", methods=["POST"])
 def chat():
-    data = request.get_json()
+    data = request.get_json() # Obtener JSON del request
     user_input = data.get("input", "").strip()
     session_id = data.get("session_id", str(uuid.uuid4()))
 
-    if not user_input:
-        return jsonify({"error": "Falta el campo 'input'"}), 400
+    if not user_input: # Verificar si el campo 'input' esta presente
+        return jsonify({"error": "Falta el campo 'input'"}), 400 
 
-    if session_id not in user_memories:
+    if session_id not in user_memories: # Cargar o inicializar memoria del usuario
         user_memories[session_id] = load_user_memory(session_id)
     
-    if session_id not in user_states:
+    if session_id not in user_states: # Inicializar estado del usuario
         user_states[session_id] = {"current_flow": "none", "reserva_step": 0, "reserva_data": {}, "waiting_for_availability": False}
 
     memory = user_memories[session_id]
@@ -2738,7 +2755,7 @@ def chat():
 
     response_output = "Lo siento, no pude procesar tu solicitud en este momento."
     
-    # ==================== SISTEMA DE MENÚ PRINCIPAL PARA /chat ====================
+    #  SISTEMA DE MENÚ PRINCIPAL PARA /chat 
     
     # Verificar si es una memoria nueva (solo tiene mensajes del sistema)
     is_new_conversation = False
@@ -3129,9 +3146,10 @@ Consulta original del usuario: {user_input}
         "memory": messages_to_dict(memory.chat_memory.messages)
     })
 
-@app.route('/api/reservas', methods=['GET'])
+# Endpoint para obtener todas las reservas Conexion con el frontend
+@app.route('/api/reservas', methods=['GET']) # Endpoint para obtener todas las reservas
 def get_reservas():
-    """Endpoint simplificado para obtener reservas para el frontend"""
+    
     try:
         # Verificar estado de la base de datos
         if not database_available or not db:
@@ -3157,7 +3175,7 @@ def get_reservas():
                 for servicio in servicios_lista:
                     servicios_array.append({
                         'nombre': servicio,
-                        'precio': 0,  # Por defecto, se puede mejorar después
+                        'precio': 0,  
                         'descripcion': ''
                     })
 
@@ -3208,10 +3226,10 @@ def get_reservas():
                 'id': reserva.id,
                 'nombre': reserva.nombres_huespedes or f"Usuario {reserva.numero_whatsapp}",
 
-                # CAMPOS IMPORTANTES - Con validación
+                
                 **campos_importantes,
 
-                # CAMPOS OPCIONALES - Pueden estar vacíos
+                
                 **campos_opcionales,
 
                 # METADATOS
@@ -3244,7 +3262,7 @@ def get_reservas():
             'reservas': []
         }), 500
 
-@app.route('/api/reservas/stats', methods=['GET'])
+@app.route('/api/reservas/stats', methods=['GET']) # Endpoint para obtener estadísticas de reservas
 def get_reservas_stats():
     """
     Endpoint para obtener estadísticas de reservas
@@ -3283,6 +3301,7 @@ def get_reservas_stats():
         print(f"ERROR en get_reservas_stats: {e}")
         return jsonify({"error": str(e)}), 500
 
+# ENDPOINT PARA CONSULTAR DISPONIBILIDADES 
 def consultar_disponibilidades_interna(fecha_inicio=None, fecha_fin=None, domo=None, personas=None):
     """
     Función interna para consultar disponibilidades sin HTTP
@@ -3435,11 +3454,9 @@ def consultar_disponibilidades_interna(fecha_inicio=None, fecha_fin=None, domo=N
             'mensaje': f'Error técnico: {str(e)}'
         }
 
-@app.route('/api/disponibilidades', methods=['GET'])
+@app.route('/api/disponibilidades', methods=['GET']) # Endpoint REST para consultar disponibilidades
 def get_disponibilidades():
-    """
-    Endpoint REST para consultar disponibilidades (ACTUALIZADO)
-    """
+    
     try:
         # Obtener parámetros
         fecha_inicio = request.args.get('fecha_inicio')
@@ -3512,12 +3529,9 @@ def generar_recomendaciones_disponibilidad(domos_disponibles, fechas_libres, per
 
     return recomendaciones
 
-@app.route('/api/agente/disponibilidades', methods=['POST'])
+@app.route('/api/agente/disponibilidades', methods=['POST']) # Endpoint especializado para consultas del agente IA
 def agente_consultar_disponibilidades():
-    """
-    Endpoint especializado para consultas del agente IA
-    Acepta consultas en lenguaje natural y devuelve respuestas estructuradas
-    """
+    # Acepta consultas en lenguaje natural y devuelve respuestas estructuradas
     if not database_available or not db:
         return jsonify({
             'respuesta_agente': 'Lo siento, no puedo consultar las disponibilidades en este momento. La base de datos no está disponible.',
@@ -3579,7 +3593,7 @@ def agente_consultar_disponibilidades():
 
 def extraer_parametros_consulta(consulta):
     """
-    Extrae parámetros de una consulta en lenguaje natural (MEJORADO)
+    Extrae parámetros de una consulta en lenguaje natural para disponibilidades
     """
     import re
     from datetime import datetime, timedelta
@@ -3715,7 +3729,7 @@ def extraer_parametros_consulta(consulta):
 
 def generar_respuesta_natural_disponibilidades(datos_disponibilidades, parametros_extraidos, consulta_original):
     """
-    Genera respuesta natural basada en datos de disponibilidades (MEJORADA)
+    Genera respuesta natural basada en datos de disponibilidades 
     """
     try:
         if not datos_disponibilidades.get('success'):
@@ -3772,7 +3786,7 @@ def generar_respuesta_natural_disponibilidades(datos_disponibilidades, parametro
         print(f"ERROR Error generando respuesta natural: {e}")
         return "Tenemos domos disponibles. ¿Te gustaría hacer una reserva?"
 
-@app.route('/health', methods=['GET'])
+@app.route('/health', methods=['GET']) # Endpoint de salud mejorado
 def health_check():
     """Health check endpoint para monitoreo mejorado"""
     try:
@@ -3791,7 +3805,7 @@ def health_check():
             'sqlalchemy_initialized': db is not None
         }
 
-        # Si la BD no está disponible, devolver 503 (Service Unavailable)
+        # Si la BD no está disponible, devolver 503 
         if not database_available:
             response['status'] = 'degraded'
             return jsonify(response), 503
@@ -3806,7 +3820,7 @@ def health_check():
             'database': 'unknown'
         }), 500
 
-@app.route('/api/reservas', methods=['POST'])
+@app.route('/api/reservas', methods=['POST']) # Endpoint para crear una nueva reserva
 def create_reserva():
     """Crear nueva reserva con validación de campos importantes"""
     if not database_available:
@@ -3869,14 +3883,13 @@ def create_reserva():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/reservas/<reserva_id>', methods=['PUT'])
+@app.route('/api/reservas/<reserva_id>', methods=['PUT']) # Endpoint para actualizar una reserva existente 
 def update_reserva(reserva_id):
     """Actualizar reserva existente"""
     if not database_available:
         return jsonify({'error': 'Base de datos no disponible'}), 503
 
     try:
-        # Extraer ID numérico de RSV-XXX
         numeric_id = int(reserva_id.replace('RSV-', ''))
         reserva = Reserva.query.get(numeric_id)
 
@@ -3929,7 +3942,7 @@ def update_reserva(reserva_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/reservas/<reserva_id>', methods=['DELETE'])
+@app.route('/api/reservas/<reserva_id>', methods=['DELETE']) 
 def delete_reserva(reserva_id):
     """Eliminar reserva"""
     if not database_available:
@@ -3952,8 +3965,8 @@ def delete_reserva(reserva_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-# === ENDPOINTS DE USUARIOS ===
-@app.route('/api/usuarios', methods=['GET'])
+# ENDPOINTS DE USUARIOS
+@app.route('/api/usuarios', methods=['GET']) 
 def get_usuarios():
     """Obtener lista de usuarios"""
     try:
@@ -4022,9 +4035,8 @@ def delete_user_endpoint(user_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
-# === FUNCIÓN DE AUTENTICACIÓN ===
+# FUNCIÓN DE AUTENTICACIÓN DE USUARIOS
 def authenticate_user(email, password):
-    """Autenticar usuario contra PostgreSQL"""
     if not db or not Usuario:
         return None
 
