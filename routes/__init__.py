@@ -1,0 +1,1 @@
+# Routes module for agente glamping

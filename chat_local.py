@@ -1,13 +1,26 @@
 import requests
 import json
+import sys
 
+# Configurar encoding para Windows
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='ignore')
+if hasattr(sys.stdin, 'reconfigure'):
+    sys.stdin.reconfigure(encoding='utf-8', errors='ignore')
+
+print("🌙 GLAMPING BRILLO DE LUNA - CHAT LOCAL")
+print("=" * 50)
 print("Escribe 'salir' para terminar.\n")
 
 # Variable para almacenar el ID de sesión. Inicialmente es None.
 current_session_id = None
 
 while True:
-    mensaje = input("Tú: ")
+    try:
+        mensaje = input("Tú: ")
+    except (EOFError, KeyboardInterrupt):
+        print("\nConversación terminada.")
+        break
     if mensaje.lower() in ["salir", "exit"]:
         break
 
@@ -30,7 +43,7 @@ while True:
             current_session_id = response_data["session_id"]
             print(f"(DEBUG) Sesión iniciada con ID: {current_session_id}\n") # Mensaje opcional para depuración
 
-        print("Maria:", response_data.get("response"))
+        print("🤖 Maria:", response_data.get("response"))
         # Puedes mantener o eliminar esta línea según si quieres ver la memoria en la consola
         # print("🧠 Memoria actual:", json.dumps(response_data.get("memory"), ensure_ascii=False, indent=2))
 
