@@ -10,70 +10,16 @@ from utils.logger import get_logger
 logger = get_logger(__name__)
 
 class LLMService:
-    """
-    Servicio centralizado para LLM, Pinecone y agentes
-    Consolida toda la inicialización de IA de agente.py
-    """
-    
+    """Servicio centralizado para LLM y agentes Consolida toda la inicialización de IA de agente.py """
     def __init__(self):
         """Inicializar servicio de LLM"""
         self.llm = None
-        self.pinecone_initialized = False
         self.qa_chains = {}
         self.tools = []
         
         logger.info("LLMService inicializado", 
                    extra={"component": "llm_service", "phase": "startup"})
     
-    def initialize_pinecone(self) -> bool:
-        """
-        Inicializa Pinecone (extraído de agente.py líneas 122-192)
-        
-        Returns:
-            bool: True si la inicialización fue exitosa
-        """
-        try:
-            logger.info("Inicializando Pinecone", 
-                       extra={"component": "llm_service", "action": "init_pinecone"})
-            
-            api_key = os.getenv("PINECONE_API_KEY")
-            environment = os.getenv("PINECONE_ENVIRONMENT")
-            
-            if not api_key or not environment:
-                logger.warning("Credenciales de Pinecone no configuradas", 
-                              extra={"component": "llm_service"})
-                return False
-            
-            try:
-                import pinecone
-                
-                # Inicializar Pinecone
-                pinecone.init(
-                    api_key=api_key,
-                    environment=environment
-                )
-                
-                # Verificar conexión
-                indexes = pinecone.list_indexes()
-                logger.info(f"Pinecone inicializado exitosamente. Índices disponibles: {len(indexes)}", 
-                           extra={"component": "llm_service", "indexes_count": len(indexes)})
-                
-                self.pinecone_initialized = True
-                return True
-                
-            except Exception as e:
-                logger.error(f"Error inicializando Pinecone: {e}", 
-                            extra={"component": "llm_service"})
-                return False
-                
-        except ImportError:
-            logger.warning("Biblioteca Pinecone no disponible", 
-                          extra={"component": "llm_service"})
-            return False
-        except Exception as e:
-            logger.error(f"Error en inicialización de Pinecone: {e}", 
-                        extra={"component": "llm_service"})
-            return False
     
     def initialize_llm(self) -> bool:
         """
@@ -165,29 +111,49 @@ class LLMService:
                 "links_imagenes"
             ]
             
-            # Crear cadenas QA básicas (sin vectorstore por ahora)
-            for chain_name in default_chains:
-                try:
-                    # Crear cadena QA simple
-                    from langchain.chains import LLMChain
-                    from langchain.prompts import PromptTemplate
+            # Intentar cargar cadenas QA reales desde rag_engine
+            try:
+                import rag_engine
+                
+                # Usar las cadenas QA que ya están cargadas con datos reales
+                if hasattr(rag_engine, 'qa_chains') and rag_engine.qa_chains:
+                    self.qa_chains = rag_engine.qa_chains.copy()
+                    successful_chains = len([chain for chain in self.qa_chains.values() if chain is not None])
                     
-                    prompt = PromptTemplate(
-                        input_variables=["question"],
-                        template=f"Responde la siguiente pregunta sobre {chain_name}: {{question}}"
-                    )
+                    logger.info(f"Cadenas QA cargadas desde rag_engine con datos reales: {successful_chains}/{len(self.qa_chains)}", 
+                               extra={"component": "llm_service", "source": "rag_engine"})
+                else:
+                    logger.warning("rag_engine.qa_chains no disponible, creando cadenas básicas", 
+                                  extra={"component": "llm_service"})
+                    raise ImportError("qa_chains no disponible")
                     
-                    chain = LLMChain(
-                        llm=self.llm,
-                        prompt=prompt
-                    )
-                    
-                    self.qa_chains[chain_name] = chain
-                    
-                except Exception as e:
-                    logger.warning(f"No se pudo crear cadena {chain_name}: {e}", 
-                                  extra={"component": "llm_service", "chain": chain_name})
-                    continue
+            except (ImportError, Exception) as e:
+                logger.warning(f"No se pudo cargar rag_engine ({e}), usando cadenas básicas", 
+                              extra={"component": "llm_service"})
+                
+                # Fallback: Crear cadenas QA básicas (sin vectorstore)
+                for chain_name in default_chains:
+                    try:
+                        # Crear cadena QA simple
+                        from langchain.chains import LLMChain
+                        from langchain.prompts import PromptTemplate
+                        
+                        prompt = PromptTemplate(
+                            input_variables=["question"],
+                            template=f"Responde la siguiente pregunta sobre {chain_name}: {{question}}"
+                        )
+                        
+                        chain = LLMChain(
+                            llm=self.llm,
+                            prompt=prompt
+                        )
+                        
+                        self.qa_chains[chain_name] = chain
+                        
+                    except Exception as e:
+                        logger.warning(f"No se pudo crear cadena {chain_name}: {e}", 
+                                      extra={"component": "llm_service", "chain": chain_name})
+                        continue
             
             logger.info(f"Cadenas QA inicializadas: {len(self.qa_chains)}/{len(default_chains)}", 
                        extra={"component": "llm_service", "chains_count": len(self.qa_chains)})
@@ -259,6 +225,29 @@ class LLMService:
             logger.error(error_msg, extra={"component": "llm_service"})
             return False, "", error_msg
     
+    def generate_simple_response(self, prompt: str) -> str:
+        """
+        Genera una respuesta simple usando el LLM directamente sin agente completo
+        Útil para manejo de errores donde no queremos activar el agente completo
+        """
+        try:
+            if not self.llm:
+                logger.warning("LLM no inicializado para respuesta simple")
+                return ""
+            
+            # Usar call_llm_with_retry que ya tiene manejo de errores
+            success, response, error = self.call_llm_with_retry(prompt, max_retries=2, temperature=0.3)
+            
+            if success and response:
+                return response.strip()
+            else:
+                logger.error(f"Error generando respuesta simple: {error}")
+                return ""
+                
+        except Exception as e:
+            logger.error(f"Error inesperado en generate_simple_response: {e}")
+            return ""
+    
     def initialize_agent_safe(self, tools: List[Any], memory: Any, max_retries: int = 3) -> Tuple[bool, Any, str]:
         """
         Inicializa agente de forma segura (extraído de agente.py líneas 1950-1993)
@@ -282,6 +271,12 @@ class LLMService:
                 try:
                     from langchain.agents import initialize_agent, AgentType
                     
+                    # Integrar PromptService para optimización del agente
+                    from services.prompt_service import get_prompt_service
+
+                    prompt_service = get_prompt_service()
+                    system_prompt = prompt_service.get_main_system_prompt()
+
                     agent = initialize_agent(
                         tools=tools,
                         llm=self.llm,
@@ -290,7 +285,12 @@ class LLMService:
                         verbose=False,
                         handle_parsing_errors=True,
                         max_iterations=3,
-                        early_stopping_method="generate"
+                        early_stopping_method="generate",
+                        agent_kwargs={
+                            'system_message': system_prompt,
+                            'human_message': "Usuario: {input}\n\nAsistente:",
+                            'format_instructions': "Usa las herramientas disponibles cuando sea necesario. Responde como el asistente especializado de Glamping Brillo de Luna."
+                        }
                     )
                     
                     logger.info("Agente inicializado exitosamente", 
@@ -373,11 +373,9 @@ class LLMService:
             health_status = {
                 'service_name': 'LLMService',
                 'llm_initialized': self.llm is not None,
-                'pinecone_initialized': self.pinecone_initialized,
                 'qa_chains_count': len(self.qa_chains),
                 'tools_count': len(self.tools),
                 'openai_api_key_configured': bool(os.getenv('OPENAI_API_KEY')),
-                'pinecone_api_key_configured': bool(os.getenv('PINECONE_API_KEY')),
                 'timestamp': time.time()
             }
             
@@ -401,6 +399,57 @@ class LLMService:
                 'timestamp': time.time()
             }
     
+    def create_contextual_prompt(self, user_input: str, context: dict) -> str:
+        """
+        Crea prompt con contexto específico, personalidad y optimización LLM
+        
+        Args:
+            user_input: Entrada del usuario
+            context: Contexto previo del usuario
+            
+        Returns:
+            str: Prompt optimizado contextualizado
+        """
+        try:
+            # Usar PromptService para crear prompt optimizado
+            from services.prompt_service import get_prompt_service
+            prompt_service = get_prompt_service()
+            
+            # Crear prompt dinámico basado en análisis del input y contexto
+            optimized_prompt = prompt_service.create_dynamic_prompt(user_input, context)
+            
+            logger.info(f"Prompt optimizado creado con PromptService", 
+                       extra={"component": "llm_service", "with_prompt_optimization": True})
+            
+            return optimized_prompt
+            
+        except Exception as e:
+            logger.error(f"Error creando prompt optimizado: {e}", 
+                        extra={"component": "llm_service"})
+            
+            # Fallback usando PersonalityService si PromptService falla
+            try:
+                from services.personality_service import get_personality_service
+                personality_service = get_personality_service()
+                fallback_prompt = personality_service.create_contextual_prompt(user_input, context)
+                
+                logger.info("Using PersonalityService fallback for prompt creation")
+                return fallback_prompt
+                
+            except Exception as fallback_error:
+                logger.error(f"Error en fallback de personalidad: {fallback_error}")
+                
+                # Último recurso: prompt básico robusto
+                return f"""Eres el asistente virtual de Glamping Brillo de Luna en Guatavita, Colombia.
+
+PERSONALIDAD: Cálido, profesional y entusiasta sobre la experiencia de glamping.
+
+MISIÓN: Ayudar con información sobre domos, servicios, actividades y reservas.
+
+Usuario pregunta: {user_input}
+
+Responde de manera completa y útil usando las herramientas RAG disponibles."""
+    
     def initialize_all(self) -> bool:
         """
         Inicializa todos los componentes del servicio LLM
@@ -412,19 +461,16 @@ class LLMService:
             logger.info("Inicializando todos los componentes LLM", 
                        extra={"component": "llm_service", "action": "init_all"})
             
-            # Inicializar Pinecone
-            pinecone_ok = self.initialize_pinecone()
-            
             # Inicializar LLM
             llm_ok = self.initialize_llm()
             
             # Inicializar cadenas QA
             qa_ok = self.initialize_qa_chains()
             
-            success = llm_ok  # LLM es crítico, Pinecone y QA son opcionales
+            success = llm_ok  # LLM es crítico, QA es opcional
             
-            logger.info(f"Inicialización completa - LLM: {llm_ok}, Pinecone: {pinecone_ok}, QA: {qa_ok}", 
-                       extra={"component": "llm_service", "llm": llm_ok, "pinecone": pinecone_ok, "qa": qa_ok})
+            logger.info(f"Inicialización completa - LLM: {llm_ok}, QA: {qa_ok}", 
+                       extra={"component": "llm_service", "llm": llm_ok, "qa": qa_ok})
             
             return success
             

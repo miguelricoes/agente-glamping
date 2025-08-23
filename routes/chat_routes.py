@@ -11,6 +11,7 @@ logger = get_logger(__name__)
 # Import unified conversation service
 from services.conversation_service import process_chat_conversation
 
+
 def register_chat_routes(app, user_memories, user_states, load_user_memory, save_user_memory,
                         is_greeting_message, get_welcome_menu, is_menu_selection, 
                         handle_menu_selection, handle_availability_request, parse_reservation_details,
@@ -29,6 +30,7 @@ def register_chat_routes(app, user_memories, user_states, load_user_memory, save
         data = request.get_json()
         user_input = data.get("input", "").strip()
         session_id = data.get("session_id", str(uuid.uuid4()))
+
 
         if not user_input:
             return jsonify({"error": "Falta el campo 'input'"}), 400

@@ -1,5 +1,6 @@
 # Logging estructurado para Agente Glamping
 # Reemplaza los print() con logging profesional para observabilidad
+# Incluye sanitización segura de datos sensibles
 
 import logging
 import sys
@@ -10,7 +11,7 @@ import json
 
 class StructuredFormatter(logging.Formatter):
     """
-    Formatter personalizado para logs estructurados
+    Formatter personalizado para logs estructurados con sanitización segura
     Genera logs en formato JSON para mejor parsing en producción
     """
     
@@ -20,17 +21,17 @@ class StructuredFormatter(logging.Formatter):
             "timestamp": datetime.utcnow().isoformat() + "Z",
             "level": record.levelname,
             "logger": record.name,
-            "message": record.getMessage(),
+            "message": self._sanitize_message(record.getMessage()),
             "module": record.module,
             "function": record.funcName,
             "line": record.lineno
         }
         
-        # Agregar contexto adicional si existe
+        # Agregar contexto adicional si existe (con sanitización)
         if hasattr(record, 'user_id'):
-            log_data["user_id"] = record.user_id
+            log_data["user_id"] = self._sanitize_user_id(record.user_id)
         if hasattr(record, 'session_id'):
-            log_data["session_id"] = record.session_id
+            log_data["session_id"] = self._sanitize_session_id(record.session_id)
         if hasattr(record, 'endpoint'):
             log_data["endpoint"] = record.endpoint
         if hasattr(record, 'error_code'):
@@ -38,11 +39,87 @@ class StructuredFormatter(logging.Formatter):
         if hasattr(record, 'duration_ms'):
             log_data["duration_ms"] = record.duration_ms
         
+        # Agregar campos extra de forma segura
+        if hasattr(record, 'extra') and isinstance(record.extra, dict):
+            sanitized_extra = self._sanitize_extra_data(record.extra)
+            log_data.update(sanitized_extra)
+        
         # Agregar información de excepción si existe
         if record.exc_info:
             log_data["exception"] = self.formatException(record.exc_info)
         
         return json.dumps(log_data, ensure_ascii=False)
+    
+    def _sanitize_message(self, message: str) -> str:
+        """Sanitizar mensaje de log para remover datos sensibles"""
+        try:
+            # Importar SecurityMiddleware para sanitización
+            try:
+                from security.security_middleware import SecurityMiddleware
+                return SecurityMiddleware.sanitize_input(message, max_length=500)
+            except ImportError:
+                # Fallback básico si no está disponible
+                import re
+                # Remover patrones que parecen tokens o API keys
+                sanitized = re.sub(r'\b[A-Za-z0-9]{20,}\b', '[REDACTED_TOKEN]', message)
+                # Remover números de teléfono
+                sanitized = re.sub(r'\+\d{10,15}', '[REDACTED_PHONE]', sanitized)
+                # Remover emails
+                sanitized = re.sub(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', '[REDACTED_EMAIL]', sanitized)
+                return sanitized[:500]
+        except Exception:
+            return str(message)[:500]
+    
+    def _sanitize_user_id(self, user_id: str) -> str:
+        """Sanitizar user_id para logging seguro"""
+        try:
+            # Importar SecurityMiddleware para sanitización de teléfono
+            try:
+                from security.security_middleware import SecurityMiddleware
+                return SecurityMiddleware.sanitize_phone_number(user_id)
+            except ImportError:
+                # Fallback básico
+                if user_id and len(user_id) > 4:
+                    return user_id[:4] + '*' * (len(user_id) - 6) + user_id[-2:] if len(user_id) > 6 else user_id[:2] + '**'
+                return '[REDACTED]'
+        except Exception:
+            return '[REDACTED]'
+    
+    def _sanitize_session_id(self, session_id: str) -> str:
+        """Sanitizar session_id"""
+        try:
+            if session_id and len(session_id) > 8:
+                return session_id[:4] + '*' * (len(session_id) - 8) + session_id[-4:]
+            return '[REDACTED]'
+        except Exception:
+            return '[REDACTED]'
+    
+    def _sanitize_extra_data(self, extra_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Sanitizar datos extra de forma segura"""
+        try:
+            # Importar SecurityMiddleware para sanitización completa
+            try:
+                from security.security_middleware import SecurityMiddleware
+                return SecurityMiddleware.secure_log_data(extra_data)
+            except ImportError:
+                # Fallback básico
+                sanitized = {}
+                sensitive_keys = ['password', 'token', 'key', 'secret', 'phone', 'email', 'api_key']
+                
+                for key, value in extra_data.items():
+                    key_lower = key.lower()
+                    is_sensitive = any(sensitive in key_lower for sensitive in sensitive_keys)
+                    
+                    if is_sensitive:
+                        sanitized[key] = '[REDACTED]'
+                    elif isinstance(value, str) and len(value) > 100:
+                        sanitized[key] = value[:97] + '...'
+                    else:
+                        sanitized[key] = value
+                
+                return sanitized
+        except Exception as e:
+            return {"sanitization_error": str(e)}
 
 class ColoredConsoleFormatter(logging.Formatter):
     """

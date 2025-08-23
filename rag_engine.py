@@ -30,26 +30,72 @@ except ImportError:
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# Validación robusta pero simple
+# Validación robusta pero simple - permitir fallback sin API key
 if not OPENAI_API_KEY:
-    raise EnvironmentError("ERROR: OPENAI_API_KEY requerida para RAG engine")
+    print("WARNING: OPENAI_API_KEY no configurada - Usando modo fallback")
+    OPENAI_API_KEY = "fallback-mode"
 
 # Asegurar API key en environment para langchain 0.1.0
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 
+def create_fallback_qa_chain(chain_name: str, file_path: str):
+    """
+    Crear cadena QA de fallback para desarrollo sin OpenAI API
+    """
+    try:
+        if not os.path.exists(file_path):
+            return None
+
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        class FallbackQAChain:
+            def __init__(self, content: str, name: str):
+                self.content = content
+                self.name = name
+
+            def run(self, query: str) -> str:
+                # Búsqueda simple por palabras clave
+                query_lower = query.lower()
+                lines = self.content.split('\n')
+
+                relevant_lines = []
+                for line in lines:
+                    if any(word in line.lower() for word in query_lower.split()):
+                        relevant_lines.append(line.strip())
+
+                if relevant_lines:
+                    return '\n'.join(relevant_lines[:5])  # Primeras 5 líneas relevantes
+                else:
+                    return f"Información sobre {self.name} disponible. Consulta específica requerida."
+
+        return FallbackQAChain(content, chain_name)
+
+    except Exception as e:
+        print(f"Error creando fallback para {chain_name}: {e}")
+        return None
+
 # Inicializar LLM con imports actualizados para evitar deprecation warnings
+llm = None
 try:
-    # Usar langchain_openai para evitar deprecation warnings
-    from langchain_openai import OpenAI as OpenAI_New
-    llm = OpenAI_New(temperature=0)
-    print("OK LLM RAG inicializado (langchain_openai)")
+    if OPENAI_API_KEY != "fallback-mode":
+        # Usar langchain_openai para evitar deprecation warnings
+        from langchain_openai import OpenAI as OpenAI_New
+        llm = OpenAI_New(temperature=0)
+        print("OK LLM RAG inicializado (langchain_openai)")
+    else:
+        print("INFO: Modo fallback activado - LLM no disponible")
 except ImportError:
-    # Fallback al import original si langchain_openai no está disponible
-    llm = OpenAI(temperature=0)
-    print("OK LLM RAG inicializado (fallback)")
+    try:
+        # Fallback al import original si langchain_openai no está disponible
+        llm = OpenAI(temperature=0)
+        print("OK LLM RAG inicializado (fallback)")
+    except Exception as fallback_error:
+        print(f"WARNING: No se pudo inicializar LLM: {fallback_error}")
+        llm = None
 except Exception as e:
-    print(f"ERROR Error LLM RAG: {e}")
-    raise
+    print(f"WARNING: Error LLM RAG: {e} - Continuando con fallbacks")
+    llm = None
 
 # Inicializar embeddings con imports actualizados para evitar deprecation warnings
 try:
@@ -71,6 +117,11 @@ def create_qa_chain(file_path: str, index_dir: str):
     # Validar parámetros
     if not file_path or not index_dir:
         print(f"ERROR: Parámetros inválidos: file_path='{file_path}', index_dir='{index_dir}'")
+        return None
+    
+    # Si no hay LLM disponible, retornar None para activar fallback
+    if llm is None:
+        print(f"INFO: LLM no disponible para '{file_path}' - Activando fallback")
         return None
     
     # Cargar y dividir documentos
@@ -166,23 +217,17 @@ qa_chains = {}
 
 # Lista de archivos y sus nombres de cadena
 files_to_process = {
-    # Archivos originales
+    # Archivos unificados nuevos
+    "informacion_general": "informacion_general_glamping.txt",
+    "domos_completos": "domos_completos.txt",
+    "politicas_completas": "politicas_completas.txt",
+    "accesibilidad_completa": "accesibilidad_completa.txt",
+
+    # Archivos que se mantienen
     "ubicacion_contacto": "ubicacion_contacto.txt",
-    "accesibilidad": "accesibilidad_movilidad_reducida.txt",
-    "domos_info": "domos_info.txt",
-    "concepto_glamping": "concepto_brillodeluna.txt",
-    "politicas_glamping": "politicas_glamping.txt",
     "servicios_incluidos": "servicios_incluidos_domos.txt",
     "actividades_adicionales": "actividades_y_servicios_adicionales.txt",
-    "requisitos_reserva": "requisitos_reserva.txt",
-    
-    # Nuevos archivos agregados
-    "domos_precios": "Domos_Precios.txt",
-    "que_es_brillo_luna": "Que_es_BrilloDeLuna.txt",
     "servicios_externos": "Servicios.txt",
-    "sugerencias_movilidad_reducida": "SugerenciasPersonasMovilidadReducida.txt",
-    "politicas_privacidad": "PoliticasDePrivaciadad.txt",
-    "politicas_cancelacion": "Políticas de Cancelación.txt",
     "links_imagenes": "Links.txt",
 }
 
@@ -211,19 +256,43 @@ for chain_name, file_name in files_to_process.items():
     index_dir = os.path.join(VECTORSTORE_BASE_DIR, f"{chain_name}_index")
     
     try:
-        chain = create_qa_chain(file_path, index_dir)
-        if chain:
-            qa_chains[chain_name] = chain
+        # Intentar crear cadena QA normal
+        qa_chain = create_qa_chain(file_path, index_dir)
+        
+        if qa_chain:
+            qa_chains[chain_name] = qa_chain
             successful_chains += 1
-            print(f"OK: Cadena QA '{chain_name}' lista")
+            print(f"OK: Cadena QA '{chain_name}' creada exitosamente")
         else:
+            # AGREGAR: Crear fallback si falla la cadena normal
+            print(f"WARNING: Intentando crear fallback para '{chain_name}'")
+            fallback_chain = create_fallback_qa_chain(chain_name, file_path)
+            
+            if fallback_chain:
+                qa_chains[chain_name] = fallback_chain
+                successful_chains += 1
+                print(f"OK: Cadena QA fallback '{chain_name}' creada")
+            else:
+                qa_chains[chain_name] = None
+                failed_chains += 1
+                print(f"ERROR: No se pudo crear cadena para '{chain_name}'")
+                
+    except Exception as e:
+        # Intentar fallback incluso en caso de excepción
+        print(f"ERROR: Error procesando '{chain_name}': {e}")
+        try:
+            fallback_chain = create_fallback_qa_chain(chain_name, file_path)
+            if fallback_chain:
+                qa_chains[chain_name] = fallback_chain
+                successful_chains += 1
+                print(f"OK: Cadena QA fallback '{chain_name}' creada tras error")
+            else:
+                qa_chains[chain_name] = None
+                failed_chains += 1
+        except Exception as fallback_error:
             qa_chains[chain_name] = None
             failed_chains += 1
-            print(f"WARNING: Cadena QA '{chain_name}' no disponible")
-    except Exception as e:
-        qa_chains[chain_name] = None
-        failed_chains += 1
-        print(f"ERROR: Error procesando '{chain_name}': {e}")
+            print(f"ERROR: Fallback también falló para '{chain_name}': {fallback_error}")
 
 # Resumen final
 print(f"\nResumen RAG:")

@@ -63,146 +63,146 @@ class RAGToolsService:
             logger.error(error_msg, extra={"component": "rag_tools_service", "chain": chain_name})
             return "Disculpa, tuve un problema accediendo a esa información. ¿Podrías reformular tu pregunta?"
     
-    # Funciones específicas para archivos originales 
-    def concepto_glamping_func(self, query: str) -> str:
-        """Información sobre el concepto del glamping"""
-        return self.call_chain_safe("concepto_glamping", query)
-    
+    # ================================================
+    # FUNCIONES RAG OPTIMIZADAS (POST-FUSIÓN)
+    # ================================================
+
+    def informacion_general_func(self, query: str) -> str:
+        """Información general unificada (concepto + filosofía)"""
+        return self.call_chain_safe("informacion_general", query)
+
+    def domos_completos_func(self, query: str) -> str:
+        """Información completa de domos (info + precios)"""
+        return self.call_chain_safe("domos_completos", query)
+
+    def politicas_completas_func(self, query: str) -> str:
+        """Políticas completas unificadas"""
+        return self.call_chain_safe("politicas_completas", query)
+
+    def accesibilidad_completa_func(self, query: str) -> str:
+        """Accesibilidad completa unificada"""
+        return self.call_chain_safe("accesibilidad_completa", query)
+
+    def actividades_servicios_externos_func(self, query: str) -> str:
+        """Actividades y servicios externos combinados"""
+        # Primero intentar actividades adicionales
+        response_adicionales = self.call_chain_safe("actividades_adicionales", query)
+        # Luego servicios externos
+        response_externos = self.call_chain_safe("servicios_externos", query)
+        
+        if "no está disponible" not in response_adicionales and "no está disponible" not in response_externos:
+            return f"{response_adicionales}\n\n{response_externos}"
+        elif "no está disponible" not in response_adicionales:
+            return response_adicionales
+        elif "no está disponible" not in response_externos:
+            return response_externos
+        else:
+            return "Lo siento, la información sobre actividades no está disponible en este momento."
+
+    # ================================================
+    # FUNCIONES RAG ACTIVAS (SIN CAMBIOS)
+    # ================================================
+
     def ubicacion_contacto_func(self, query: str) -> str:
         """Información sobre ubicación y contacto"""
         return self.call_chain_safe("ubicacion_contacto", query)
-    
-    def domos_info_func(self, query: str) -> str:
-        """Información sobre los domos"""
-        return self.call_chain_safe("domos_info", query)
-    
+
     def servicios_incluidos_func(self, query: str) -> str:
         """Información sobre servicios incluidos"""
         return self.call_chain_safe("servicios_incluidos", query)
     
-    def actividades_adicionales_func(self, query: str) -> str:
-        """Información sobre actividades adicionales"""
-        return self.call_chain_safe("actividades_adicionales", query)
-    
-    def politicas_glamping_func(self, query: str) -> str:
-        """Información sobre políticas del glamping"""
-        return self.call_chain_safe("politicas_glamping", query)
-    
-    def accesibilidad_func(self, query: str) -> str:
-        """Información sobre accesibilidad"""
-        return self.call_chain_safe("accesibilidad", query)
-    
-    def requisitos_reserva_func(self, query: str) -> str:
-        """Información sobre requisitos de reserva"""
-        return self.call_chain_safe("requisitos_reserva", query)
-    
-    # Funciones específicas para archivos nuevos
-    def domos_precios_func(self, query: str) -> str:
-        """Información detallada sobre precios de domos"""
-        return self.call_chain_safe("domos_precios", query)
-    
-    def que_es_brillo_luna_func(self, query: str) -> str:
-        """Información sobre qué es Brillo de Luna"""
-        return self.call_chain_safe("que_es_brillo_luna", query)
-    
-    def servicios_externos_func(self, query: str) -> str:
-        """Información sobre servicios externos y actividades"""
-        return self.call_chain_safe("servicios_externos", query)
-    
-    def sugerencias_movilidad_reducida_func(self, query: str) -> str:
-        """Información específica sobre movilidad reducida"""
-        return self.call_chain_safe("sugerencias_movilidad_reducida", query)
-    
-    def politicas_privacidad_func(self, query: str) -> str:
-        """Información sobre políticas de privacidad"""
-        return self.call_chain_safe("politicas_privacidad", query)
-    
-    def politicas_cancelacion_func(self, query: str) -> str:
-        """Información sobre políticas de cancelación"""
-        return self.call_chain_safe("politicas_cancelacion", query)
-    
     def links_imagenes_func(self, query: Optional[str] = None) -> str:
         """
-        Función robusta que SIEMPRE devuelve los links (extraído de agente.py líneas 771-788)
+        Función que maneja solicitudes de links usando la nueva lógica inteligente (Variable 1)
+        Solo proporciona links cuando el trigger es apropiado
         
         Args:
             query: Consulta del usuario (opcional)
             
         Returns:
-            str: Respuesta con links siempre incluidos
+            str: Respuesta con links solo cuando corresponde según Variable 1
         """
         try:
             if query is None:
                 query = "Enlaces para ver imágenes de los domos"
             
-            # Usar RAG para contexto, pero siempre incluir los links
-            response = self.call_chain_safe("links_imagenes", query)
+            # Usar la nueva lógica inteligente de detección de links
+            from services.website_link_service import get_website_link_service
+            website_service = get_website_link_service()
             
-            # Crear respuesta que SIEMPRE incluya los links
-            links_response = (
-                "Aquí tienes los enlaces que necesitas:\n\n"
-                "**Para ver imágenes de los domos**: https://www.glampingbrillodeluna.com/domos\n\n"
-                "**Página web oficial**: https://www.glampingbrillodeluna.com\n\n"
-                "En estos enlaces podrás ver todas las fotos de nuestros hermosos domos geodésicos, "
-                "conocer las instalaciones y realizar reservas directamente."
-            )
+            # Detectar si debe mostrar links según triggers específicos
+            should_share, trigger_type, reason = website_service.should_share_website_link(query)
             
-            logger.info("Links de imágenes proporcionados", 
-                       extra={"component": "rag_tools_service", "action": "links_imagenes"})
-            
-            return links_response
+            if should_share:
+                # Generar respuesta apropiada con links
+                response = website_service.generate_website_response(trigger_type, query)
+                logger.info(f"Links proporcionados por trigger: {trigger_type}", 
+                           extra={"component": "rag_tools_service", "trigger": trigger_type})
+                return response
+            else:
+                # No mostrar links, usar RAG para respuesta contextual sin links
+                rag_response = self.call_chain_safe("links_imagenes", query)
+                
+                if rag_response and len(rag_response.strip()) > 10:
+                    logger.info("Respuesta RAG sin links proporcionada", 
+                               extra={"component": "rag_tools_service", "action": "rag_only"})
+                    return rag_response
+                else:
+                    # Fallback sin links
+                    logger.info("Fallback sin links usado", 
+                               extra={"component": "rag_tools_service", "action": "fallback_no_links"})
+                    return "Puedo ayudarte con información sobre nuestros domos y servicios. ¿Qué te gustaría saber específicamente?"
             
         except Exception as e:
             logger.error(f"Error en links_imagenes_func: {e}", 
                         extra={"component": "rag_tools_service"})
-            # Siempre devolver los links incluso si hay error
-            return (
-                "Aquí tienes los enlaces que necesitas:\n\n"
-                "**Para ver imágenes de los domos**: https://www.glampingbrillodeluna.com/domos\n\n"
-                "**Página web oficial**: https://www.glampingbrillodeluna.com"
-            )
+            # Fallback de error sin links automáticos
+            return "Disculpa, tuve un problema procesando tu consulta. ¿Podrías reformular tu pregunta?"
     
     def menu_principal_func(self, query: Optional[str] = None) -> str:
         """
-        Muestra el menú principal de navegación (extraído de agente.py líneas 1038-1040)
+        Muestra el menú principal de navegación mejorado con variantes flexibles
         
         Args:
             query: Consulta del usuario (opcional)
             
         Returns:
-            str: Menú principal
+            str: Menú principal con instrucciones de uso flexible
         """
         try:
-            # Función movida localmente para eliminar dependencia de agente.py
-            return """
-🏕️ **BIENVENIDO A GLAMPING BRILLO DE LUNA** 🌙
+            # Menú principal completo con las 8 opciones correctas
+            return """🏕️ **BIENVENIDO A GLAMPING BRILLO DE LUNA** 🌙
 
 1️⃣ **Información General** - Concepto, ubicación, contacto
-2️⃣ **Domos Disponibles** - Tipos, características y precios  
+2️⃣ **Domos Disponibles** - Tipos, características y precios
 3️⃣ **Consultar Disponibilidad** - Fechas y reservas
-4️⃣ **Servicios Incluidos** - Qué incluye tu estadía
-5️⃣ **Actividades Adicionales** - Experiencias únicas
-6️⃣ **Políticas** - Cancelación, mascotas, normas
-7️⃣ **Ver Imágenes** - Galería de fotos
-8️⃣ **Accesibilidad** - Información para movilidad reducida
+4️⃣ **Servicios** - Incluidos y adicionales
+5️⃣ **Políticas** - Cancelación, mascotas, normas
 
 💬 Escribe el número o describe lo que necesitas
+
+🤖 **Para consultas específicas, simplemente pregúntame:**
+• "¿Qué actividades hay en la zona?"
+• "Quiero ver fotos del lugar"
+• "Información para personas en silla de ruedas"
             """
         except Exception as e:
             logger.warning(f"Error generando menú: {e}", 
                           extra={"component": "rag_tools_service"})
-            return (
-                "🏕️ **MENÚ PRINCIPAL - GLAMPING BRILLO DE LUNA** 🌙\n\n"
-                "1️⃣ **Información General** - Concepto, ubicación, contacto\n"
-                "2️⃣ **Domos Disponibles** - Tipos, características y precios\n"
-                "3️⃣ **Consultar Disponibilidad** - Fechas y reservas\n"
-                "4️⃣ **Servicios Incluidos** - Qué incluye tu estadía\n"
-                "5️⃣ **Actividades Adicionales** - Experiencias únicas\n"
-                "6️⃣ **Políticas** - Cancelación, mascotas, normas\n"
-                "7️⃣ **Ver Imágenes** - Galería de fotos\n"
-                "8️⃣ **Accesibilidad** - Información para movilidad reducida\n\n"
-                "💬 Escribe el número o describe lo que necesitas"
-            )
+            return """🏕️ **BIENVENIDO A GLAMPING BRILLO DE LUNA** 🌙
+
+1️⃣ **Información General** - Concepto, ubicación, contacto
+2️⃣ **Domos Disponibles** - Tipos, características y precios
+3️⃣ **Consultar Disponibilidad** - Fechas y reservas
+4️⃣ **Servicios** - Incluidos y adicionales
+5️⃣ **Políticas** - Cancelación, mascotas, normas
+
+💬 Escribe el número o describe lo que necesitas
+
+🤖 **Para consultas específicas, simplemente pregúntame:**
+• "¿Qué actividades hay en la zona?"
+• "Quiero ver fotos del lugar"
+• "Información para personas en silla de ruedas" """
 
 class ReservationRequestTool(BaseTool):
     """
@@ -250,78 +250,41 @@ def create_rag_tools(rag_tools_service: RAGToolsService,
             # Herramienta de solicitud de reserva
             ReservationRequestTool(),
             
-            # Herramientas de información básica
+            # Herramientas optimizadas unificadas
             Tool(
-                name="ConceptoGlamping",
-                func=rag_tools_service.concepto_glamping_func,
-                description="Útil para responder preguntas generales sobre el concepto del glamping."
+                name="InformacionGeneralGlamping",
+                func=rag_tools_service.informacion_general_func,
+                description="Información general, concepto, filosofía y qué es Glamping Brillo de Luna."
             ),
             Tool(
-                name="UbicacionContactoGlamping",
-                func=rag_tools_service.ubicacion_contacto_func,
-                description="Información sobre ubicación, contacto, RNT, etc."
+                name="DomosCompletos",
+                func=rag_tools_service.domos_completos_func,
+                description="Información completa de domos: tipos, precios, características, capacidad y servicios incluidos."
             ),
             Tool(
-                name="DomosInfoGlamping",
-                func=rag_tools_service.domos_info_func,
-                description="Tipos de domos, precios y características básicas."
+                name="PoliticasCompletas",
+                func=rag_tools_service.politicas_completas_func,
+                description="Políticas completas: reserva, cancelación, mascotas, requisitos y normas del lugar."
+            ),
+            Tool(
+                name="AccesibilidadCompleta",
+                func=rag_tools_service.accesibilidad_completa_func,
+                description="SIEMPRE usar cuando el usuario mencione: 'silla de ruedas', 'discapacidad', 'movilidad reducida', 'accesibilidad', 'necesidades especiales'. Información completa sobre adaptaciones, equipos de apoyo y medidas de seguridad."
             ),
             Tool(
                 name="ServiciosIncluidosGlamping",
                 func=rag_tools_service.servicios_incluidos_func,
-                description="Servicios incluidos como desayuno, WiFi, parqueadero, etc."
+                description="Servicios incluidos como desayuno, WiFi, parqueadero, BBQ, etc."
             ),
             Tool(
-                name="ActividadesServiciosAdicionalesGlamping",
-                func=rag_tools_service.actividades_adicionales_func,
-                description="Servicios adicionales y actividades como masajes, paseos, etc."
+                name="ActividadesServiciosExternos",
+                func=rag_tools_service.actividades_servicios_externos_func,
+                description="USAR CUANDO el usuario pregunte sobre actividades, qué hacer, turismo, paseos, diversión, entretenimiento en Guatavita. Incluye laguna sagrada, jet ski, paseos a caballo, avistamiento de aves."
             ),
             Tool(
-                name="PoliticasGlamping",
-                func=rag_tools_service.politicas_glamping_func,
-                description="Políticas de cancelación, mascotas, normas del lugar."
-            ),
-            Tool(
-                name="AccesibilidadMovilidadReducidaGlamping",
-                func=rag_tools_service.accesibilidad_func,
-                description="Útil cuando el usuario menciona silla de ruedas, discapacidad, movilidad reducida, accesibilidad, o necesidades especiales. Proporciona adaptaciones y recomendaciones para personas con limitaciones de movilidad."
-            ),
-            Tool(
-                name="RequisitosReserva",
-                func=rag_tools_service.requisitos_reserva_func,
-                description="Requisitos para que el usuario pueda reservar."
-            ),
-            
-            # Herramientas específicas avanzadas
-            Tool(
-                name="DomosPreciosDetallados",
-                func=rag_tools_service.domos_precios_func,
-                description="Devuelve los precios de los domos. Input: pregunta del usuario, por ejemplo 'precios de los domos para el 12/09'."
-            ),
-            Tool(
-                name="QueEsBrilloDeLuna",
-                func=rag_tools_service.que_es_brillo_luna_func,
-                description="Explicación completa sobre qué es Glamping Brillo de Luna, su filosofía y propósito único."
-            ),
-            Tool(
-                name="ServiciosExternos",
-                func=rag_tools_service.servicios_externos_func,
-                description="USAR CUANDO el usuario pregunte sobre actividades, qué hacer, turismo, paseos, diversión, entretenimiento, planes, experiencias, o lugares para visitar en Guatavita. Incluye laguna sagrada, jet ski, paseos a caballo, avistamiento de aves, navegación y más."
-            ),
-            Tool(
-                name="SugerenciasMovilidadReducida",
-                func=rag_tools_service.sugerencias_movilidad_reducida_func,
-                description="SIEMPRE usar esta herramienta cuando el usuario mencione: 'silla de ruedas', 'amigo en silla de ruedas', 'persona con discapacidad', 'movilidad reducida', 'accesibilidad', 'limitaciones físicas', 'necesidades especiales', 'adaptaciones', 'personas mayores'. Esta herramienta contiene información específica sobre rutas accesibles, equipos de apoyo, medidas de seguridad, personal capacitado y todas las adaptaciones disponibles en Brillo de Luna para personas con movilidad limitada."
-            ),
-            Tool(
-                name="PoliticasPrivacidad",
-                func=rag_tools_service.politicas_privacidad_func,
-                description="Políticas de privacidad, manejo de datos personales y protección de información."
-            ),
-            Tool(
-                name="PoliticasCancelacion",
-                func=rag_tools_service.politicas_cancelacion_func,
-                description="Políticas específicas de cancelación, términos y condiciones de reserva."
+                name="UbicacionContactoGlamping",
+                func=rag_tools_service.ubicacion_contacto_func,
+                description="Información sobre ubicación, contacto, RNT, dirección y cómo llegar."
             ),
             Tool(
                 name="LinksImagenesWeb",

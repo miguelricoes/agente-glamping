@@ -35,6 +35,11 @@ class ConversationStateDB:
             reserva_step = self.db.Column(self.db.Integer, default=0, nullable=False)
             waiting_for_availability = self.db.Column(self.db.Boolean, default=False, nullable=False)
             
+            # NUEVOS CAMPOS para manejo de contexto
+            previous_context = self.db.Column(self.db.String(100), default='', nullable=True)
+            last_action = self.db.Column(self.db.String(100), default='', nullable=True)
+            waiting_for_continuation = self.db.Column(self.db.Boolean, default=False, nullable=False)
+            
             # Datos de reserva en progreso (JSON)
             reserva_data = self.db.Column(self.db.JSON, default=dict, nullable=True)
             
@@ -59,6 +64,9 @@ class ConversationStateDB:
                     'reserva_step': self.reserva_step,
                     'reserva_data': self.reserva_data or {},
                     'waiting_for_availability': self.waiting_for_availability,
+                    'previous_context': self.previous_context or '',  # NUEVO
+                    'last_action': self.last_action or '',           # NUEVO
+                    'waiting_for_continuation': self.waiting_for_continuation,  # NUEVO
                     'conversation_memory': self.conversation_memory or {},
                     'last_interaction': self.last_interaction.isoformat() if self.last_interaction else None,
                     'total_messages': self.total_messages
@@ -70,6 +78,9 @@ class ConversationStateDB:
                 self.reserva_step = state_dict.get('reserva_step', 0)
                 self.reserva_data = state_dict.get('reserva_data', {})
                 self.waiting_for_availability = state_dict.get('waiting_for_availability', False)
+                self.previous_context = state_dict.get('previous_context', '')  # NUEVO
+                self.last_action = state_dict.get('last_action', '')           # NUEVO
+                self.waiting_for_continuation = state_dict.get('waiting_for_continuation', False)  # NUEVO
                 self.last_interaction = datetime.utcnow()
         
         self.UserConversationState = UserConversationState
@@ -95,6 +106,9 @@ class ConversationStateDB:
                     current_flow='none',
                     reserva_step=0,
                     waiting_for_availability=False,
+                    previous_context='',  # NUEVO
+                    last_action='',       # NUEVO
+                    waiting_for_continuation=False,  # NUEVO
                     reserva_data={},
                     conversation_memory={}
                 )

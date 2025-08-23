@@ -3,10 +3,11 @@
 
 import os
 import sys
-from flask import Flask
+from flask import Flask, request
 from flask_cors import CORS
 from dotenv import load_dotenv
 from utils.logger import get_logger
+from config.security_config import get_secure_config_manager, validate_production_security
 
 logger = get_logger(__name__)
 
@@ -20,6 +21,7 @@ class AppConfig:
         """Inicializar configuración de aplicación"""
         self.app = None
         self.cors = None
+        self.security_manager = get_secure_config_manager()
         
         logger.info("AppConfig inicializado", 
                    extra={"component": "app_config", "phase": "startup"})
@@ -37,9 +39,7 @@ class AppConfig:
             
             # Variables críticas
             critical_vars = [
-                'OPENAI_API_KEY',
-                'PINECONE_API_KEY', 
-                'PINECONE_ENVIRONMENT'
+                'OPENAI_API_KEY'
             ]
             
             # Variables opcionales pero importantes
@@ -144,10 +144,22 @@ class AppConfig:
             self.app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
             self.app.config['JSON_AS_ASCII'] = False  # Soporte para caracteres UTF-8
             
-            # Configurar CORS
+            # Configurar CORS de forma segura
+            cors_origins = ["*"]  # Desarrollo por defecto
+            
+            # Restringir orígenes en producción
+            env_mode = os.getenv('ENV', 'development')
+            if env_mode == 'production':
+                cors_origin = os.getenv('CORS_ORIGIN')
+                if cors_origin:
+                    cors_origins = [cors_origin]
+                else:
+                    logger.warning("CORS_ORIGIN no configurado en producción")
+                    cors_origins = []  # Sin CORS si no está configurado
+            
             self.cors = CORS(self.app, resources={
                 r"/*": {
-                    "origins": ["*"],
+                    "origins": cors_origins,
                     "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
                     "allow_headers": ["Content-Type", "Authorization"]
                 }
@@ -239,6 +251,21 @@ class AppConfig:
                 self.app.config['SESSION_COOKIE_HTTPONLY'] = True
                 self.app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
                 
+                # Headers de seguridad
+                @self.app.after_request
+                def add_security_headers(response):
+                    # Prevenir clickjacking
+                    response.headers['X-Frame-Options'] = 'DENY'
+                    # Prevenir MIME sniffing
+                    response.headers['X-Content-Type-Options'] = 'nosniff'
+                    # XSS Protection
+                    response.headers['X-XSS-Protection'] = '1; mode=block'
+                    # Referrer Policy
+                    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+                    # Content Security Policy básico
+                    response.headers['Content-Security-Policy'] = "default-src 'self'"
+                    return response
+                
                 logger.info("Configuración de producción aplicada", 
                            extra={"component": "app_config", "mode": "production"})
         except Exception as e:
@@ -266,7 +293,8 @@ def create_app(validate_env: bool = True) -> Flask:
     app = config.create_flask_app()
     
     # Configurar para producción si es necesario
-    if os.getenv('FLASK_ENV') == 'production':
+    env_mode = os.getenv('ENV', 'development')
+    if env_mode == 'production':
         config.setup_production_config()
     
     return app

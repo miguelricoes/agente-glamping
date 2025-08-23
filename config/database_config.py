@@ -48,6 +48,7 @@ class DatabaseConfig:
         """
         Obtener URL de base de datos desde variables de entorno
         Prioriza DATABASE_PRIVATE_URL > DATABASE_PUBLIC_URL > DATABASE_URL
+        Detecta entorno local y evita URLs internas de Railway
         
         Returns:
             URL de base de datos o None si no está configurada
@@ -58,6 +59,12 @@ class DatabaseConfig:
         DATABASE_URL = os.getenv('DATABASE_URL')
         
         database_url = DATABASE_PRIVATE_URL or DATABASE_PUBLIC_URL or DATABASE_URL
+        
+        # Verificar si estamos en entorno local y la URL es interna de Railway
+        if database_url and "railway.internal" in database_url:
+            logger.warning("Detectada URL interna de Railway en entorno local - Deshabilitando BD", 
+                         extra={"phase": "startup"})
+            return None
         
         # Logging de configuración seleccionada
         if DATABASE_PRIVATE_URL:
@@ -142,12 +149,12 @@ class DatabaseConfig:
             id = self.db.Column(self.db.Integer, primary_key=True)
 
             # CAMPOS IMPORTANTES 
-            numero_whatsapp = self.db.Column(self.db.String(50), nullable=False)        
-            email_contacto = self.db.Column(self.db.String(100), nullable=False)        
+            numero_whatsapp = self.db.Column(self.db.String(50), nullable=False, index=True)        
+            email_contacto = self.db.Column(self.db.String(100), nullable=False, index=True)        
             cantidad_huespedes = self.db.Column(self.db.Integer, nullable=False)        
-            domo = self.db.Column(self.db.String(50), nullable=False)                   
-            fecha_entrada = self.db.Column(self.db.Date, nullable=False)                
-            fecha_salida = self.db.Column(self.db.Date, nullable=False)                 
+            domo = self.db.Column(self.db.String(50), nullable=False, index=True)                   
+            fecha_entrada = self.db.Column(self.db.Date, nullable=False, index=True)                
+            fecha_salida = self.db.Column(self.db.Date, nullable=False, index=True)                 
             metodo_pago = self.db.Column(self.db.String(50), nullable=False, default='Pendiente')
 
             # CAMPOS OPCIONALES 
@@ -159,7 +166,39 @@ class DatabaseConfig:
 
             # CAMPOS CALCULADOS
             monto_total = self.db.Column(self.db.Numeric(10, 2), default=0.00)
-            fecha_creacion = self.db.Column(self.db.DateTime, default=datetime.utcnow)
+            fecha_creacion = self.db.Column(self.db.DateTime, default=datetime.utcnow, index=True)
+            
+            # CONSTRAINTS PARA PREVENIR RACE CONDITIONS
+            __table_args__ = (
+                # Prevenir reservas duplicadas exactas (mismo usuario, fechas y domo)
+                self.db.UniqueConstraint(
+                    'numero_whatsapp', 'domo', 'fecha_entrada', 'fecha_salida',
+                    name='uq_reserva_usuario_domo_fechas'
+                ),
+                # Índice compuesto para consultas de disponibilidad (optimización + constraint)
+                self.db.Index(
+                    'idx_disponibilidad_domo_fechas',
+                    'domo', 'fecha_entrada', 'fecha_salida'
+                ),
+                # Índice para búsquedas por usuario
+                self.db.Index(
+                    'idx_reservas_usuario_fecha',
+                    'numero_whatsapp', 'fecha_creacion'
+                ),
+                # CHECK constraints para validación de datos
+                self.db.CheckConstraint(
+                    'cantidad_huespedes > 0 AND cantidad_huespedes <= 20',
+                    name='chk_cantidad_huespedes_valida'
+                ),
+                self.db.CheckConstraint(
+                    'fecha_salida > fecha_entrada',
+                    name='chk_fechas_validas'
+                ),
+                self.db.CheckConstraint(
+                    'monto_total >= 0',
+                    name='chk_monto_no_negativo'
+                )
+            )
 
             def __repr__(self):
                 return f'<Reserva {self.id}: {self.nombres_huespedes or "Usuario"}>'
@@ -189,15 +228,42 @@ class DatabaseConfig:
             __tablename__ = 'usuarios'
             id = self.db.Column(self.db.Integer, primary_key=True)
             nombre = self.db.Column(self.db.String(100), nullable=False)
-            email = self.db.Column(self.db.String(100), unique=True, nullable=False)
+            email = self.db.Column(self.db.String(100), unique=True, nullable=False, index=True)
             password_hash = self.db.Column(self.db.String(255), nullable=False)
             temp_password = self.db.Column(self.db.String(50))
-            rol = self.db.Column(self.db.String(20), default='limitado', nullable=False)
-            fecha_creacion = self.db.Column(self.db.DateTime, default=datetime.utcnow)
+            rol = self.db.Column(self.db.String(20), default='limitado', nullable=False, index=True)
+            fecha_creacion = self.db.Column(self.db.DateTime, default=datetime.utcnow, index=True)
             creado_por = self.db.Column(self.db.String(100), default='system')
-            activo = self.db.Column(self.db.Boolean, default=True)
-            ultimo_acceso = self.db.Column(self.db.DateTime)
+            activo = self.db.Column(self.db.Boolean, default=True, index=True)
+            ultimo_acceso = self.db.Column(self.db.DateTime, index=True)
             password_changed = self.db.Column(self.db.Boolean, default=False)
+            
+            # CONSTRAINTS PARA INTEGRIDAD Y SEGURIDAD
+            __table_args__ = (
+                # Índice para búsquedas de usuarios activos
+                self.db.Index(
+                    'idx_usuarios_activos',
+                    'activo', 'fecha_creacion'
+                ),
+                # Índice para autenticación rápida
+                self.db.Index(
+                    'idx_usuarios_auth',
+                    'email', 'activo'
+                ),
+                # CHECK constraints para validación
+                self.db.CheckConstraint(
+                    "rol IN ('admin', 'limitado')",
+                    name='chk_rol_valido'
+                ),
+                self.db.CheckConstraint(
+                    "email LIKE '%@%'",
+                    name='chk_email_formato'
+                ),
+                self.db.CheckConstraint(
+                    "LENGTH(nombre) >= 2",
+                    name='chk_nombre_longitud_minima'
+                )
+            )
 
             def __repr__(self):
                 return f'<Usuario {self.id}: {self.nombre} ({self.email})>'

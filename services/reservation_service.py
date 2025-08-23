@@ -5,6 +5,7 @@ import json
 import re
 from datetime import date, datetime, timedelta
 from typing import Dict, Any, Optional, Tuple, List
+from sqlalchemy.exc import SQLAlchemyError
 from utils.logger import get_logger
 from services.validation_service import ValidationService
 
@@ -179,8 +180,10 @@ class ReservationService:
             patterns = {
                 'email': r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
                 'telefono': r'(?:\+57\s?)?(?:3\d{2}|\d{3})\s?\d{3}\s?\d{4}',
-                'fecha': r'\b(?:\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2})\b',
-                'numero': r'\b(?:cantidad|personas|huespedes?|guests?)[:\s]*(\d+)\b',
+                # Improved date pattern to catch more formats
+                'fecha': r'\b(?:\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2}|\d{1,2}\s+de\s+\w+\s+de?\s+\d{4})\b',
+                # More flexible number pattern with accent and encoding handling
+                'numero': r'\b(?:cantidad|personas|hu[eéè�]spedes?|huespedes?|guests?|para)[:\s]*(\d+)\b|\b(\d+)\s+(?:personas?|hu[eéè�]spedes?|huespedes?|guests?)\b',
                 'domo': r'\b(antares|polaris|sirius|centaury|centauro)\b',
                 'pago': r'\b(efectivo|tarjeta|transferencia|nequi|daviplata)\b'
             }
@@ -202,21 +205,38 @@ class ReservationService:
             # Extraer fechas
             date_matches = re.findall(patterns['fecha'], user_input)
             if len(date_matches) >= 2:
-                # Parsear fechas
+                # Parsear fechas - usar parsing simple sin validación de futuro
                 for i, date_str in enumerate(date_matches[:2]):
-                    success, parsed_date, _ = self.validation_service.parse_flexible_date(date_str)
-                    if success:
-                        if i == 0:
-                            parsed_data['fecha_entrada'] = parsed_date
-                        else:
-                            parsed_data['fecha_salida'] = parsed_date
+                    try:
+                        # Intentar diferentes formatos de fecha
+                        from datetime import datetime
+                        date_formats = ['%d/%m/%Y', '%d-%m-%Y', '%d.%m.%Y', '%Y/%m/%d', '%Y-%m-%d', '%Y.%m.%d']
+                        
+                        parsed_date = None
+                        for fmt in date_formats:
+                            try:
+                                parsed_date = datetime.strptime(date_str, fmt).date()
+                                break
+                            except ValueError:
+                                continue
+                        
+                        if parsed_date:
+                            if i == 0:
+                                parsed_data['fecha_entrada'] = parsed_date
+                            else:
+                                parsed_data['fecha_salida'] = parsed_date
+                    except Exception:
+                        continue
             
-            # Extraer cantidad de huéspedes
+            # Extraer cantidad de huéspedes - improved logic for flexible pattern
             numero_match = re.search(patterns['numero'], text_lower)
             if numero_match:
                 try:
-                    parsed_data['cantidad_huespedes'] = int(numero_match.group(1))
-                except:
+                    # Try both capture groups since the pattern has alternatives
+                    number = numero_match.group(1) if numero_match.group(1) else numero_match.group(2)
+                    if number:
+                        parsed_data['cantidad_huespedes'] = int(number)
+                except (ValueError, IndexError):
                     pass
             
             # Extraer domo
@@ -246,17 +266,27 @@ class ReservationService:
             if nombres_matches:
                 parsed_data['nombres_huespedes'] = ', '.join(nombres_matches[:3])  # Máximo 3 nombres
             
-            # Verificar si se parsearon datos suficientes
-            required_fields = ['email_contacto', 'numero_whatsapp', 'cantidad_huespedes']
-            parsed_fields = sum(1 for field in required_fields if parsed_data.get(field))
+            # Verificar si se parsearon datos suficientes para una reserva válida
+            # Necesitamos al menos los campos críticos para proceder
+            critical_fields = ['email_contacto', 'numero_whatsapp', 'cantidad_huespedes', 'domo']
+            optional_critical_fields = ['fecha_entrada', 'fecha_salida', 'metodo_pago']
             
-            if parsed_fields < 2:
-                return False, parsed_data, "Información insuficiente parseada"
+            # Contar campos críticos presentes
+            critical_present = sum(1 for field in critical_fields if parsed_data.get(field))
+            optional_present = sum(1 for field in optional_critical_fields if parsed_data.get(field))
             
-            logger.info(f"Detalles parseados exitosamente: {parsed_fields} campos críticos", 
-                       extra={"component": "reservation_service", "parsed_fields": parsed_fields})
+            # Necesitamos al menos 3 campos críticos + 1 opcional para considerar éxito
+            total_required = critical_present + optional_present
             
-            return True, parsed_data, f"Parseados {parsed_fields} campos críticos"
+            if critical_present < 3 or total_required < 4:
+                missing_fields = [field for field in critical_fields if not parsed_data.get(field)]
+                missing_optional = [field for field in optional_critical_fields if not parsed_data.get(field)]
+                return False, parsed_data, f"Información insuficiente: faltan {missing_fields + missing_optional[:2]}"
+            
+            logger.info(f"Detalles parseados exitosamente: {total_required} campos importantes", 
+                       extra={"component": "reservation_service", "parsed_fields": total_required})
+            
+            return True, parsed_data, f"Parseados {total_required} campos importantes"
             
         except Exception as e:
             error_msg = f"Error parseando detalles de reserva: {e}"
@@ -328,54 +358,18 @@ class ReservationService:
     
     def save_reservation_to_pinecone(self, user_phone_number: str, reservation_data: Dict[str, Any]) -> bool:
         """
-        Guarda reserva en Pinecone (extraído de agente.py líneas 1633-1652)
+        Stub para compatibilidad - Pinecone no se usa en este sistema
         
         Args:
             user_phone_number: Número de teléfono del usuario
             reservation_data: Datos de la reserva
             
         Returns:
-            bool: True si se guardó exitosamente
+            bool: Always True for compatibility
         """
-        try:
-            logger.info("Guardando reserva en Pinecone", 
-                       extra={"component": "reservation_service", "phone": user_phone_number})
-            
-            # Crear texto de reserva para vectorización
-            reservation_text = f"""
-            Reserva para {reservation_data.get('nombres_huespedes', 'Usuario')}.
-            Teléfono: {user_phone_number}
-            Email: {reservation_data.get('email_contacto', '')}
-            Domo: {reservation_data.get('domo', '')}
-            Huéspedes: {reservation_data.get('cantidad_huespedes', 0)}
-            Fecha entrada: {reservation_data.get('fecha_entrada', '')}
-            Fecha salida: {reservation_data.get('fecha_salida', '')}
-            Método pago: {reservation_data.get('metodo_pago', '')}
-            Monto: {reservation_data.get('monto_total', 0)}
-            """
-            
-            # Metadata para Pinecone
-            metadata = {
-                "tipo": "reserva",
-                "user_phone": user_phone_number,
-                "domo": reservation_data.get('domo', ''),
-                "fecha_entrada": str(reservation_data.get('fecha_entrada', '')),
-                "fecha_salida": str(reservation_data.get('fecha_salida', '')),
-                "huespedes": reservation_data.get('cantidad_huespedes', 0),
-                "monto": reservation_data.get('monto_total', 0),
-                "fecha_creacion": datetime.utcnow().isoformat()
-            }
-            
-            # TODO: Implementar guardado real en Pinecone cuando esté disponible
-            logger.info("Reserva preparada para Pinecone (implementación pendiente)", 
-                       extra={"component": "reservation_service", "metadata": metadata})
-            
-            return True
-            
-        except Exception as e:
-            logger.error(f"Error guardando reserva en Pinecone: {e}", 
-                        extra={"component": "reservation_service"})
-            return False
+        # Stub function - Pinecone functionality removed
+        # All reservation data is stored in PostgreSQL
+        return True
     
     def create_reservation_summary(self, reservation_data: Dict[str, Any]) -> str:
         """
@@ -425,6 +419,60 @@ class ReservationService:
             logger.error(f"Error creando resumen de reserva: {e}", 
                         extra={"component": "reservation_service"})
             return "Error generando resumen de reserva"
+
+    def save_reservation_atomic(self, reservation_data: Dict[str, Any]) -> Tuple[bool, str, Optional[int]]:
+        """Guardar reserva de forma atómica con validaciones"""
+        try:
+            with self.db.session.begin():  # Transacción automática
+                # 1. Validar datos antes de guardar
+                valid, errors = self.validation_service.validate_campos_importantes_reserva(reservation_data)
+                if not valid:
+                    raise ValueError(f"Datos de reserva inválidos: {errors}")
+
+                # 2. Verificar disponibilidad (con lock para evitar race conditions)
+                availability_check = self.db.session.execute(
+                    """SELECT id FROM reservas
+                       WHERE domo = :domo
+                       AND fecha_entrada < :fecha_salida
+                       AND fecha_salida > :fecha_entrada
+                       FOR UPDATE""",
+                    {
+                        'domo': reservation_data['domo'],
+                        'fecha_entrada': reservation_data['fecha_entrada'],
+                        'fecha_salida': reservation_data['fecha_salida']
+                    }
+                ).fetchall()
+
+                if availability_check:
+                    raise ValueError("Domo no disponible para las fechas seleccionadas")
+
+                # 3. Crear reserva
+                nueva_reserva = self.Reserva(
+                    numero_whatsapp=reservation_data['numero_whatsapp'],
+                    email_contacto=reservation_data['email_contacto'],
+                    cantidad_huespedes=reservation_data['cantidad_huespedes'],
+                    nombres_huespedes=json.dumps(reservation_data.get('nombres_huespedes', [])),
+                    domo=reservation_data['domo'],
+                    fecha_entrada=reservation_data['fecha_entrada'],
+                    fecha_salida=reservation_data['fecha_salida'],
+                    precio_total=reservation_data.get('precio_total', 0.0),
+                    metodo_pago=reservation_data['metodo_pago'],
+                    estado='confirmada',
+                    fecha_creacion=datetime.utcnow()
+                )
+
+                self.db.session.add(nueva_reserva)
+                self.db.session.flush()  # Obtener ID sin commit
+
+                logger.info(f"Reserva guardada atómicamente: ID {nueva_reserva.id}")
+                return True, f"Reserva confirmada con ID {nueva_reserva.id}", nueva_reserva.id
+
+        except ValueError as ve:
+            logger.warning(f"Error de validación en reserva: {ve}")
+            return False, str(ve), None
+        except Exception as e:
+            logger.error(f"Error guardando reserva: {e}")
+            return False, "Error interno procesando reserva", None
     
     def get_health_status(self) -> Dict[str, Any]:
         """

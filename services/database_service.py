@@ -4,6 +4,8 @@
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
 from decimal import Decimal
+from contextlib import contextmanager
+from sqlalchemy.exc import SQLAlchemyError
 from utils.logger import get_logger, log_database_operation, log_error
 
 # Inicializar logger para este módulo
@@ -15,7 +17,7 @@ class DatabaseService:
     Extrae y organiza las operaciones CRUD de reservas y usuarios
     """
     
-    def __init__(self, db, Reserva=None, Usuario=None):
+    def __init__(self, db, Reserva=None, Usuario=None, persistent_state_service=None):
         """
         Inicializar servicio de base de datos
         
@@ -23,17 +25,59 @@ class DatabaseService:
             db: Instancia de SQLAlchemy
             Reserva: Modelo de Reserva
             Usuario: Modelo de Usuario
+            persistent_state_service: Servicio de estado persistente para invalidar cache
         """
         self.db = db
         self.Reserva = Reserva
         self.Usuario = Usuario
+        self.persistent_state_service = persistent_state_service
         
         logger.info("Servicio de base de datos inicializado",
-                   extra={"phase": "startup", "component": "database_service"})
+                   extra={"phase": "startup", "component": "database_service", 
+                          "cache_integration": persistent_state_service is not None})
     
     def _check_database_available(self) -> bool:
         """Verificar que la base de datos esté disponible"""
         return self.db is not None and self.Reserva is not None and self.Usuario is not None
+    
+    def _invalidate_user_cache(self, user_id: str = None) -> None:
+        """Invalidar cache de estado de usuario específico o todos"""
+        if self.persistent_state_service and hasattr(self.persistent_state_service, '_clear_cache'):
+            try:
+                if user_id:
+                    self.persistent_state_service._clear_cache(user_id)
+                    logger.debug(f"Cache invalidado para usuario: {user_id}",
+                               extra={"component": "database_service", "action": "cache_invalidation"})
+                else:
+                    # Invalidar todo el cache
+                    if hasattr(self.persistent_state_service, '_state_cache'):
+                        self.persistent_state_service._state_cache.clear()
+                        self.persistent_state_service._memory_cache.clear()
+                        self.persistent_state_service._cache_timestamps.clear()
+                        logger.debug("Cache global invalidado",
+                                   extra={"component": "database_service", "action": "global_cache_invalidation"})
+            except Exception as e:
+                logger.warning(f"Error invalidando cache: {e}",
+                             extra={"component": "database_service", "user_id": user_id})
+    
+    @contextmanager
+    def atomic_transaction(self):
+        """Context manager para transacciones atómicas con invalidación de cache"""
+        try:
+            yield
+            self.db.session.commit()
+            logger.debug("Transacción atómica confirmada",
+                       extra={"component": "database_service"})
+        except SQLAlchemyError as e:
+            self.db.session.rollback()
+            logger.error(f"Error en transacción atómica, rollback ejecutado: {e}",
+                       extra={"component": "database_service"})
+            raise
+        except Exception as e:
+            self.db.session.rollback()
+            logger.error(f"Error inesperado en transacción, rollback ejecutado: {e}",
+                       extra={"component": "database_service"})
+            raise
     
     # ===== OPERACIONES DE RESERVAS =====
     
@@ -181,8 +225,13 @@ class DatabaseService:
                 comentarios_especiales=reserva_data.get('comentarios_especiales')
             )
             
-            self.db.session.add(nueva_reserva)
-            self.db.session.commit()
+            with self.atomic_transaction():
+                self.db.session.add(nueva_reserva)
+                
+                # Invalidar cache del usuario asociado a la reserva
+                user_id = reserva_data.get('numero_whatsapp')
+                if user_id:
+                    self._invalidate_user_cache(user_id)
             
             log_database_operation(logger, "INSERT", "reservas", True, 
                                  f"Reserva creada con ID: {nueva_reserva.id}")
@@ -231,7 +280,15 @@ class DatabaseService:
                     else:
                         setattr(reserva, field, update_data[field])
             
-            self.db.session.commit()
+            with self.atomic_transaction():
+                # Invalidar cache del usuario asociado (tanto el original como el actualizado)
+                if reserva.numero_whatsapp:
+                    self._invalidate_user_cache(reserva.numero_whatsapp)
+                
+                # Si se cambió el número de WhatsApp, invalidar cache del nuevo usuario también
+                new_whatsapp = update_data.get('numero_whatsapp')
+                if new_whatsapp and new_whatsapp != reserva.numero_whatsapp:
+                    self._invalidate_user_cache(new_whatsapp)
             
             log_database_operation(logger, "UPDATE", "reservas", True, 
                                  f"Reserva {reserva_id} actualizada")
@@ -262,8 +319,12 @@ class DatabaseService:
             if not reserva:
                 return False, "Reserva no encontrada"
             
-            self.db.session.delete(reserva)
-            self.db.session.commit()
+            with self.atomic_transaction():
+                # Invalidar cache del usuario asociado antes de eliminar
+                if reserva.numero_whatsapp:
+                    self._invalidate_user_cache(reserva.numero_whatsapp)
+                    
+                self.db.session.delete(reserva)
             
             log_database_operation(logger, "DELETE", "reservas", True, 
                                  f"Reserva {reserva_id} eliminada")
@@ -401,8 +462,11 @@ class DatabaseService:
                 fecha_creacion=datetime.utcnow()
             )
             
-            self.db.session.add(nuevo_usuario)
-            self.db.session.commit()
+            with self.atomic_transaction():
+                self.db.session.add(nuevo_usuario)
+            
+            # Invalidar cache global después de crear usuario
+            self._invalidate_user_cache()
             
             user_data = {
                 'id': nuevo_usuario.id,
@@ -454,13 +518,15 @@ class DatabaseService:
             if existing_user:
                 return False, "Email ya existe en otro usuario"
             
-            # Actualizar campos
-            usuario.nombre = nombre
-            usuario.email = email
-            usuario.rol = rol
-            usuario.activo = activo
+            with self.atomic_transaction():
+                # Actualizar campos
+                usuario.nombre = nombre
+                usuario.email = email
+                usuario.rol = rol
+                usuario.activo = activo
             
-            self.db.session.commit()
+            # Invalidar cache global después de actualizar usuario
+            self._invalidate_user_cache()
             
             log_database_operation(logger, "UPDATE", "usuarios", True, 
                                  f"Usuario {user_id} actualizado")
@@ -491,8 +557,11 @@ class DatabaseService:
             if not usuario:
                 return False, "Usuario no encontrado"
             
-            self.db.session.delete(usuario)
-            self.db.session.commit()
+            with self.atomic_transaction():
+                self.db.session.delete(usuario)
+            
+            # Invalidar cache global después de eliminar usuario
+            self._invalidate_user_cache()
             
             log_database_operation(logger, "DELETE", "usuarios", True, 
                                  f"Usuario {user_id} eliminado")
@@ -540,9 +609,9 @@ class DatabaseService:
             if not password_valid:
                 return None
             
-            # Actualizar último acceso
-            usuario.ultimo_acceso = datetime.utcnow()
-            self.db.session.commit()
+            # Actualizar último acceso de forma atómica
+            with self.atomic_transaction():
+                usuario.ultimo_acceso = datetime.utcnow()
             
             user_data = {
                 'id': usuario.id,
@@ -582,13 +651,15 @@ class DatabaseService:
             # Generar nueva contraseña
             new_password = self._generate_simple_password()
             
-            # Actualizar contraseña
-            from werkzeug.security import generate_password_hash
-            user.password_hash = generate_password_hash(new_password)
-            user.temp_password = new_password
-            user.password_changed = False
+            with self.atomic_transaction():
+                # Actualizar contraseña
+                from werkzeug.security import generate_password_hash
+                user.password_hash = generate_password_hash(new_password)
+                user.temp_password = new_password
+                user.password_changed = False
             
-            self.db.session.commit()
+            # Invalidar cache global después de regenerar contraseña
+            self._invalidate_user_cache()
             
             log_database_operation(logger, "UPDATE", "usuarios", True, 
                                  f"Contraseña regenerada para usuario {user_id}")

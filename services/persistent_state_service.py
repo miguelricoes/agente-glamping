@@ -4,6 +4,8 @@
 from typing import Dict, Any, Optional
 import json
 from datetime import datetime, timedelta
+from contextlib import contextmanager
+from sqlalchemy.exc import SQLAlchemyError
 from utils.logger import get_logger, log_database_operation
 from models.conversation_state_db import ConversationStateDB
 
@@ -342,6 +344,38 @@ class PersistentStateService:
             logger.error(f"Error obteniendo estadísticas del sistema: {e}",
                         extra={"phase": "stats"})
             return {"error": str(e)}
+
+    @contextmanager
+    def atomic_transaction(self):
+        """Context manager para transacciones atómicas"""
+        try:
+            yield
+            self.db.session.commit()
+            logger.debug("Transacción confirmada exitosamente")
+        except SQLAlchemyError as e:
+            self.db.session.rollback()
+            logger.error(f"Error en transacción, rollback ejecutado: {e}")
+            raise
+        except Exception as e:
+            self.db.session.rollback()
+            logger.error(f"Error inesperado, rollback ejecutado: {e}")
+            raise
+
+    def update_user_state_atomic(self, user_id: str, state_data: Dict[str, Any]):
+        """Actualizar estado de usuario de forma atómica"""
+        with self.atomic_transaction():
+            # Limpiar cache antes de la transacción
+            self._clear_cache(user_id)
+
+            # Actualizar en base de datos
+            success = self.state_db.save_user_state(user_id, state_data)
+
+            if success:
+                # Actualizar cache después de confirmación exitosa
+                self._update_cache(user_id, state_data)
+                return True
+            else:
+                raise Exception("Error guardando estado en base de datos")
 
 # Clase de compatibilidad para migración gradual
 class CompatibilityStateManager:

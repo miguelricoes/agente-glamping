@@ -1,9 +1,16 @@
+# 🔒 DEPENDENCIAS PRINCIPALES CON VERSIONES SEGURAS
 Flask==3.0.0
 Flask-SQLAlchemy==3.0.5
 Flask-CORS==4.0.0
-gunicorn==21.2.0
-psycopg2-binary==2.9.7
 python-dotenv==1.0.0
+
+# 🚀 SERVIDOR DE PRODUCCIÓN
+gunicorn==22.0.0
+
+# 🗄️ BASE DE DATOS
+psycopg2-binary==2.9.9
+
+# 🤖 INTELIGENCIA ARTIFICIAL Y NLP
 langchain==0.3.27
 langchain-openai==0.3.29
 langchain-community==0.3.27
@@ -11,8 +18,32 @@ openai>=1.86.0,<2.0.0
 numpy>=1.24.0,<2.0.0
 faiss-cpu==1.7.4
 sentence-transformers==2.2.2
-twilio==8.10.0
 tiktoken>=0.5.2,<1.0.0
-pinecone>=7.0.0
-Werkzeug>=3.0.0
+
+# 📱 COMUNICACIÓN
+twilio==8.10.0
+
+# 🔐 SEGURIDAD Y ENCRIPTACIÓN
+cryptography==42.0.5
+Werkzeug==3.0.1
+bleach>=6.1.0
+email-validator>=2.1.0
+phonenumbers>=8.13.0
+
+# 🌐 HTTP Y REQUESTS
 requests>=2.32.3
+urllib3>=2.2.1
+
+# 🛡️ SEGURIDAD ADICIONAL
+certifi>=2024.2.2
+
+# 📊 VALIDACIÓN Y PARSING
+python-dateutil>=2.8.2
+pytz>=2024.1
+
+# 📊 MONITOREO DE SISTEMA Y PERFORMANCE
+psutil>=5.9.5
+
+# 🔍 MONITORING Y LOGGING (OPCIONAL PARA PRODUCCIÓN)
+# sentry-sdk[flask]>=2.0.0  # Uncomment para error tracking
+# prometheus-flask-exporter>=0.23.0  # Uncomment para métricas

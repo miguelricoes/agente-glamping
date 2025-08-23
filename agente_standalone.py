@@ -203,8 +203,9 @@ class StandaloneAgent:
             # Inicializar estado persistente si la base de datos está disponible
             if self.db:
                 try:
-                    # Ejecutar migración
-                    migration_success = run_migration(self.db, self.user_states, self.user_memories)
+                    # Ejecutar migración con contexto de aplicación Flask
+                    with self.app.app_context():
+                        migration_success = run_migration(self.db, self.user_states, self.user_memories)
                     
                     if migration_success:
                         # Inicializar servicio persistente
@@ -246,10 +247,10 @@ class StandaloneAgent:
             tools = []
             
             # Crear herramientas RAG si están disponibles
-            if 'rag_tools' in self.services and 'availability' in self.services:
+            if 'rag_tools' in self.services:
                 tools = create_rag_tools(
                     self.services['rag_tools'], 
-                    self.services['availability']
+                    self.services.get('availability')  # Puede ser None si no hay BD
                 )
             
             logger.info(f"Herramientas creadas: {len(tools)}", 
@@ -292,30 +293,36 @@ class StandaloneAgent:
                 pass
             
             def is_greeting_message(message: str) -> bool:
-                greetings = ['hola', 'hello', 'hi', 'buenas', 'saludos']
-                return any(greeting in message.lower() for greeting in greetings)
-            
-            def get_welcome_menu() -> str:
-                return """
-🏕️ **BIENVENIDO A GLAMPING BRILLO DE LUNA** 🌙
-
-1️⃣ **Información General** - Concepto, ubicación, contacto
-2️⃣ **Domos Disponibles** - Tipos, características y precios  
-3️⃣ **Consultar Disponibilidad** - Fechas y reservas
-4️⃣ **Servicios Incluidos** - Qué incluye tu estadía
-5️⃣ **Actividades Adicionales** - Experiencias únicas
-6️⃣ **Políticas** - Cancelación, mascotas, normas
-7️⃣ **Ver Imágenes** - Galería de fotos
-8️⃣ **Accesibilidad** - Información para movilidad reducida
-
-💬 Escribe el número o describe lo que necesitas
-                """
-            
-            def is_menu_selection(message: str) -> bool:
-                return any(str(i) in message for i in range(1, 9))
+                # Use the improved ValidationService for greeting detection
+                if 'validation' in self.services:
+                    return self.services['validation'].is_greeting_message(message)
+                else:
+                    # Fallback to basic detection
+                    greetings = ['hola', 'holi', 'hello', 'hi', 'buenas', 'saludos', 'holiwis', 'hey']
+                    return any(greeting in message.lower() for greeting in greetings)
             
             def handle_menu_selection(selection: str, qa_chains: dict) -> str:
-                return f"Has seleccionado la opción {selection}. ¿En qué puedo ayudarte específicamente?"
+                try:
+                    # Use the new menu service instead of the dummy response
+                    from services.validation_service import ValidationService
+                    from services.menu_service import create_menu_service
+                    
+                    validation_service = ValidationService()
+                    menu_service = create_menu_service(qa_chains, validation_service)
+                    
+                    # Create a dummy user_state for the menu service
+                    user_state = {"current_flow": "none"}
+                    
+                    result = menu_service.handle_menu_selection(selection, user_state)
+                    
+                    # Handle dictionary responses (some menu options return dicts)
+                    if isinstance(result, dict):
+                        return result.get("message", str(result))
+                    
+                    return result
+                except Exception as e:
+                    logger.error(f"Error en handle_menu_selection: {e}")
+                    return f"Error procesando la opción {selection}. Intenta de nuevo."
             
             def handle_availability_request(message: str) -> str:
                 if 'availability' in self.services:
@@ -343,15 +350,62 @@ class StandaloneAgent:
                     return self.services['reservation'].save_reservation_to_pinecone(phone, data)
                 return False
             
-            def initialize_agent_safe(tools_list, memory):
+            def initialize_agent_safe(tools_list, memory, max_retries=3):
                 if self.llm_service:
-                    return self.llm_service.initialize_agent_safe(tools_list, memory)
+                    return self.llm_service.initialize_agent_safe(tools_list, memory, max_retries)
                 return False, None, "LLM service no disponible"
             
             def run_agent_safe(agent, user_input: str):
                 if self.llm_service:
                     return self.llm_service.run_agent_safe(agent, user_input)
                 return False, "", "LLM service no disponible"
+            
+            def get_welcome_menu() -> str:
+                """
+                Función que genera el menú de bienvenida para WhatsApp
+                """
+                return """🌟 **¡Bienvenido a Glamping Brillo de Luna!** 🌟
+
+🏞️ Tu escape perfecto en Guatavita, Colombia
+
+**¿En qué puedo ayudarte hoy?**
+
+1️⃣ 📍 **Información General** - Ubicación, concepto, contacto
+2️⃣ 🏠 **Domos Disponibles** - Tipos, características, precios
+3️⃣ 📅 **Consultar Disponibilidad** - Fechas libres para reservar
+4️⃣ 🛎️ **Servicios Incluidos** - Qué incluye tu estadía
+5️⃣ 📋 **Políticas del Glamping** - Normas y condiciones
+
+💬 **Escribe el número de tu opción o pregúntame directamente**
+
+✨ *Estoy aquí para hacer tu experiencia inolvidable*"""
+            
+            def is_menu_selection_standalone(message: str) -> bool:
+                """
+                Función que detecta si el mensaje es una selección del menú
+                Replica la lógica del ValidationService
+                """
+                message_clean = message.lower().strip()
+                
+                # Detectar números directos (1-5)
+                if message_clean in ['1', '2', '3', '4', '5']:
+                    return True
+                
+                # Detectar variantes textuales
+                menu_variants = {
+                    '1': ['informacion', 'información', 'informacion general', 'información general'],
+                    '2': ['domos', 'domos disponibles'],
+                    '3': ['disponibilidad', 'consultar disponibilidad'],
+                    '4': ['servicios', 'servicios incluidos'],
+                    '5': ['politicas', 'políticas']
+                }
+                
+                for option, variants in menu_variants.items():
+                    for variant in variants:
+                        if variant == message_clean or f" {variant}" in message_clean:
+                            return True
+                
+                return False
             
             # Registrar rutas WhatsApp
             register_whatsapp_routes(
@@ -364,8 +418,6 @@ class StandaloneAgent:
                 load_user_memory=load_user_memory,
                 save_user_memory=save_user_memory,
                 is_greeting_message=is_greeting_message,
-                get_welcome_menu=get_welcome_menu,
-                is_menu_selection=is_menu_selection,
                 handle_menu_selection=handle_menu_selection,
                 handle_availability_request=handle_availability_request,
                 parse_reservation_details=parse_reservation_details,
@@ -374,7 +426,10 @@ class StandaloneAgent:
                 Reserva=self.database_config.Reserva if self.database_config else None,
                 save_reservation_to_pinecone=save_reservation_to_pinecone,
                 initialize_agent_safe=initialize_agent_safe,
-                run_agent_safe=run_agent_safe
+                run_agent_safe=run_agent_safe,
+                # AGREGAR estos argumentos faltantes:
+                get_welcome_menu=get_welcome_menu,
+                is_menu_selection=is_menu_selection_standalone
             )
             
             # Registrar rutas Chat
@@ -385,8 +440,6 @@ class StandaloneAgent:
                 load_user_memory=load_user_memory,
                 save_user_memory=save_user_memory,
                 is_greeting_message=is_greeting_message,
-                get_welcome_menu=get_welcome_menu,
-                is_menu_selection=is_menu_selection,
                 handle_menu_selection=handle_menu_selection,
                 handle_availability_request=handle_availability_request,
                 parse_reservation_details=parse_reservation_details,
@@ -515,31 +568,37 @@ class StandaloneAgent:
             }
     
     def run(self, host: str = "0.0.0.0", port: Optional[int] = None, debug: bool = False):
-        """
-        Ejecuta la aplicación
-        
-        Args:
-            host: Host para ejecutar
-            port: Puerto para ejecutar
-            debug: Modo debug
-        """
+        """Ejecuta la aplicación con configuraciones de producción"""
         try:
             if not self.app:
-                logger.error("Aplicación no inicializada", 
+                logger.error("Aplicación no inicializada",
                             extra={"component": "standalone_agent"})
                 return
-            
+
             # Puerto por defecto
             if port is None:
                 port = int(os.environ.get("PORT", 8080))
-            
-            logger.info(f"Iniciando servidor en {host}:{port}", 
-                       extra={"component": "standalone_agent", "host": host, "port": port})
-            
-            self.app.run(host=host, port=port, debug=debug)
-            
+
+            # AGREGAR: Configuración de producción
+            is_production = os.environ.get("ENV", "development") == "production"
+
+            if is_production:
+                # Configuración de seguridad para producción
+                self.app.config['DEBUG'] = False
+                self.app.config['TESTING'] = False
+
+                logger.info(f"Iniciando servidor en modo PRODUCCIÓN {host}:{port}",
+                           extra={"component": "standalone_agent", "mode": "production"})
+
+                # Usar Gunicorn en producción (Railway lo maneja automáticamente)
+                self.app.run(host=host, port=port, debug=False, threaded=True)
+            else:
+                logger.info(f"Iniciando servidor en modo DESARROLLO {host}:{port}",
+                           extra={"component": "standalone_agent", "mode": "development"})
+                self.app.run(host=host, port=port, debug=debug)
+
         except Exception as e:
-            logger.error(f"Error ejecutando aplicación: {e}", 
+            logger.error(f"Error ejecutando aplicación: {e}",
                         extra={"component": "standalone_agent"})
 
 
@@ -579,6 +638,39 @@ def main():
                     extra={"component": "main"})
         sys.exit(1)
 
+
+# Variable global para Gunicorn en producción
+app = None
+
+def create_production_app():
+    """Crear aplicación para producción con Gunicorn"""
+    global app
+    try:
+        logger.info("Creando aplicación para producción", 
+                   extra={"component": "standalone_agent"})
+        
+        # Crear instancia del agente
+        agent = StandaloneAgent()
+        
+        # Inicializar completamente
+        if agent.initialize():
+            app = agent.app
+            logger.info("Aplicación de producción creada exitosamente", 
+                       extra={"component": "standalone_agent"})
+            return app
+        else:
+            logger.error("Error inicializando agente para producción", 
+                        extra={"component": "standalone_agent"})
+            return None
+            
+    except Exception as e:
+        logger.error(f"Error creando aplicación de producción: {e}", 
+                    extra={"component": "standalone_agent"})
+        return None
+
+# Crear app para Gunicorn automáticamente
+if os.environ.get("ENV") == "production":
+    app = create_production_app()
 
 if __name__ == "__main__":
     main()
