@@ -1,4 +1,4 @@
-# Configuración de Gunicorn optimizada para Railway
+# Configuración de Gunicorn optimizada para Railway - SIN DEPENDENCIAS EXTERNAS
 import os
 import multiprocessing
 
@@ -39,62 +39,50 @@ limit_request_line = 0  # No limit (manejado por Flask)
 limit_request_fields = 100
 limit_request_field_size = 8190
 
-# CONFIGURACIÓN DE MONITOREO
-# Enable stats para monitoreo externo
-statsd_host = os.getenv('STATSD_HOST')
-statsd_prefix = 'glamping.gunicorn'
-
-# HOOKS DE CONFIGURACIÓN AVANZADA
+# HOOKS DE CONFIGURACIÓN SIMPLE (SIN LOGGER EXTERNO)
 def on_starting(server):
-    """Hook ejecutado al iniciar Gunicorn"""
-    logger.info(f"🚀 Iniciando Gunicorn con {workers} workers, {threads} threads cada uno")
-    logger.info(f"📊 Concurrencia total: {workers * threads} conexiones simultáneas")
-    logger.info(f"⏱️ Timeouts: request={timeout}s, keepalive={keepalive}s, graceful={graceful_timeout}s")
-    logger.info(f"🔄 Reciclado de workers cada {max_requests}±{max_requests_jitter} requests")
+    """Hook ejecutado al iniciar Gunicorn - USA PRINT PARA EVITAR ERRORES"""
+    print(f"Iniciando Gunicorn con {workers} workers")
+    print(f"Concurrencia total: {workers} workers")
+    print(f"Timeout: {timeout}s")
+    print(f"Bind: {bind}")
     
     # Verificar configuración crítica
     if workers < 2:
-        logger.warning("⚠️ ADVERTENCIA: Solo 1 worker configurado - puede causar bloqueos")
+        print("ADVERTENCIA: Solo 1 worker configurado - puede causar bloqueos")
     
     if timeout > 30:
-        logger.warning("⚠️ ADVERTENCIA: Timeout > 30s puede causar timeouts de WhatsApp")
+        print("ADVERTENCIA: Timeout > 30s puede causar timeouts de WhatsApp")
 
 def on_reload(server):
     """Hook ejecutado en reload"""
-    logger.info("🔄 Recargando configuración de Gunicorn")
+    print("Recargando configuracion de Gunicorn")
 
 def worker_int(worker):
     """Hook ejecutado cuando worker recibe SIGINT"""
-    logger.info(f"👷 Worker {worker.pid} interrumpido")
+    print(f"Worker {worker.pid} interrumpido")
 
 def on_exit(server):
     """Hook ejecutado al salir"""
-    logger.info("🛑 Cerrando Gunicorn")
+    print("Cerrando Gunicorn")
 
 def pre_fork(server, worker):
     """Hook antes de crear worker"""
-    logger.debug(f"👷 Creando worker {worker.age}")
+    print(f"Creando worker {worker.age}")
 
 def post_fork(server, worker):
     """Hook después de crear worker"""
-    logger.info(f"✅ Worker {worker.pid} iniciado")
-
-def pre_exec(server):
-    """Hook antes de exec"""
-    logger.info("🔧 Pre-exec: preparando nueva configuración")
+    print(f"Worker {worker.pid} iniciado")
 
 def when_ready(server):
     """Hook cuando server está listo"""
-    logger.info("✅ Gunicorn listo para recibir requests")
-    
-    # Log configuración final
-    logger.info(f"🌐 Escuchando en {bind}")
-    logger.info(f"🏭 Worker class: {worker_class}")
-    logger.info(f"📈 Max workers: {workers}, Threads: {threads}")
+    print("Gunicorn listo para recibir requests")
+    print(f"Worker class: {worker_class}")
+    print(f"Workers activos: {workers}")
 
 def worker_abort(worker):
     """Hook cuando worker es abortado"""
-    logger.error(f"💥 Worker {worker.pid} abortado inesperadamente")
+    print(f"Worker {worker.pid} abortado inesperadamente")
 
 # CONFIGURACIÓN ESPECÍFICA PARA DIFERENTES ENTORNOS
 env = os.getenv('ENV', 'development')
@@ -108,14 +96,12 @@ if env == 'production':
 elif env == 'development':
     # Configuración de desarrollo para debugging
     workers = 1
-    threads = 2
     timeout = 60  # Más tiempo para debugging
     reload = True  # Auto-reload en desarrollo
     
 elif env == 'testing':
     # Configuración mínima para testing
     workers = 1
-    threads = 1
     timeout = 10
 
 # CONFIGURACIÓN ADICIONAL PARA CONTENEDORES
@@ -135,29 +121,22 @@ if os.path.exists('/.dockerenv'):
             # Si hay poca memoria, reducir workers
             if mem_total_mb < 512:
                 workers = 1
-                threads = 2
-                logger.warning(f"⚠️ Memoria limitada ({mem_total_mb:.0f}MB), reduciendo workers a {workers}")
+                print(f"Memoria limitada ({mem_total_mb:.0f}MB), reduciendo workers a {workers}")
             elif mem_total_mb < 1024:
                 workers = min(workers, 2)
-                logger.info(f"💾 Memoria detectada: {mem_total_mb:.0f}MB, usando {workers} workers")
+                print(f"Memoria detectada: {mem_total_mb:.0f}MB, usando {workers} workers")
                 
     except Exception as e:
-        logger.warning(f"No se pudo detectar memoria del sistema: {e}")
+        print(f"No se pudo detectar memoria del sistema: {e}")
 
-# LOG RESUMEN DE CONFIGURACIÓN
-logger.info("📋 Configuración de Gunicorn cargada:")
-logger.info(f"   Workers: {workers}")
-logger.info(f"   Threads: {threads}")
-logger.info(f"   Worker class: {worker_class}")
-logger.info(f"   Timeout: {timeout}s")
-logger.info(f"   Max requests: {max_requests}")
-logger.info(f"   Bind: {bind}")
-logger.info(f"   Environment: {env}")
-logger.info(f"   Preload app: {preload_app}")
+# LOG FINAL DE CONFIGURACIÓN (USA PRINT EN LUGAR DE LOGGER)
+print("Configuracion de Gunicorn cargada:")
+print(f"   Workers: {workers}")
+print(f"   Worker class: {worker_class}")
+print(f"   Timeout: {timeout}s")
+print(f"   Bind: {bind}")
+print(f"   Log level: {loglevel}")
 
 # Validación final
-if workers * threads < 4:
-    logger.error("🚨 CONFIGURACIÓN CRÍTICA: Concurrencia total < 4 puede causar bloqueos severos")
-    
-if timeout < 20:
-    logger.warning("⚠️ Timeout muy bajo para operaciones LLM complejas")
+if workers < 2:
+    print("ADVERTENCIA: Configuracion de bajo rendimiento detectada")
