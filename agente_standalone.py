@@ -640,7 +640,7 @@ def main():
 
 
 # Factory pattern implementation for Docker/Gunicorn deployment
-def create_app():
+def create_standalone_app():
     """Factory para crear la aplicación Flask"""
     try:
         logger.info("Creando aplicación con factory pattern", 
@@ -667,7 +667,7 @@ def create_app():
         raise RuntimeError(f"Failed to initialize application: {e}")
 
 # Variable app para Gunicorn
-app = create_app()
+app = create_standalone_app()
 
 # Para ejecución directa
 if __name__ == '__main__':
