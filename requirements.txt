@@ -1,4 +1,11 @@
-# 🔒 DEPENDENCIAS PRINCIPALES CON VERSIONES SEGURAS
+# 🔒 DEPENDENCIAS PRINCIPALES CON VERSIONES SEGURAS Y COMPATIBLES
+# Organizadas por criticidad para el funcionamiento del sistema
+
+# ===============================================================================
+# 🚨 DEPENDENCIAS CRÍTICAS - ETAPAS 1-3 (ESENCIALES PARA FUNCIONAMIENTO BÁSICO)
+# ===============================================================================
+
+# Core Framework - CRÍTICAS
 Flask==3.0.0
 Flask-SQLAlchemy==3.0.5
 Flask-CORS==4.0.0
@@ -10,40 +17,94 @@ gunicorn==22.0.0
 # 🗄️ BASE DE DATOS
 psycopg2-binary==2.9.9
 
-# 🤖 INTELIGENCIA ARTIFICIAL Y NLP
+# 🧮 DEPENDENCIAS MATEMÁTICAS FUNDAMENTALES
+numpy>=1.24.0,<2.0.0
+
+# ===============================================================================
+# ⚠️ DEPENDENCIAS IMPORTANTES - ETAPAS 4-5 (FUNCIONALIDAD IA PRINCIPAL)
+# ===============================================================================
+
+# 🤖 INTELIGENCIA ARTIFICIAL Y NLP - Con compatibilidad validada
+openai>=1.86.0,<2.0.0
+tiktoken>=0.5.2,<1.0.0
+
+# LangChain ecosystem - versiones estables
 langchain==0.3.27
 langchain-openai==0.3.29
 langchain-community==0.3.27
-openai>=1.86.0,<2.0.0
-numpy>=1.24.0,<2.0.0
+
+# ===============================================================================
+# 🔶 DEPENDENCIAS OPCIONALES - ETAPAS 6-8 (FUNCIONALIDAD EXTENDIDA)
+# ===============================================================================
+
+# Vector search - CPU version para compatibilidad
 faiss-cpu==1.7.4
+
+# Text processing - versión estable
 sentence-transformers==2.2.2
-tiktoken>=0.5.2,<1.0.0
 
 # 📱 COMUNICACIÓN
 twilio==8.10.0
 
+# ===============================================================================
+# 🛡️ DEPENDENCIAS DE SEGURIDAD - ETAPAS 9-10 (OPCIONALES PERO RECOMENDADAS)
+# ===============================================================================
+
 # 🔐 SEGURIDAD Y ENCRIPTACIÓN
 cryptography==42.0.5
 Werkzeug==3.0.1
-bleach>=6.1.0
-email-validator>=2.1.0
-phonenumbers>=8.13.0
 
 # 🌐 HTTP Y REQUESTS
 requests>=2.32.3
 urllib3>=2.2.1
-
-# 🛡️ SEGURIDAD ADICIONAL
 certifi>=2024.2.2
 
 # 📊 VALIDACIÓN Y PARSING
 python-dateutil>=2.8.2
 pytz>=2024.1
 
-# 📊 MONITOREO DE SISTEMA Y PERFORMANCE
+# 📊 MONITOREO DE SISTEMA
 psutil>=5.9.5
 
-# 🔍 MONITORING Y LOGGING (OPCIONAL PARA PRODUCCIÓN)
-# sentry-sdk[flask]>=2.0.0  # Uncomment para error tracking
-# prometheus-flask-exporter>=0.23.0  # Uncomment para métricas
+# 🛡️ VALIDACIÓN Y SANITIZACIÓN (OPCIONALES)
+# Nota: Estas dependencias son opcionales para funcionalidad básica
+bleach>=6.1.0
+email-validator>=2.1.0
+phonenumbers>=8.13.0
+
+# ===============================================================================
+# 🔍 DEPENDENCIAS DE MONITOREO (COMENTADAS - ACTIVAR EN PRODUCCIÓN SI SE NECESITA)
+# ===============================================================================
+
+# Error tracking y métricas (descomenta según necesidades)
+# sentry-sdk[flask]>=2.0.0  # Para error tracking en producción
+# prometheus-flask-exporter>=0.23.0  # Para métricas detalladas
+
+# ===============================================================================
+# 📋 NOTAS DE COMPATIBILIDAD Y DEPLOYMENT:
+# ===============================================================================
+# 
+# 🚨 DEPENDENCIAS CRÍTICAS (Etapas 1-3):
+#   - Si cualquiera de estas falla, la aplicación NO funcionará
+#   - Son verificadas en ETAPA 11 del Dockerfile con import testing
+#   - Versiones pinneadas para máxima estabilidad
+#
+# ⚠️ DEPENDENCIAS IMPORTANTES (Etapas 4-5):
+#   - Necesarias para funcionalidad IA completa
+#   - Tienen fallbacks con warnings en Dockerfile
+#   - La app puede funcionar parcialmente sin ellas
+#
+# 🔶 DEPENDENCIAS OPCIONALES (Etapas 6-10):
+#   - Mejoran funcionalidad pero no son esenciales
+#   - Fallos no impiden el funcionamiento básico
+#   - Se pueden instalar post-deployment si es necesario
+#
+# 🐳 COMPATIBILIDAD DOCKER:
+#   - Orden optimizado para instalación por etapas
+#   - Versiones compatibles validadas entre sí
+#   - Requiere dependencias del sistema: gcc, g++, gfortran, libblas-dev
+#
+# 🔄 ACTUALIZACIÓN:
+#   - Versiones pinneadas para reproducibilidad
+#   - Actualizar con cuidado y testing en entorno de desarrollo
+#   - Verificar compatibilidad antes de actualizar en producción

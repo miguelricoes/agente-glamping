@@ -1,0 +1,189 @@
+# 🔒 DOCKER COMPOSE PARA AGENTE GLAMPING - CONFIGURACIÓN OPTIMIZADA
+# Configuración segura para desarrollo y staging
+
+version: '3.8'
+
+services:
+  # 🤖 Aplicación principal del agente
+  agente-glamping:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # Optimizaciones de build
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+    
+    # 🌐 Configuración de red
+    ports:
+      - "8080:8080"
+    
+    # 🔐 Variables de entorno (usa .env para valores reales)
+    environment:
+      - ENV=development
+      - PORT=8080
+      - LOG_LEVEL=INFO
+      - STRUCTURED_LOGS=true
+      - CONSOLE_LOGS=true
+    
+    # 📁 Volúmenes para persistencia (solo en desarrollo)
+    volumes:
+      # Logs persistentes
+      - ./logs:/app/logs:rw
+      # Cache de desarrollo (solo desarrollo)
+      - agente_cache:/app/cache
+    
+    # 🏥 Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # 🔄 Reinicio automático
+    restart: unless-stopped
+    
+    # 🛡️ Configuraciones de seguridad
+    security_opt:
+      - no-new-privileges:true
+    
+    # 📊 Límites de recursos
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+    
+    # 🔗 Dependencias
+    depends_on:
+      postgres:
+        condition: service_healthy
+    
+    # 🌐 Redes
+    networks:
+      - agente-network
+
+  # 🗄️ Base de datos PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    
+    # 🔐 Variables de entorno de base de datos
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-agente_glamping}
+      POSTGRES_USER: ${POSTGRES_USER:-agente_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_in_production}
+      POSTGRES_HOST_AUTH_METHOD: ${POSTGRES_HOST_AUTH_METHOD:-scram-sha-256}
+    
+    # 📁 Volumen para persistencia de datos
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Scripts de inicialización
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    
+    # 🌐 Puerto (solo para desarrollo - no exponer en producción)
+    ports:
+      - "5432:5432"
+    
+    # 🏥 Health check
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-agente_user} -d ${POSTGRES_DB:-agente_glamping}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    
+    # 🔄 Reinicio automático
+    restart: unless-stopped
+    
+    # 🛡️ Configuraciones de seguridad
+    security_opt:
+      - no-new-privileges:true
+    
+    # 📊 Límites de recursos
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.3'
+        reservations:
+          memory: 256M
+          cpus: '0.1'
+    
+    # 🌐 Redes
+    networks:
+      - agente-network
+
+  # 📊 Redis para caché (opcional)
+  redis:
+    image: redis:7-alpine
+    
+    # 🔧 Configuración optimizada
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    
+    # 📁 Volumen para persistencia
+    volumes:
+      - redis_data:/data
+    
+    # 🏥 Health check
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    
+    # 🔄 Reinicio automático
+    restart: unless-stopped
+    
+    # 🛡️ Configuraciones de seguridad
+    security_opt:
+      - no-new-privileges:true
+    
+    # 📊 Límites de recursos
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.2'
+        reservations:
+          memory: 128M
+          cpus: '0.05'
+    
+    # 🌐 Redes
+    networks:
+      - agente-network
+
+# 📁 Volúmenes nombrados
+volumes:
+  postgres_data:
+    driver: local
+    labels:
+      com.agente-glamping.description: "Base de datos PostgreSQL"
+  
+  redis_data:
+    driver: local
+    labels:
+      com.agente-glamping.description: "Cache Redis"
+  
+  agente_cache:
+    driver: local
+    labels:
+      com.agente-glamping.description: "Cache de aplicación"
+
+# 🌐 Redes
+networks:
+  agente-network:
+    driver: bridge
+    labels:
+      com.agente-glamping.description: "Red interna del agente"
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# 🏷️ Metadatos del proyecto
+labels:
+  com.agente-glamping.version: "2.0.0"
+  com.agente-glamping.description: "Sistema de chatbot para glamping con IA"
+  com.agente-glamping.maintainer: "equipo@glamping.com"

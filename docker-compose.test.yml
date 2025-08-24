@@ -1,0 +1,388 @@
+# 🧪 docker-compose.test.yml - Entorno Completo para Testing Local
+# Configuración optimizada para desarrollo y testing antes del deployment
+
+version: '3.8'
+
+services:
+  # ===============================================================================
+  # 🤖 APLICACIÓN PRINCIPAL - AGENTE GLAMPING (MODO TEST)
+  # ===============================================================================
+  glamping-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # Optimizaciones para desarrollo
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+      # Target específico para testing si existe
+      target: ${BUILD_TARGET:-}
+    
+    # 🌐 Configuración de red
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    
+    # 🔐 Variables de entorno para testing
+    environment:
+      # Configuración base
+      - ENV=test
+      - PORT=8080
+      - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
+      - STRUCTURED_LOGS=true
+      - CONSOLE_LOGS=true
+      
+      # Base de datos de prueba
+      - DATABASE_URL=postgresql://glamping_user:glamping_pass@postgres-test:5432/glamping_test
+      - POSTGRES_HOST=postgres-test
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=glamping_test
+      - POSTGRES_USER=glamping_user
+      - POSTGRES_PASSWORD=glamping_pass
+      
+      # Redis para testing
+      - REDIS_URL=redis://redis-test:6379/0
+      - REDIS_HOST=redis-test
+      - REDIS_PORT=6379
+      
+      # APIs externas (desde .env local)
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID:-}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN:-}
+      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER:-}
+      
+      # Configuraciones específicas de testing
+      - TESTING_MODE=true
+      - DISABLE_RATE_LIMITING=true
+      - MOCK_EXTERNAL_APIS=${MOCK_EXTERNAL_APIS:-false}
+      - DEBUG_LOGS=true
+    
+    # 📁 Volúmenes para desarrollo y debugging
+    volumes:
+      # Logs persistentes para análisis
+      - ./logs:/app/logs:rw
+      # Datos de testing (opcional)
+      - ./test_data:/app/test_data:ro
+      # Cache de desarrollo
+      - test_cache:/app/cache
+      # Configuración de desarrollo (si existe)
+      - ./config/test_config.py:/app/config/test_config.py:ro
+    
+    # 🏥 Health check optimizado para testing
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health", "||", "exit", "1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    
+    # 🔄 Reinicio automático para desarrollo
+    restart: unless-stopped
+    
+    # 📊 Límites de recursos para desarrollo
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+    
+    # 🔗 Dependencias con health checks
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    
+    # 🌐 Redes
+    networks:
+      - test-network
+    
+    # 🏷️ Labels para identificación
+    labels:
+      - "com.glamping.service=application"
+      - "com.glamping.environment=test"
+      - "com.glamping.version=test"
+
+  # ===============================================================================
+  # 🗄️ POSTGRESQL - BASE DE DATOS DE TESTING
+  # ===============================================================================
+  postgres-test:
+    image: postgres:15-alpine
+    
+    # 🔐 Configuración de base de datos de prueba
+    environment:
+      POSTGRES_DB: glamping_test
+      POSTGRES_USER: glamping_user
+      POSTGRES_PASSWORD: glamping_pass
+      # Configuraciones adicionales para desarrollo
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=C"
+      POSTGRES_HOST_AUTH_METHOD: trust  # Solo para testing local
+    
+    # 🌐 Puerto expuesto para debugging directo
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    
+    # 📁 Volúmenes para persistencia y scripts
+    volumes:
+      # Datos persistentes de testing
+      - postgres_test_data:/var/lib/postgresql/data
+      # Scripts de inicialización de testing
+      - ./scripts/init_test.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      # Configuración personalizada
+      - ./config/postgresql-test.conf:/etc/postgresql/postgresql.conf:ro
+    
+    # 🏥 Health check para base de datos
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U glamping_user -d glamping_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    
+    # 🔄 Reinicio automático
+    restart: unless-stopped
+    
+    # 📊 Límites de recursos
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.3'
+        reservations:
+          memory: 256M
+          cpus: '0.1'
+    
+    # 🌐 Redes
+    networks:
+      - test-network
+    
+    # 🏷️ Labels
+    labels:
+      - "com.glamping.service=database"
+      - "com.glamping.environment=test"
+
+  # ===============================================================================
+  # 📊 REDIS - CACHE Y SESIONES DE TESTING
+  # ===============================================================================
+  redis-test:
+    image: redis:7-alpine
+    
+    # 🔧 Configuración optimizada para testing
+    command: >
+      redis-server 
+      --appendonly yes 
+      --maxmemory 128mb 
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --loglevel notice
+    
+    # 🌐 Puerto expuesto para debugging
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    
+    # 📁 Volumen para persistencia
+    volumes:
+      - redis_test_data:/data
+    
+    # 🏥 Health check
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    
+    # 🔄 Reinicio automático
+    restart: unless-stopped
+    
+    # 📊 Límites de recursos
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.2'
+        reservations:
+          memory: 128M
+          cpus: '0.05'
+    
+    # 🌐 Redes
+    networks:
+      - test-network
+    
+    # 🏷️ Labels
+    labels:
+      - "com.glamping.service=cache"
+      - "com.glamping.environment=test"
+
+  # ===============================================================================
+  # 🔧 ADMINER - ADMINISTRADOR DE BASE DE DATOS (OPCIONAL)
+  # ===============================================================================
+  adminer:
+    image: adminer:4.8.1
+    
+    # 🌐 Puerto para acceso web
+    ports:
+      - "${ADMINER_PORT:-8081}:8080"
+    
+    # 🔐 Variables de entorno
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres-test
+      ADMINER_DESIGN: hydra
+    
+    # 🔗 Dependencias
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    
+    # 🔄 Reinicio automático
+    restart: unless-stopped
+    
+    # 🌐 Redes
+    networks:
+      - test-network
+    
+    # 🏷️ Labels
+    labels:
+      - "com.glamping.service=admin"
+      - "com.glamping.environment=test"
+      - "traefik.enable=false"
+
+  # ===============================================================================
+  # 📊 REDIS COMMANDER - ADMINISTRADOR DE REDIS (OPCIONAL)
+  # ===============================================================================
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    
+    # 🌐 Puerto para acceso web
+    ports:
+      - "${REDIS_COMMANDER_PORT:-8082}:8081"
+    
+    # 🔐 Variables de entorno
+    environment:
+      REDIS_HOSTS: local:redis-test:6379
+      HTTP_USER: ${REDIS_COMMANDER_USER:-admin}
+      HTTP_PASSWORD: ${REDIS_COMMANDER_PASS:-admin123}
+    
+    # 🔗 Dependencias
+    depends_on:
+      redis-test:
+        condition: service_healthy
+    
+    # 🔄 Reinicio automático
+    restart: unless-stopped
+    
+    # 🌐 Redes
+    networks:
+      - test-network
+    
+    # 🏷️ Labels
+    labels:
+      - "com.glamping.service=admin"
+      - "com.glamping.environment=test"
+
+  # ===============================================================================
+  # 🧪 SERVICIO DE TESTING - EJECUTOR DE TESTS AUTOMATIZADOS (OPCIONAL)
+  # ===============================================================================
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: test
+    
+    # 🔐 Variables de entorno para testing
+    environment:
+      - ENV=test
+      - DATABASE_URL=postgresql://glamping_user:glamping_pass@postgres-test:5432/glamping_test
+      - REDIS_URL=redis://redis-test:6379/0
+      - TESTING_MODE=true
+      - PYTHONPATH=/app
+    
+    # 📁 Volúmenes para tests y resultados
+    volumes:
+      # Código de tests
+      - ./tests:/app/tests:ro
+      # Resultados de tests
+      - ./test_results:/app/test_results:rw
+      # Coverage reports
+      - ./coverage:/app/coverage:rw
+    
+    # 🔗 Dependencias completas
+    depends_on:
+      glamping-agent:
+        condition: service_healthy
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    
+    # 🏃 Comando para ejecutar tests
+    command: >
+      sh -c "
+        echo '🧪 Esperando servicios...' &&
+        sleep 30 &&
+        echo '🧪 Ejecutando tests...' &&
+        python -m pytest tests/ -v --cov=. --cov-report=html:/app/coverage/html --cov-report=xml:/app/coverage/coverage.xml --junit-xml=/app/test_results/junit.xml
+      "
+    
+    # 🌐 Redes
+    networks:
+      - test-network
+    
+    # 🏷️ Labels
+    labels:
+      - "com.glamping.service=testing"
+      - "com.glamping.environment=test"
+    
+    # No restart - se ejecuta una vez
+    restart: "no"
+
+# ===============================================================================
+# 📁 VOLÚMENES NOMBRADOS PARA PERSISTENCIA
+# ===============================================================================
+volumes:
+  # Base de datos PostgreSQL de testing
+  postgres_test_data:
+    driver: local
+    labels:
+      com.glamping.description: "PostgreSQL test database"
+      com.glamping.environment: "test"
+  
+  # Cache Redis de testing  
+  redis_test_data:
+    driver: local
+    labels:
+      com.glamping.description: "Redis test cache"
+      com.glamping.environment: "test"
+  
+  # Cache de aplicación de testing
+  test_cache:
+    driver: local
+    labels:
+      com.glamping.description: "Application test cache"
+      com.glamping.environment: "test"
+
+# ===============================================================================
+# 🌐 REDES PARA COMUNICACIÓN ENTRE SERVICIOS
+# ===============================================================================
+networks:
+  test-network:
+    driver: bridge
+    labels:
+      com.glamping.description: "Test network for local development"
+      com.glamping.environment: "test"
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16
+
+# ===============================================================================
+# 🏷️ METADATOS DEL PROYECTO DE TESTING
+# ===============================================================================
+labels:
+  com.glamping.project: "agente-glamping"
+  com.glamping.version: "test-2.0.0"
+  com.glamping.description: "Entorno completo de testing local"
+  com.glamping.environment: "test"
+  com.glamping.maintainer: "equipo@glamping.com"

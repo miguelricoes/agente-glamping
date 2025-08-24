@@ -1,0 +1,299 @@
+# 🔒 DOCKER COMPOSE PRODUCCIÓN - CONFIGURACIÓN SEGURA
+# Solo para uso en producción con máxima seguridad
+
+version: '3.8'
+
+services:
+  # 🤖 Aplicación principal del agente (PRODUCCIÓN)
+  agente-glamping:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # Optimizaciones de build para producción
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+    
+    # 🌐 SOLO puerto interno (usar reverse proxy en producción)
+    expose:
+      - "8080"
+    
+    # 🔐 Variables de entorno SEGURAS para producción
+    environment:
+      - ENV=production
+      - PORT=8080
+      - LOG_LEVEL=WARNING
+      - STRUCTURED_LOGS=true
+      - CONSOLE_LOGS=false
+      - LOG_FILE=/app/logs/agente_glamping.log
+      # Variables de base de datos desde secretos
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB_FILE=/run/secrets/postgres_db
+      - POSTGRES_USER_FILE=/run/secrets/postgres_user
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+    
+    # 📁 Volúmenes LIMITADOS para producción
+    volumes:
+      # SOLO logs (read-only filesystem excepto logs)
+      - production_logs:/app/logs:rw
+      - /app/data:ro  # Datos read-only
+    
+    # 🏥 Health check más agresivo
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    
+    # 🔄 Reinicio automático
+    restart: always
+    
+    # 🛡️ MÁXIMA SEGURIDAD
+    security_opt:
+      - no-new-privileges:true
+      - apparmor:docker-default
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=100m
+      - /app/cache:noexec,nosuid,size=200m
+    
+    # 📊 Límites de recursos ESTRICTOS
+    deploy:
+      mode: replicated
+      replicas: 2
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        order: start-first
+    
+    # 🔗 Dependencias con health checks
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    
+    # 🔐 Secretos de Docker
+    secrets:
+      - postgres_db
+      - postgres_user
+      - postgres_password
+      - openai_api_key
+      - twilio_auth_token
+    
+    # 🌐 Redes
+    networks:
+      - agente-backend
+    
+    # 🏷️ Labels para monitoreo
+    labels:
+      - "traefik.enable=false"  # No exposición directa
+      - "com.agente-glamping.tier=application"
+      - "com.agente-glamping.env=production"
+
+  # 🗄️ PostgreSQL PRODUCCIÓN (configuración segura)
+  postgres:
+    image: postgres:15-alpine
+    
+    # 🔐 Configuración SEGURA
+    environment:
+      POSTGRES_DB_FILE: /run/secrets/postgres_db
+      POSTGRES_USER_FILE: /run/secrets/postgres_user  
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+    
+    # 📁 Volumen para persistencia SEGURA
+    volumes:
+      - postgres_production_data:/var/lib/postgresql/data
+      # Configuración de PostgreSQL optimizada
+      - ./config/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./config/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+    
+    # 🚫 NO exponer puertos en producción
+    expose:
+      - "5432"
+    
+    # 🏥 Health check
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $(cat /run/secrets/postgres_user) -d $(cat /run/secrets/postgres_db)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    
+    # 🔄 Reinicio automático
+    restart: always
+    
+    # 🛡️ Seguridad máxima
+    security_opt:
+      - no-new-privileges:true
+      - apparmor:docker-default
+    
+    # 📊 Límites de recursos
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+    
+    # 🔐 Secretos
+    secrets:
+      - postgres_db
+      - postgres_user
+      - postgres_password
+    
+    # 🌐 Redes
+    networks:
+      - agente-backend
+    
+    # 🏷️ Labels
+    labels:
+      - "com.agente-glamping.tier=database"
+      - "com.agente-glamping.env=production"
+
+  # 📊 Redis PRODUCCIÓN
+  redis:
+    image: redis:7-alpine
+    
+    # 🔧 Configuración optimizada y SEGURA
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --requirepass $(cat /run/secrets/redis_password)
+    
+    # 📁 Volumen para persistencia
+    volumes:
+      - redis_production_data:/data
+    
+    # 🚫 NO exponer puertos
+    expose:
+      - "6379"
+    
+    # 🏥 Health check con autenticación
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "$(cat /run/secrets/redis_password)", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    
+    # 🔄 Reinicio automático
+    restart: always
+    
+    # 🛡️ Seguridad
+    security_opt:
+      - no-new-privileges:true
+    
+    # 📊 Límites de recursos
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.3'
+        reservations:
+          memory: 256M
+          cpus: '0.1'
+    
+    # 🔐 Secretos
+    secrets:
+      - redis_password
+    
+    # 🌐 Redes
+    networks:
+      - agente-backend
+    
+    # 🏷️ Labels
+    labels:
+      - "com.agente-glamping.tier=cache"
+      - "com.agente-glamping.env=production"
+
+# 🔐 SECRETOS DE PRODUCCIÓN (definir externamente)
+secrets:
+  postgres_db:
+    external: true
+    name: agente_postgres_db
+  postgres_user:
+    external: true
+    name: agente_postgres_user
+  postgres_password:
+    external: true
+    name: agente_postgres_password
+  redis_password:
+    external: true
+    name: agente_redis_password
+  openai_api_key:
+    external: true
+    name: agente_openai_api_key
+  twilio_auth_token:
+    external: true
+    name: agente_twilio_auth_token
+
+# 📁 Volúmenes SEGUROS para producción
+volumes:
+  postgres_production_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/lib/agente-glamping/postgres
+    labels:
+      com.agente-glamping.description: "Base de datos PostgreSQL - PRODUCCIÓN"
+      com.agente-glamping.backup: "required"
+  
+  redis_production_data:
+    driver: local
+    driver_opts:
+      type: none  
+      o: bind
+      device: /var/lib/agente-glamping/redis
+    labels:
+      com.agente-glamping.description: "Cache Redis - PRODUCCIÓN"
+  
+  production_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/log/agente-glamping
+    labels:
+      com.agente-glamping.description: "Logs de aplicación - PRODUCCIÓN"
+
+# 🌐 Redes SEGURAS
+networks:
+  agente-backend:
+    driver: bridge
+    internal: true  # RED INTERNA - no acceso externo directo
+    labels:
+      com.agente-glamping.description: "Red interna backend - SOLO comunicación entre servicios"
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+
+# 🏷️ Metadatos del proyecto PRODUCCIÓN
+labels:
+  com.agente-glamping.version: "2.0.0"
+  com.agente-glamping.description: "Sistema de chatbot para glamping con IA - PRODUCCIÓN"
+  com.agente-glamping.environment: "production"
+  com.agente-glamping.security-level: "high"
