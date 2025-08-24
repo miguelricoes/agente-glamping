@@ -38,10 +38,14 @@ def validate_twilio_signature(f):
         skip_validation = os.environ.get('SKIP_TWILIO_VALIDATION', 'false').lower() == 'true'
         
         if not skip_validation:
-            # Validar firma
+            # Validar firma - Corregir URL HTTP/HTTPS para Railway
             validator = RequestValidator(auth_token)
+            
+            # Railway siempre usa HTTPS, pero request.url puede llegar como HTTP
+            correct_url = request.url.replace('http://', 'https://')
+            
             request_valid = validator.validate(
-                request.url,
+                correct_url,
                 request.form,
                 request.headers.get('X-Twilio-Signature', '')
             )
@@ -49,7 +53,8 @@ def validate_twilio_signature(f):
             if not request_valid:
                 # Debug detallado para troubleshooting
                 logger.warning(f"Firma Twilio inválida desde {request.remote_addr}")
-                logger.warning(f"URL recibida: {request.url}")
+                logger.warning(f"URL original: {request.url}")
+                logger.warning(f"URL corregida: {correct_url}")
                 logger.warning(f"Signature header: {request.headers.get('X-Twilio-Signature', 'MISSING')}")
                 logger.warning(f"Form data keys: {list(request.form.keys()) if request.form else 'EMPTY'}")
                 return "Forbidden", 403
