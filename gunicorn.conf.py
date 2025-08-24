@@ -1,60 +1,37 @@
-# Configuración de Gunicorn optimizada para rendimiento y concurrencia
-# Resuelve el problema crítico de 1 worker que causa cuello de botella severo
-
-import multiprocessing
+# Configuración de Gunicorn optimizada para Railway
 import os
-from utils.logger import get_logger
+import multiprocessing
 
-# Configurar logger
-logger = get_logger(__name__)
-
-# CONFIGURACIÓN DE WORKERS Y CONCURRENCIA
-# Calcular workers basado en CPU disponibles
-cpu_count = multiprocessing.cpu_count()
-max_workers = int(os.getenv('GUNICORN_MAX_WORKERS', cpu_count * 2 + 1))
-
-# Limitar workers para evitar sobrecarga en contenedores con recursos limitados
-workers = min(max_workers, 4)  # Máximo 4 workers para contenedores estándar
-
-# Threads por worker para I/O concurrente (crítico para llamadas OpenAI)
-threads = int(os.getenv('GUNICORN_THREADS', 4))
-
-# CONFIGURACIÓN DE CONEXIONES
-# Worker class optimizada para I/O intensivo (OpenAI, DB, etc.)
-worker_class = "gthread"  # Mejor que sync para I/O bloqueante
-
-# Conexiones concurrentes = workers * threads
-max_worker_connections = threads
-
-# CONFIGURACIÓN DE TIMEOUTS
-# Timeout de request (importante para WhatsApp - máximo 30s)
-timeout = int(os.getenv('GUNICORN_TIMEOUT', 25))
-
-# Keep alive para conexiones persistentes
-keepalive = int(os.getenv('GUNICORN_KEEPALIVE', 5))
-
-# Grace period para shutdown suave
-graceful_timeout = int(os.getenv('GUNICORN_GRACEFUL_TIMEOUT', 30))
-
-# CONFIGURACIÓN DE RECURSOS
-# Reciclar workers periódicamente para liberar memoria
-max_requests = int(os.getenv('GUNICORN_MAX_REQUESTS', 1000))
-max_requests_jitter = int(max_requests * 0.1)  # 10% jitter
-
-# CONFIGURACIÓN DE RED
+# CONFIGURACIÓN BÁSICA PARA RAILWAY
 bind = f"0.0.0.0:{os.getenv('PORT', 8080)}"
+workers = min(int(os.getenv('WEB_CONCURRENCY', 2)), 4)  # Railway recomienda 2-4
+worker_class = "sync"  # Cambiar de gthread a sync para Railway
+timeout = 30  # Railway timeout
+keepalive = 2
 
-# CONFIGURACIÓN DE LOGGING
-# Logs estructurados para monitoreo
-loglevel = os.getenv('GUNICORN_LOG_LEVEL', 'info')
-accesslog = '-'  # STDOUT
-errorlog = '-'   # STDERR
+# CONFIGURACIÓN DE RECURSOS PARA RAILWAY
+max_requests = 1000
+max_requests_jitter = 50
+worker_connections = 1000
+preload_app = True
 
-# Formato de access log personalizado para monitoreo
-access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %(D)s'
+# CONFIGURACIÓN DE LOGS PARA RAILWAY
+loglevel = os.getenv('LOG_LEVEL', 'info')
+accesslog = '-'  # STDOUT para Railway logs
+errorlog = '-'   # STDERR para Railway logs
+capture_output = True
 
-# CONFIGURACIÓN DE DESARROLLO/PRODUCCIÓN
-preload_app = True  # Precargar aplicación para ahorrar memoria
+# RAILWAY OPTIMIZATIONS
+worker_tmp_dir = '/dev/shm'  # Usar memoria compartida
+tmp_upload_dir = '/tmp'
+
+# CONFIGURACIÓN DE DESARROLLO VS PRODUCCIÓN
+if os.getenv('RAILWAY_ENVIRONMENT_NAME') == 'production':
+    workers = min(4, multiprocessing.cpu_count() * 2 + 1)
+    loglevel = 'warning'
+else:
+    workers = 2
+    loglevel = 'info'
 
 # CONFIGURACIÓN DE SEGURIDAD
 # Limitar tamaño de headers y requests

@@ -639,38 +639,37 @@ def main():
         sys.exit(1)
 
 
-# Variable global para Gunicorn en producción
-app = None
-
-def create_production_app():
-    """Crear aplicación para producción con Gunicorn"""
-    global app
+# Factory pattern implementation for Docker/Gunicorn deployment
+def create_app():
+    """Factory para crear la aplicación Flask"""
     try:
-        logger.info("Creando aplicación para producción", 
+        logger.info("Creando aplicación con factory pattern", 
                    extra={"component": "standalone_agent"})
         
         # Crear instancia del agente
         agent = StandaloneAgent()
         
-        # Inicializar completamente
-        if agent.initialize():
-            app = agent.app
-            logger.info("Aplicación de producción creada exitosamente", 
-                       extra={"component": "standalone_agent"})
-            return app
-        else:
-            logger.error("Error inicializando agente para producción", 
+        # Usar initialize_all como método de inicialización completa
+        success = agent.initialize_all()
+
+        if not success:
+            logger.error("Error en inicialización completa del sistema", 
                         extra={"component": "standalone_agent"})
-            return None
-            
+            raise RuntimeError("Failed to initialize application")
+
+        logger.info("Aplicación inicializada exitosamente", 
+                   extra={"component": "standalone_agent"})
+        return agent.app
+        
     except Exception as e:
-        logger.error(f"Error creando aplicación de producción: {e}", 
+        logger.error(f"Error en factory de aplicación: {e}", 
                     extra={"component": "standalone_agent"})
-        return None
+        raise RuntimeError(f"Failed to initialize application: {e}")
 
-# Crear app para Gunicorn automáticamente
-if os.environ.get("ENV") == "production":
-    app = create_production_app()
+# Variable app para Gunicorn
+app = create_app()
 
-if __name__ == "__main__":
-    main()
+# Para ejecución directa
+if __name__ == '__main__':
+    port = int(os.getenv('PORT', 8080))
+    app.run(host='0.0.0.0', port=port, debug=False)
