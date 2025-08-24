@@ -287,24 +287,22 @@ Responde de manera completa, útil y con la calidez característica de la hospit
         resp = MessagingResponse()
         agent_answer = "Lo siento, no pude procesar tu solicitud en este momento."
         
-        # PERFORMANCE OPTIMIZATION: Inicializar optimizador de rendimiento
-        perf_optimizer = get_performance_optimizer()
+        # PERFORMANCE OPTIMIZATION: TEMPORALMENTE DESHABILITADO (causa error 500)
+        # perf_optimizer = get_performance_optimizer()
+        perf_optimizer = None
         request_start_time = time.time()
         
-        # Generar cache key para la consulta
-        cache_key = perf_optimizer.generate_cache_key(
-            incoming_msg, 
-            context="whatsapp_webhook",
-            user_id=from_number
-        )
+        # Generar cache key simplificado
+        cache_key = f"whatsapp_webhook:{from_number}:{hash(incoming_msg)}"
         
         # Verificar cache de respuestas primero (para consultas apropiadas)
-        if should_cache_response_check(incoming_msg):
-            cached_response = perf_optimizer.get_cached_response(cache_key)
+        # CACHE TEMPORALMENTE DESHABILITADO
+        if False:  # should_cache_response_check(incoming_msg):
+            cached_response = None  # perf_optimizer.get_cached_response(cache_key)
             if cached_response:
                 resp.message(cached_response)
                 processing_time = time.time() - request_start_time
-                perf_optimizer.update_performance_metrics(processing_time, was_cached=True)
+                # perf_optimizer.update_performance_metrics(processing_time, was_cached=True)
                 logger.info(f"Respuesta servida desde cache para {from_number} ({processing_time:.2f}s)",
                            extra={"user_id": from_number, "cached": True, "processing_time": processing_time})
                 return str(resp)
@@ -567,8 +565,9 @@ Responde de manera completa, útil y con la calidez característica de la hospit
             enhanced_final_answer = personality.apply_personality_to_response(agent_answer, "general")
             
             # PERFORMANCE: Cachear respuesta si es apropiada
-            if perf_optimizer.should_cache_response(enhanced_final_answer, incoming_msg):
-                perf_optimizer.cache_response(
+            # CACHE DESHABILITADO TEMPORALMENTE
+            if False:  # perf_optimizer.should_cache_response(enhanced_final_answer, incoming_msg):
+                pass  # perf_optimizer.cache_response(
                     cache_key, 
                     enhanced_final_answer, 
                     ttl=180,  # 3 minutos para respuestas generales
@@ -580,7 +579,7 @@ Responde de manera completa, útil y con la calidez característica de la hospit
             
             # PERFORMANCE: Actualizar métricas
             processing_time = time.time() - request_start_time
-            perf_optimizer.update_performance_metrics(processing_time, was_cached=False)
+            # perf_optimizer.update_performance_metrics(processing_time, was_cached=False)
             
             logger.info(f"WhatsApp respuesta enviada a {from_number} ({processing_time:.2f}s total)", 
                        extra={
@@ -594,7 +593,7 @@ Responde de manera completa, útil y con la calidez característica de la hospit
         except Exception as e:
             # Error handler con métricas
             processing_time = time.time() - request_start_time
-            perf_optimizer.update_performance_metrics(processing_time, was_cached=False)
+            # perf_optimizer.update_performance_metrics(processing_time, was_cached=False)
             
             logger.error(f"Error crítico en procesamiento final para {from_number}: {e}",
                         extra={"user_id": from_number, "processing_time": processing_time})
