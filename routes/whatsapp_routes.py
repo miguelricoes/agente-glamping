@@ -568,12 +568,12 @@ Responde de manera completa, útil y con la calidez característica de la hospit
             # CACHE DESHABILITADO TEMPORALMENTE
             if False:  # perf_optimizer.should_cache_response(enhanced_final_answer, incoming_msg):
                 pass  # perf_optimizer.cache_response(
-                    cache_key, 
-                    enhanced_final_answer, 
-                    ttl=180,  # 3 minutos para respuestas generales
-                    metadata={"user_id": from_number, "source": "fallback_general"}
-                )
-                logger.debug(f"Respuesta cacheada para futuras consultas similares")
+                # cache_key, 
+                # enhanced_final_answer, 
+                # ttl=180,  # 3 minutos para respuestas generales
+                # metadata={"user_id": from_number, "source": "fallback_general"}
+                # )
+                # logger.debug(f"Respuesta cacheada para futuras consultas similares")
             
             resp.message(enhanced_final_answer)
             
