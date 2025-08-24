@@ -253,7 +253,7 @@ Responde de manera completa, útil y con la calidez característica de la hospit
     @app.route("/whatsapp_webhook", methods=["POST"])
     @validate_twilio_signature  # AGREGAR decorador de seguridad
     @rate_limit  # AGREGAR rate limiting
-    @performance_monitor  # AGREGAR monitoreo de performance
+    # @performance_monitor  # DESHABILITADO: Causa error LogRecord
     def whatsapp_webhook():
         # VALIDACIÓN DE ENTRADA
         incoming_msg = request.values.get('Body', '').strip()
