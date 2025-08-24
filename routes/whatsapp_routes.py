@@ -33,17 +33,28 @@ def validate_twilio_signature(f):
             logger.error("TWILIO_AUTH_TOKEN no configurado")
             return "Unauthorized", 401
 
-        # Validar firma
-        validator = RequestValidator(auth_token)
-        request_valid = validator.validate(
-            request.url,
-            request.form,
-            request.headers.get('X-Twilio-Signature', '')
-        )
+        # MODO DEBUG: Validación deshabilitada temporalmente
+        # TODO: Rehabilitar validación cuando webhook esté configurado correctamente
+        skip_validation = os.environ.get('SKIP_TWILIO_VALIDATION', 'false').lower() == 'true'
+        
+        if not skip_validation:
+            # Validar firma
+            validator = RequestValidator(auth_token)
+            request_valid = validator.validate(
+                request.url,
+                request.form,
+                request.headers.get('X-Twilio-Signature', '')
+            )
 
-        if not request_valid:
-            logger.warning(f"Firma Twilio inválida desde {request.remote_addr}")
-            return "Forbidden", 403
+            if not request_valid:
+                # Debug detallado para troubleshooting
+                logger.warning(f"Firma Twilio inválida desde {request.remote_addr}")
+                logger.warning(f"URL recibida: {request.url}")
+                logger.warning(f"Signature header: {request.headers.get('X-Twilio-Signature', 'MISSING')}")
+                logger.warning(f"Form data keys: {list(request.form.keys()) if request.form else 'EMPTY'}")
+                return "Forbidden", 403
+        else:
+            logger.warning("MODO DEBUG: Validación Twilio deshabilitada - NO usar en producción")
 
         return f(*args, **kwargs)
     return decorated_function
