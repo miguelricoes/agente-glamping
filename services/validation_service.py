@@ -292,26 +292,19 @@ class ValidationService:
             Tuple[bool, str, str]: (should_share, trigger_type, reason)
         """
         try:
-            # Usar ImportResolver para evitar dependencias circulares
-            from services.import_resolver import get_import_resolver
-            resolver = get_import_resolver()
+            # IMPLEMENTACIÓN DIRECTA SIN LOOP CIRCULAR
+            # Importar AdminContactService directamente para evitar recursión
+            from services.admin_contact_service import get_admin_contact_service
+            admin_service = get_admin_contact_service()
             
-            # Buscar en conversation_handlers el admin_contact
-            conversation_handlers = resolver.get_service('conversation_handlers')
-            if conversation_handlers and 'admin_contact' in conversation_handlers:
-                admin_handler = conversation_handlers['admin_contact']
-                
-                # El handler debería retornar el formato esperado
-                should_share, trigger_type, reason = admin_handler(message, self)
-                
-                if should_share:
-                    logger.info(f"Solicitud de contacto admin detectada: {trigger_type} - {reason}", 
-                               extra={"component": "validation_service", "admin_trigger": trigger_type})
-                
-                return should_share, trigger_type, reason
-            else:
-                logger.warning("Admin contact handler no disponible en ImportResolver")
-                return False, "", "Handler not available"
+            # Usar el servicio especializado para detectar si debe compartir contacto
+            should_share, trigger_type, reason = admin_service.should_share_admin_contact(message)
+            
+            if should_share:
+                logger.info(f"Solicitud de contacto admin detectada: {trigger_type} - {reason}", 
+                           extra={"component": "validation_service", "admin_trigger": trigger_type})
+            
+            return should_share, trigger_type, reason
             
         except Exception as e:
             logger.error(f"Error detectando solicitud de contacto admin: {e}", 

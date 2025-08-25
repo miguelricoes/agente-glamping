@@ -385,7 +385,16 @@ Responde de manera completa, útil y con la calidez característica de la hospit
                        extra={"user_id": from_number, "filter_reason": reason, "phase": "domain_filter"})
             return str(resp)
 
-        # 2. Handle greeting in new conversation
+        # 2. FALLBACK: Handle specific dome queries without AI (Error 429 prevention)
+        dome_response = handle_dome_query_fallback(incoming_msg)
+        if dome_response:
+            enhanced_response = personality.apply_personality_to_response(dome_response, "information")
+            resp.message(enhanced_response)
+            logger.info(f"Dome fallback response sent to {from_number}", 
+                       extra={"user_id": from_number, "phase": "dome_fallback"})
+            return str(resp)
+
+        # 3. Handle greeting in new conversation
         handled, response = handle_greeting_new_conversation(
             memory, incoming_msg, is_greeting_message, get_welcome_menu, save_user_memory, from_number
         )
@@ -437,7 +446,18 @@ Responde de manera completa, útil y con la calidez característica de la hospit
                 resp.message(response)
             return str(resp)
 
-        # 4. Handle availability request
+        # 4.5. Detección específica para nombres de domos (PREVIENE ERROR 429)
+        domo_names = ['antares', 'polaris', 'sirius', 'centaury', 'centauro']
+        if any(domo_name in incoming_msg.lower() for domo_name in domo_names):
+            # Usar respuesta directa sin IA
+            domo_response = generate_simple_domo_response(incoming_msg)
+            enhanced_response = personality.apply_personality_to_response(domo_response, "information")
+            resp.message(enhanced_response)
+            logger.info(f"Dome direct response sent to {from_number}", 
+                       extra={"user_id": from_number, "phase": "dome_direct"})
+            return str(resp)
+
+        # 5. Handle availability request
         handled, response = handle_availability_request_unified(
             incoming_msg, user_state, memory, qa_chains, handle_availability_request, 
             save_user_memory, from_number, validation_service
