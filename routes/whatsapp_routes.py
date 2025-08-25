@@ -1049,4 +1049,9 @@ Disculpa las molestias técnicas temporales."""
 
 Te atenderemos personalmente para resolver todas tus dudas."""
 
+def handle_dome_query_fallback(message: str) -> str:
+    """Manejar consultas específicas de domos sin IA (fallback que ya existía en el código)"""
+    return generate_simple_domo_response(message)
+
+    # Fin de la función register_whatsapp_routes
     return app
