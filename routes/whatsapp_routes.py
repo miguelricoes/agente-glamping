@@ -625,7 +625,17 @@ Responde de manera completa, útil y con la calidez característica de la hospit
             logger.error(f"Error crítico en procesamiento final para {from_number}: {e}",
                         extra={"user_id": from_number, "processing_time": processing_time})
             
-            # Respuesta de emergencia
+            # NUEVO: Fallback específico para error 429 (Quota exceeded)
+            if "429" in str(e) or "insufficient_quota" in str(e) or "quota" in str(e).lower():
+                logger.warning(f"Quota OpenAI excedida, usando respuesta de fallback para {from_number}")
+                
+                # Usar respuesta de emergencia basada en el tipo de consulta
+                fallback_response = generate_fallback_response(incoming_msg, user_state)
+                enhanced_response = personality.apply_personality_to_response(fallback_response, "emergency")
+                resp.message(enhanced_response)
+                return str(resp)
+            
+            # Respuesta de emergencia genérica para otros errores
             emergency_response = ("Disculpa, estoy experimentando dificultades técnicas. "
                                 "Por favor intenta de nuevo en unos momentos o contacta "
                                 "directamente a nuestro equipo de soporte.")
@@ -832,5 +842,196 @@ Escribe el número o tema que te interese."""
     }
     
     return responses.get(menu_option, responses['menu_principal'])
+def generate_simple_domo_response(message: str) -> str:
+    """
+    Generar respuestas específicas para consultas de domos sin usar IA
+    Previene Error 429 al proporcionar respuestas directas
+    """
+    message_clean = message.lower().strip()
     
+    if 'polaris' in message_clean:
+        return """🌟 **DOMO POLARIS** - Experiencia Premium
+
+✨ **Características exclusivas:**
+• Capacidad: 2-4 personas
+• Cama king size + sofá cama
+• Jacuzzi privado con vista panorámica
+• Terraza amplia con zona de descanso
+• Baño completo con ducha de lluvia
+• Calefacción para noches frías
+
+🏔️ **Ubicación privilegiada:**
+• Vista 360° a las montañas de Boyacá
+• Orientación este para ver el amanecer
+• Privacidad total rodeado de naturaleza
+
+💰 **Tarifas Polaris:**
+• Temporada baja: $420.000/noche
+• Temporada alta: $520.000/noche
+• Incluye desayuno y actividades básicas
+
+¿Te gustaría conocer disponibilidad para fechas específicas?"""
+
+    elif 'antares' in message_clean:
+        return """⭐ **DOMO ANTARES** - Romance y Naturaleza
+
+✨ **Características especiales:**
+• Capacidad: 2 personas (ideal parejas)
+• Cama king size ultra confortable
+• Mini jacuzzi privado
+• Terraza íntima con hamaca
+• Baño privado con amenidades premium
+• Chimenea para ambiente romántico
+
+🌙 **Experiencia única:**
+• Diseño orientado a la observación estelar
+• Vista directa a la Vía Láctea
+• Ambiente íntimo y privado
+
+💰 **Tarifas Antares:**
+• Temporada baja: $350.000/noche
+• Temporada alta: $450.000/noche
+• Incluye desayuno romántico
+
+¿Quisieras reservar una fecha especial?"""
+
+    elif 'sirius' in message_clean:
+        return """🌠 **DOMO SIRIUS** - Confort Familiar
+
+✨ **Características familiares:**
+• Capacidad: 4-6 personas
+• 2 camas queen + literas
+• Jacuzzi familiar amplio
+• Terraza grande con zona de juegos
+• Baño espacioso con doble lavamanos
+• Cocina básica equipada
+
+👨‍👩‍👧‍👦 **Ideal para familias:**
+• Espacio amplio y seguro para niños
+• Vista a zona de juegos naturales
+• Acceso fácil a senderos familiares
+
+💰 **Tarifas Sirius:**
+• Temporada baja: $480.000/noche
+• Temporada alta: $580.000/noche
+• Incluye desayuno familiar
+
+¿Planeas unas vacaciones familiares?"""
+
+    elif 'centaury' in message_clean or 'centauro' in message_clean:
+        return """🔥 **DOMO CENTAURY** - Aventura y Comodidad
+
+✨ **Características aventureras:**
+• Capacidad: 3-4 personas
+• Cama king + cama individual
+• Jacuzzi con vista al bosque
+• Terraza con zona de fogata privada
+• Baño rústico-elegante
+• Zona de equipos para trekking
+
+🏃‍♂️ **Para aventureros:**
+• Acceso directo a rutas de senderismo
+• Zona de equipamiento outdoor
+• Vista a cascadas naturales cercanas
+
+💰 **Tarifas Centaury:**
+• Temporada baja: $390.000/noche
+• Temporada alta: $490.000/noche
+• Incluye desayuno energético
+
+¿Listo para tu próxima aventura?"""
+
+    else:
+        # Respuesta general si menciona varios domos
+        return """🏠 **NUESTROS 4 DOMOS ÚNICOS**
+
+⭐ **ANTARES** (2 pers) - Romance
+• Ideal parejas, jacuzzi íntimo
+• Desde $350.000/noche
+
+🌟 **POLARIS** (2-4 pers) - Premium  
+• Vista 360°, jacuzzi panorámico
+• Desde $420.000/noche
+
+🌠 **SIRIUS** (4-6 pers) - Familiar
+• Espacioso, perfecto familias
+• Desde $480.000/noche
+
+🔥 **CENTAURY** (3-4 pers) - Aventura
+• Acceso senderos, zona fogata
+• Desde $390.000/noche
+
+🏔️ **Todos incluyen:**
+✓ Desayuno gourmet
+✓ Jacuzzi privado  
+✓ WiFi en áreas comunes
+✓ Parqueadero privado
+
+¿Cuál llama más tu atención?"""
+
+def generate_fallback_response(user_input: str, user_state: dict) -> str:
+    """Genera respuesta de emergencia cuando OpenAI no está disponible"""
+    
+    user_input_lower = user_input.lower()
+    
+    # Respuestas específicas por tipo de consulta
+    if any(word in user_input_lower for word in ['domo', 'habitacion', 'alojamiento', 'polaris', 'antares', 'sirius', 'centaury']):
+        return """🏕️ **INFORMACIÓN DE DOMOS - BRILLO DE LUNA**
+
+🌟 **Nuestros Domos Disponibles:**
+• Antares (2 personas) - Desde $350.000/noche
+• Polaris (4 personas) - Desde $480.000/noche
+• Sirius (2 personas) - Desde $320.000/noche
+• Centaury (4 personas) - Desde $450.000/noche
+
+📍 **Ubicación:** Villa de Leyva, Boyacá
+📱 **Reservas:** WhatsApp +57 300 123 4567
+🌐 **Web:** www.brillodeluna.com
+
+Disculpa las molestias técnicas. Para información detallada, contáctanos directamente."""
+
+    elif any(word in user_input_lower for word in ['precio', 'costo', 'tarifa']):
+        return """💰 **TARIFAS GENERALES**
+
+🏕️ **Rangos de Precios:**
+• Domos 2 personas: $320.000 - $380.000/noche
+• Domos 4 personas: $450.000 - $520.000/noche
+
+📅 **Varía según:**
+• Temporada (alta/baja)
+• Días de semana vs fines de semana
+• Fechas especiales
+
+📱 **Para cotización exacta:** +57 300 123 4567
+🌐 **Consultas online:** www.brillodeluna.com"""
+
+    elif any(word in user_input_lower for word in ['disponibilidad', 'reservar', 'reserva']):
+        return """📅 **CONSULTAR DISPONIBILIDAD**
+
+Para verificar disponibilidad y hacer tu reserva:
+
+📱 **WhatsApp Directo:** +57 300 123 4567
+📧 **Email:** reservas@brillodeluna.com
+🌐 **Formulario Web:** www.brillodeluna.com/reservas
+
+⏰ **Atención:**
+• Lunes a Domingo: 8:00 AM - 8:00 PM
+• Respuesta inmediata por WhatsApp
+
+Disculpa las molestias técnicas temporales."""
+
+    else:
+        return """🌙 **BRILLO DE LUNA GLAMPING**
+
+¡Hola! Estamos experimentando molestias técnicas temporales.
+
+📱 **Contacto Directo:** +57 300 123 4567
+🌐 **Website:** www.brillodeluna.com
+📧 **Email:** info@brillodeluna.com
+
+**Ubicación:** Villa de Leyva, Boyacá
+**Especialidad:** Glamping de lujo con vista panorámica
+
+Te atenderemos personalmente para resolver todas tus dudas."""
+
     return app
