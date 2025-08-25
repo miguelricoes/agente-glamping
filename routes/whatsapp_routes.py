@@ -23,27 +23,22 @@ from services.async_llm_service import create_async_llm_service, get_global_asyn
 logger = get_logger(__name__)
 
 def validate_twilio_signature(f):
-    """Decorator para validar firma de Twilio"""
+    """Decorator para validar firma de Twilio con seguridad condicional por entorno"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Obtener credenciales de Twilio
+        # Obtener credenciales de Twilio y configuración de entorno
         auth_token = os.environ.get('TWILIO_AUTH_TOKEN')
+        env = os.environ.get('ENV', 'development')
 
         if not auth_token:
             logger.error("TWILIO_AUTH_TOKEN no configurado")
             return "Unauthorized", 401
 
-        # MODO DEBUG: Validación deshabilitada temporalmente
-        # TODO: Rehabilitar validación cuando webhook esté configurado correctamente
-        skip_validation = os.environ.get('SKIP_TWILIO_VALIDATION', 'false').lower() == 'true'
-        
-        if not skip_validation:
-            # Validar firma - Corregir URL HTTP/HTTPS para Railway
+        # VALIDACIÓN OBLIGATORIA EN PRODUCCIÓN
+        if env == 'production':
             validator = RequestValidator(auth_token)
-            
-            # Railway siempre usa HTTPS, pero request.url puede llegar como HTTP
             correct_url = request.url.replace('http://', 'https://')
-            
+
             request_valid = validator.validate(
                 correct_url,
                 request.form,
@@ -51,15 +46,35 @@ def validate_twilio_signature(f):
             )
 
             if not request_valid:
-                # Debug detallado para troubleshooting
-                logger.warning(f"Firma Twilio inválida desde {request.remote_addr}")
-                logger.warning(f"URL original: {request.url}")
-                logger.warning(f"URL corregida: {correct_url}")
-                logger.warning(f"Signature header: {request.headers.get('X-Twilio-Signature', 'MISSING')}")
-                logger.warning(f"Form data keys: {list(request.form.keys()) if request.form else 'EMPTY'}")
+                logger.warning(f"🚨 PRODUCCIÓN: Firma Twilio inválida desde {request.remote_addr}")
+                logger.warning(f"URL: {correct_url}")
+                logger.warning(f"Signature: {request.headers.get('X-Twilio-Signature', 'MISSING')[:20]}...")
                 return "Forbidden", 403
-        else:
-            logger.warning("MODO DEBUG: Validación Twilio deshabilitada - NO usar en producción")
+
+        # MODO DESARROLLO CON VALIDACIÓN OPCIONAL
+        elif env == 'development':
+            skip_validation = os.environ.get('SKIP_TWILIO_VALIDATION', 'false').lower() == 'true'
+
+            if not skip_validation:
+                # Validar normalmente en desarrollo también
+                validator = RequestValidator(auth_token)
+                correct_url = request.url.replace('http://', 'https://')
+
+                request_valid = validator.validate(
+                    correct_url,
+                    request.form,
+                    request.headers.get('X-Twilio-Signature', '')
+                )
+
+                if not request_valid:
+                    logger.warning(f"🔧 DESARROLLO: Firma Twilio inválida desde {request.remote_addr}")
+                    logger.warning(f"URL original: {request.url}")
+                    logger.warning(f"URL corregida: {correct_url}")
+                    logger.warning(f"Signature header: {request.headers.get('X-Twilio-Signature', 'MISSING')}")
+                    logger.warning(f"Form data keys: {list(request.form.keys()) if request.form else 'EMPTY'}")
+                    return "Forbidden", 403
+            else:
+                logger.warning("⚠️ MODO DEBUG: Validación Twilio deshabilitada - SOLO DESARROLLO")
 
         return f(*args, **kwargs)
     return decorated_function
