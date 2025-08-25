@@ -462,8 +462,31 @@ Responde de manera completa, útil y con la calidez característica de la hospit
             return str(resp)
 
         # 4.5. Detección específica para nombres de domos (PREVIENE ERROR 429)
+        # SOLO cuando se pregunta específicamente por un domo
         domo_names = ['antares', 'polaris', 'sirius', 'centaury', 'centauro']
-        if any(domo_name in incoming_msg.lower() for domo_name in domo_names):
+        specific_domo_queries = [
+            'domo antares', 'domo polaris', 'domo sirius', 'domo centaury',
+            'información antares', 'información polaris', 'información sirius', 'información centaury',
+            'características antares', 'características polaris', 'características sirius', 'características centaury',
+            'precio antares', 'precio polaris', 'precio sirius', 'precio centaury'
+        ]
+
+        incoming_lower = incoming_msg.lower().strip()
+
+        # Solo activar si es consulta específica de domo Y no es saludo/servicios generales
+        is_domo_specific = (
+            any(query in incoming_lower for query in specific_domo_queries) or
+            (any(domo in incoming_lower for domo in domo_names) and
+             any(keyword in incoming_lower for keyword in ['información', 'precio', 'características', 'detalles',
+                                                          'cuesta', 'cuánto']))
+        )
+
+        # NO activar para saludos o consultas generales
+        is_general_query = any(word in incoming_lower for word in [
+            'hola', 'servicios', 'qué ofrecen', 'que ofrecen', 'actividades', 'pasear', 'hacer'
+        ])
+
+        if is_domo_specific and not is_general_query:
             # Usar respuesta directa sin IA
             domo_response = generate_simple_domo_response(incoming_msg)
             enhanced_response = personality.apply_personality_to_response(domo_response, "information")
