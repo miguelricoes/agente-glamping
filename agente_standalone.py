@@ -285,9 +285,14 @@ class StandaloneAgent:
             
             # Funciones auxiliares (implementación básica)
             def load_user_memory(user_id: str):
-                # Implementación básica de carga de memoria
-                from langchain.memory import ConversationBufferMemory
-                return ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+                # Implementación básica de carga de memoria con límite de tokens
+                from langchain.memory import ConversationBufferWindowMemory
+                # Usar window memory para limitar contexto a últimos 5 intercambios
+                return ConversationBufferWindowMemory(
+                    memory_key="chat_history", 
+                    return_messages=True,
+                    k=5  # Solo mantener últimos 5 intercambios
+                )
             
             def save_user_memory(user_id: str, memory):
                 # Implementación básica de guardado de memoria
@@ -356,9 +361,9 @@ class StandaloneAgent:
                     return self.llm_service.initialize_agent_safe(tools_list, memory, max_retries)
                 return False, None, "LLM service no disponible"
             
-            def run_agent_safe(agent, user_input: str):
+            def run_agent_safe(agent, user_input: str, user_id: str = "anonymous"):
                 if self.llm_service:
-                    return self.llm_service.run_agent_safe(agent, user_input)
+                    return self.llm_service.run_agent_safe(agent, user_input, user_id=user_id)
                 return False, "", "LLM service no disponible"
             
             def get_welcome_menu() -> str:

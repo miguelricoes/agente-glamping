@@ -709,8 +709,67 @@ def register_api_routes(app, db=None, Reserva=None, Usuario=None, database_avail
                 'error_tecnico': str(e)
             }), 500
 
+    @app.route('/api/cache/stats', methods=['GET'])
+    def get_cache_stats():
+        """Obtiene estadísticas del cache de respuestas LLM"""
+        try:
+            # Obtener estadísticas del cache desde el LLM service
+            from services.llm_service import get_llm_service
+            llm_service = get_llm_service()
+            
+            if hasattr(llm_service, 'get_cache_stats'):
+                stats = llm_service.get_cache_stats()
+                return jsonify({
+                    'success': True,
+                    'cache_stats': stats,
+                    'timestamp': datetime.now().isoformat()
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': 'Cache no disponible',
+                    'timestamp': datetime.now().isoformat()
+                })
+                
+        except Exception as e:
+            log_error(logger, e, {"endpoint": "/api/cache/stats"})
+            return jsonify({
+                'success': False,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }), 500
+
+    @app.route('/api/cache/clear', methods=['POST'])
+    def clear_cache():
+        """Limpia el cache de respuestas LLM"""
+        try:
+            from services.llm_service import get_llm_service
+            llm_service = get_llm_service()
+            
+            if hasattr(llm_service, 'clear_cache'):
+                llm_service.clear_cache()
+                return jsonify({
+                    'success': True,
+                    'message': 'Cache limpiado exitosamente',
+                    'timestamp': datetime.now().isoformat()
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': 'Cache no disponible',
+                    'timestamp': datetime.now().isoformat()
+                })
+                
+        except Exception as e:
+            log_error(logger, e, {"endpoint": "/api/cache/clear"})
+            return jsonify({
+                'success': False,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }), 500
+
     logger.info("Rutas API centralizadas registradas exitosamente",
                extra={"phase": "startup", "component": "api_routes", 
-                      "endpoints_count": 16})
+                      "endpoints_count": 18})
     
     return app

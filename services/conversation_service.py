@@ -128,11 +128,22 @@ def replace_generic_menu_response(agent_response: str, user_input: str) -> str:
     return specific_responses.get(option, agent_response)
 
 def add_message_to_memory(memory, user_message: str, ai_response: str):
-    """Unified function to add messages to memory with fallback compatibility"""
+    """Unified function to add messages to memory with fallback compatibility and token limits"""
+    
+    # Limitar longitud de mensajes para reducir tokens
+    MAX_MESSAGE_LENGTH = 200
+    user_message = user_message[:MAX_MESSAGE_LENGTH] if len(user_message) > MAX_MESSAGE_LENGTH else user_message
+    ai_response = ai_response[:MAX_MESSAGE_LENGTH] if len(ai_response) > MAX_MESSAGE_LENGTH else ai_response
+    
     try:
         from langchain.schema import HumanMessage, AIMessage
         memory.chat_memory.add_message(HumanMessage(content=user_message))
         memory.chat_memory.add_message(AIMessage(content=ai_response))
+        
+        # Limitar historial de memoria (mantener solo últimos 10 mensajes)
+        if hasattr(memory.chat_memory, 'messages') and len(memory.chat_memory.messages) > 20:  # 10 pares
+            memory.chat_memory.messages = memory.chat_memory.messages[-20:]
+            
     except (ImportError, AttributeError):
         try:
             memory.chat_memory.add_user_message(user_message)
