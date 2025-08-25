@@ -1060,7 +1060,7 @@ def handle_website_link_request(user_message: str, validation_service) -> Tuple[
                     extra={"component": "conversation_service"})
         return False, ""
 
-def handle_admin_contact_request(user_message: str, validation_service) -> Tuple[bool, str]:
+def handle_admin_contact_request(user_message: str, validation_service) -> Tuple[bool, str, str]:
     """
     Detecta y maneja solicitudes de contacto de administradores según triggers de PQRS
     Variable 2: Contactos solo cuando se solicite información de contacto o se quiera hacer PQRS
@@ -1070,11 +1070,11 @@ def handle_admin_contact_request(user_message: str, validation_service) -> Tuple
         validation_service: Servicio de validación con detección de contactos admin
         
     Returns:
-        Tuple[bool, str]: (handled, response_message)
+        Tuple[bool, str, str]: (handled, trigger_type, response_message)
     """
     try:
         if not validation_service:
-            return False, ""
+            return False, "", ""
         
         # Detectar si debe compartir contacto según triggers específicos
         should_share, trigger_type, reason = validation_service.detect_admin_contact_request(user_message)
@@ -1090,14 +1090,14 @@ def handle_admin_contact_request(user_message: str, validation_service) -> Tuple
             # Generar respuesta apropiada según el tipo de trigger
             response = admin_service.generate_admin_contact_response(trigger_type, user_message)
             
-            return True, response
+            return True, trigger_type, response
         
-        return False, ""
+        return False, "", ""
         
     except Exception as e:
         logger.error(f"Error manejando solicitud de contacto admin: {e}", 
                     extra={"component": "conversation_service"})
-        return False, ""
+        return False, "", ""
 
 def handle_reservation_intent_v3(user_message: str, validation_service, qa_chains=None) -> Tuple[bool, str]:
     """

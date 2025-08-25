@@ -329,25 +329,33 @@ class ValidationService:
             Tuple[str, str, str]: (intent_type, action, reason)
         """
         try:
-            # Usar ImportResolver para evitar dependencias circulares
-            from services.import_resolver import get_import_resolver
-            resolver = get_import_resolver()
+            # Análisis directo sin dependencias circulares
+            message_clean = message.lower().strip()
             
-            # Buscar en conversation_handlers el reservation_intent
-            conversation_handlers = resolver.get_service('conversation_handlers')
-            if conversation_handlers and 'reservation_intent' in conversation_handlers:
-                reservation_handler = conversation_handlers['reservation_intent']
-                
-                # El handler debería retornar el formato esperado
-                intent_type, action, reason = reservation_handler(message, self)
-                
-                logger.info(f"Intención de reserva analizada: {intent_type} -> {action}", 
-                           extra={"component": "validation_service", "reservation_intent": intent_type})
-                
-                return intent_type, action, reason
+            # Patrones específicos para querer hacer una reserva
+            definite_reservation_patterns = [
+                'quiero hacer una reserva', 'necesito hacer una reserva', 'quisiera reservar',
+                'me gustaría reservar', 'quiero reservar', 'deseo hacer una reserva',
+                'necesito reservar', 'quisiera hacer una reserva'
+            ]
+            
+            # Patrones para solo mencionar "reservas" sin intención clara
+            info_reservation_patterns = [
+                'reservas', 'información sobre reservas', 'cómo hacer reservas',
+                'proceso de reservas', 'requisitos para reservas'
+            ]
+            
+            # Verificar intención definitiva de reservar
+            if any(pattern in message_clean for pattern in definite_reservation_patterns):
+                return "definite", "initiate_flow", "Usuario quiere hacer una reserva específica"
+            
+            # Verificar si solo busca información sobre reservas
+            elif any(pattern in message_clean for pattern in info_reservation_patterns):
+                return "info_request", "provide_info", "Usuario busca información sobre reservas"
+            
+            # No es una solicitud relacionada con reservas
             else:
-                logger.warning("Reservation intent handler no disponible en ImportResolver")
-                return "none", "none", "Handler not available"
+                return "none", "none", "No se detectó intención de reserva"
             
         except Exception as e:
             logger.error(f"Error analizando intención de reserva: {e}", 

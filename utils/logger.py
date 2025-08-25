@@ -8,6 +8,56 @@ import os
 from datetime import datetime
 from typing import Dict, Any, Optional
 import json
+import time
+from collections import defaultdict
+
+class RateLimitedHandler(logging.Handler):
+    """
+    Handler que implementa rate limiting para evitar saturar Railway
+    Máximo 100 logs por segundo, con burst de 200
+    """
+    
+    def __init__(self, handler, max_logs_per_second=100, burst_limit=200):
+        super().__init__()
+        self.handler = handler
+        self.max_logs_per_second = max_logs_per_second
+        self.burst_limit = burst_limit
+        self.tokens = burst_limit
+        self.last_refill = time.time()
+        self.dropped_count = 0
+    
+    def emit(self, record):
+        now = time.time()
+        # Refill tokens based on time passed
+        time_passed = now - self.last_refill
+        self.tokens = min(self.burst_limit, self.tokens + time_passed * self.max_logs_per_second)
+        self.last_refill = now
+        
+        if self.tokens >= 1:
+            self.tokens -= 1
+            self.handler.emit(record)
+            
+            # Log dropped count periodically
+            if self.dropped_count > 0:
+                dropped_record = logging.LogRecord(
+                    name="rate_limiter",
+                    level=logging.WARNING,
+                    pathname="",
+                    lineno=0,
+                    msg=f"Dropped {self.dropped_count} log messages due to rate limiting",
+                    args=(),
+                    exc_info=None
+                )
+                self.handler.emit(dropped_record)
+                self.dropped_count = 0
+        else:
+            self.dropped_count += 1
+    
+    def setFormatter(self, formatter):
+        self.handler.setFormatter(formatter)
+    
+    def setLevel(self, level):
+        self.handler.setLevel(level)
 
 class StructuredFormatter(logging.Formatter):
     """
@@ -184,7 +234,7 @@ def setup_logging(
     # Limpiar handlers existentes para evitar duplicación
     logger.handlers.clear()
     
-    # Handler para consola (desarrollo)
+    # Handler para consola (desarrollo) - CON RATE LIMITING
     if console_logs:
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setLevel(getattr(logging, log_level.upper()))
@@ -194,7 +244,14 @@ def setup_logging(
         else:
             console_handler.setFormatter(ColoredConsoleFormatter())
         
-        logger.addHandler(console_handler)
+        # Aplicar rate limiting en producción
+        is_production = os.getenv("RAILWAY_ENVIRONMENT") == "production" or os.getenv("ENV") == "production"
+        if is_production:
+            rate_limited_handler = RateLimitedHandler(console_handler, max_logs_per_second=50, burst_limit=100)
+            rate_limited_handler.setLevel(getattr(logging, log_level.upper()))
+            logger.addHandler(rate_limited_handler)
+        else:
+            logger.addHandler(console_handler)
     
     # Handler para archivo (producción)
     if log_file:
@@ -203,12 +260,17 @@ def setup_logging(
         file_handler.setFormatter(StructuredFormatter())
         logger.addHandler(file_handler)
     
-    # Configurar loggers de librerías externas
-    logging.getLogger("werkzeug").setLevel(logging.WARNING)
-    logging.getLogger("urllib3").setLevel(logging.WARNING)
-    logging.getLogger("requests").setLevel(logging.WARNING)
-    logging.getLogger("langchain").setLevel(logging.WARNING)
-    logging.getLogger("openai").setLevel(logging.WARNING)
+    # Configurar loggers de librerías externas - REDUCIR LOGS PARA RAILWAY
+    logging.getLogger("werkzeug").setLevel(logging.ERROR)
+    logging.getLogger("urllib3").setLevel(logging.ERROR)
+    logging.getLogger("requests").setLevel(logging.ERROR)
+    logging.getLogger("langchain").setLevel(logging.ERROR)
+    logging.getLogger("openai").setLevel(logging.ERROR)
+    
+    # Reducir logs de servicios propios que causan loops
+    logging.getLogger("agente_glamping.services.validation_service").setLevel(logging.CRITICAL)
+    logging.getLogger("agente_glamping.services.llm_service").setLevel(logging.WARNING)
+    logging.getLogger("agente_glamping.services.conversation_service").setLevel(logging.WARNING)
     
     return logger
 

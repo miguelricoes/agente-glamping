@@ -484,7 +484,7 @@ Responde de manera completa, útil y con la calidez característica de la hospit
 
         # 9. Handle admin contact requests (Variable 2 implementation)
         if conversation_handlers and 'admin_contact' in conversation_handlers:
-            handled, contact_response = conversation_handlers['admin_contact'](incoming_msg, validation_service)
+            handled, trigger_type, contact_response = conversation_handlers['admin_contact'](incoming_msg, validation_service)
             if handled:
                 enhanced_response = personality.apply_personality_to_response(contact_response, "contact")
                 resp.message(enhanced_response)
