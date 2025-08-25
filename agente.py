@@ -1123,8 +1123,78 @@ tools = [
         name="MenuPrincipal",
         func=menu_principal_func,
         description="OBLIGATORIO: Usar cuando usuario pida: 'menú', 'menús', 'opciones', 'guía', 'ayuda', 'navegación', 'qué puedo hacer', 'cómo navegar'. Muestra el menú principal de opciones disponibles."
+    ),
+    Tool(
+        name="RespuestaEmpaticaYRedirection",
+        func=lambda query: generate_empathetic_redirect(query),
+        description="USAR ÚNICAMENTE cuando el usuario comparta algo personal, emocional o fuera del tema del glamping (como tristeza, estrés, problemas personales, emociones). Esta herramienta genera una respuesta empática auténtica que conecta con sus emociones y hace una transición natural hacia cómo el glamping puede ser relevante para su situación. NO usar para preguntas técnicas o consultas normales del glamping."
     )
 ]
+
+# Nueva función para respuestas empáticas con redirección estrategica
+def generate_empathetic_redirect(query):
+    """
+    Genera respuesta empática que conecta emocionalmente y redirige al glamping
+    """
+    try:
+        hybrid_prompt = f"""
+        Eres María, asistente especializada de Glamping Brillo de Luna en Guatavita, Colombia. Un usuario te ha compartido algo personal o emocional.
+
+        Mensaje del usuario: "{query}"
+
+        Crea una respuesta que:
+        1. PRIMERO: Muestre empatía genuina y comprenda su emoción/situación
+        2. SEGUNDO: Conecte naturalmente su situación con los beneficios del glamping/naturaleza
+        3. TERCERO: Invite suavemente a considerar una experiencia en el glamping
+
+        GUIA DE CONEXIONES EMOCIONALES:
+        - Tristeza/Depresión → "La naturaleza tiene un poder sanador increíble. Muchos huéspedes llegan buscando paz y se van renovados..."
+        - Estrés/Ansiedad → "El ritmo acelerado puede agotarnos. El silencio de la naturaleza y el aire fresco ayudan a resetear la mente..."
+        - Problemas de pareja → "Las relaciones necesitan espacios especiales para reconectarse. Un ambiente romántico sin distracciones..."
+        - Agotamiento laboral → "El trabajo puede consumir nuestra energía. Un escape a la naturaleza permite recargar baterías..."
+        - Soledad → "A veces necesitamos tiempo con nosotros mismos en un ambiente tranquilo para reflexionar..."
+        - Celebraciones → "Los momentos especiales merecen lugares especiales. La magia de nuestros domos bajo las estrellas..."
+
+        Tu respuesta debe ser:
+        - Auténtica y cálida (no robótica)
+        - 3-4 oraciones máximo
+        - Transición suave y natural (no forzada)
+        - Invitación gentil, no agresiva comercialmente
+        - Mencionar elementos específicos como: naturaleza, tranquilidad, domos, estrellas, aire fresco, paz
+
+        RESPUESTA:"""
+        
+        try:
+            from langchain_openai import ChatOpenAI
+            empathy_llm = ChatOpenAI(
+                model="gpt-4o-mini",  # Modelo eficiente para respuestas empáticas
+                temperature=0.8,  # Mayor creatividad para empatía
+                api_key=os.getenv("OPENAI_API_KEY")
+            )
+        except ImportError:
+            try:
+                empathy_llm = ChatOpenAI(
+                    model="gpt-4o-mini",
+                    temperature=0.8,
+                    api_key=os.getenv("OPENAI_API_KEY")
+                )
+            except NameError:
+                return "Comprendo lo que estás sintiendo. A veces la naturaleza puede ser un refugio especial para encontrar paz. ¿Te gustaría conocer cómo nuestro glamping puede ofrecerte ese espacio de tranquilidad?"
+        
+        empathetic_response = empathy_llm.invoke(hybrid_prompt).content.strip()
+        
+        print(f"[EMPATÍA] Respuesta generada para situación personal: '{query[:30]}...'")
+        return empathetic_response
+        
+    except Exception as e:
+        print(f"Error en respuesta empática: {e}")
+        # Fallback empático básico
+        return (
+            "Comprendo que hay momentos en los que necesitamos un espacio para nosotros mismos. "
+            "La naturaleza tiene una manera especial de brindarnos paz y perspectiva. "
+            "En nuestro glamping, muchos huéspedes encuentran exactamente esa tranquilidad que buscan. "
+            "¿Te gustaría saber cómo podemos ayudarte a encontrar ese momento de calma?"
+        )
 
 # Manejo de Memoria 
 def _get_memory_file_path(user_id: str) -> str:
@@ -1203,24 +1273,27 @@ def _create_fresh_memory(user_id: str) -> ConversationBufferMemory:
         
         # Mensajes iniciales para el contexto del agente
         system_message = (
-            "Eres María, una asistente experta del Glamping Brillo de Luna. "
+            "Eres María, una asistente experta y empática del Glamping Brillo de Luna en Guatavita, Colombia. "
             "Tienes acceso a información detallada sobre el lugar, sus domos, servicios, políticas y actividades. "
-            "Cuentas con una excelente memoria para recordar todo lo conversado, incluso si no está directamente relacionado con el glamping "
-            "o si es de carácter personal o emocional. "
-            "Responde SIEMPRE en español. "
+            "Cuentas con una excelente memoria para recordar todo lo conversado, incluso conversaciones personales y emocionales. "
+            "Responde SIEMPRE en español con un tono cálido y profesional. "
 
             "REGLAS IMPORTANTES: "
-            "1. SIEMPRE usa las herramientas disponibles para responder preguntas específicas. "
+            "1. SIEMPRE usa las herramientas disponibles para responder preguntas específicas sobre glamping. "
             "2. Si el usuario menciona: 'silla de ruedas', 'movilidad reducida', 'discapacidad', 'accesibilidad', 'limitaciones físicas', 'muletas' o 'adaptaciones', "
             "usa de inmediato la herramienta 'SugerenciasMovilidadReducida' y responde con toda la información que esta te proporcione. "
             "3. Si pregunta sobre precios, usa 'DomosPreciosDetallados'. "
             "4. Si pregunta sobre actividades, usa 'ServiciosExternos'. "
             "5. Si pregunta por fotos, imágenes, galería, página web o enlaces, usa 'LinksImagenesWeb'. "
             "6. Si solicita menú, opciones, guía, ayuda o navegación, usa 'MenuPrincipal'. "
-            "7. NUNCA hagas preguntas de seguimiento si ya tienes la información específica de una herramienta. "
-            "8. Tu respuesta debe basarse en la información EXACTA de la herramienta, sin agregar información inventada ni preguntas adicionales. "
-            "9. Evita respuestas genéricas cuando haya herramientas específicas disponibles. "
-            "Tu objetivo es ser útil, clara y precisa, siempre apoyándote en la información de las herramientas."
+            "7. *** NUEVA REGLA CRITICA *** Si el usuario comparte algo PERSONAL o EMOCIONAL (tristeza, estrés, problemas personales, emociones), "
+            "usa OBLIGATORIAMENTE la herramienta 'RespuestaEmpaticaYRedirection' para generar una respuesta empática que conecte con sus emociones "
+            "y haga una transición natural hacia cómo el glamping puede ayudar con su situación. "
+            "8. NUNCA hagas preguntas de seguimiento si ya tienes la información específica de una herramienta. "
+            "9. Tu respuesta debe basarse en la información EXACTA de la herramienta, sin agregar información inventada ni preguntas adicionales. "
+            "10. Evita respuestas genéricas cuando haya herramientas específicas disponibles. "
+            "11. Mantén siempre un equilibrio entre profesionalismo y calidez humana. "
+            "Tu objetivo es ser útil, clara, precisa y empática, siempre apoyándote en las herramientas adecuadas para cada situación."
         )
 
         assistant_response = (
@@ -2089,7 +2162,7 @@ def handle_menu_selection(selection, qa_chains):
             response += "\n\n¿Te gustaría saber algo más específico sobre algún domo? 🤔"
             return response
         except Exception as e:
-            return "🏠 *DOMOS DISPONIBLES*\n\nTenemos hermosos domos geodésicos únicos. ¿Te gustaría que te cuente más detalles sobre alguno en particular?"
+            return "🏠 *DOMOS DISPONIBLES*"
     
     elif selection == "2":
         try:
@@ -2101,7 +2174,7 @@ def handle_menu_selection(selection, qa_chains):
             response += "\n\n¿Hay algún servicio específico que te interese? ✨"
             return response
         except Exception as e:
-            return "🎯 *SERVICIOS*\n\nOfrecemos una amplia gama de servicios incluidos y adicionales. ¿Te gustaría saber sobre algo en particular?"
+            return "🎯 *SERVICIOS*\n\nOfrecemos una amplia gama de servicios incluidos y adicionales."
     
     elif selection == "3":
         return {
@@ -2127,7 +2200,7 @@ def handle_menu_selection(selection, qa_chains):
             response += "\n\n¿Hay algo más específico que te gustaría saber? 🌟"
             return response
         except Exception as e:
-            return "ℹ️ *INFORMACIÓN GENERAL*\n\nSomos un glamping ubicado en un entorno natural único. ¿Te gustaría saber algo específico?"
+            return "ℹ️ *INFORMACIÓN GENERAL*\n\nSomos un glamping ubicado en un entorno natural único."
     
     else:
         return (
@@ -2305,25 +2378,204 @@ def is_glamping_related(message):
         # En caso de error, asumimos que está relacionado para no bloquear conversaciones legítimas
         return True
 
-def get_off_topic_response():
+def get_strategic_redirect_response(user_message):
     """
-    Retorna la respuesta para temas no relacionados con glamping
+    Genera una respuesta empática que conecta emocionalmente con el usuario
+    y redirige estratégicamente hacia el glamping usando IA generativa
+    """
+    try:
+        # Usar LLM para generar respuesta híbrida empática + marketing suave
+        hybrid_prompt = f"""
+        Eres María, asistente especializada de Glamping Brillo de Luna. Un usuario te ha escrito algo personal/emocional fuera del tema del glamping.
+
+        Mensaje del usuario: "{user_message}"
+
+        Tu tarea es crear una respuesta que:
+        1. PRIMERO: Sea genuinamente empática y conecte con la emoción/situación del usuario
+        2. SEGUNDO: Haga una transición natural hacia cómo el glamping puede ser relevante para su situación
+        3. TERCERO: Ofrezca una invitación suave a explorar el glamping como solución/escape/experiencia
+
+        EJEMPLOS de buenas transiciones:
+        - Si está triste → "Los momentos difíciles necesitan espacios de sanación. La naturaleza tiene un poder restaurador increíble..."
+        - Si está estresado → "El estrés del día a día puede ser abrumador. Muchos de nuestros huéspedes vienen buscando ese respiro..."
+        - Si habla de relaciones → "Las relaciones necesitan momentos especiales para reconectarse. Un ambiente romántico en la naturaleza..."
+        - Si habla de trabajo → "El trabajo puede consumirnos. Todos necesitamos un escape de la rutina..."
+
+        Tu respuesta debe:
+        - Ser auténtica, no forzada
+        - Mostrar comprensión real de su situación
+        - Conectar naturalmente con la experiencia de glamping
+        - Invitar sin presionar
+        - Mantener un tono cálido y profesional
+        - Ser entre 3-4 oraciones
+        - Terminar con una pregunta abierta o invitación suave
+
+        RESPUESTA:"""
+        
+        try:
+            redirect_llm = ChatOpenAI(
+                model="gpt-4o",
+                temperature=0.7,  # Más creatividad para respuestas empáticas
+                api_key=os.getenv("OPENAI_API_KEY")
+            )
+        except NameError:
+            from langchain_openai import ChatOpenAI
+            redirect_llm = ChatOpenAI(
+                model="gpt-4o",
+                temperature=0.7,
+                api_key=os.getenv("OPENAI_API_KEY")
+            )
+        
+        empathetic_response = redirect_llm.invoke(hybrid_prompt).content.strip()
+        
+        # Agregar opciones de menú al final
+        full_response = empathetic_response + "\n\n"
+        full_response += "Si te apetece, puedes explorar:\n"
+        full_response += "1️⃣ *Domos* - Nuestros espacios únicos\n"
+        full_response += "2️⃣ *Servicios* - Experiencias que ofrecemos\n"
+        full_response += "3️⃣ *Disponibilidad* - Consultar fechas\n"
+        full_response += "4️⃣ *Información General* - Conoce más sobre nosotros\n\n"
+        full_response += "O simplemente escribe *'reservar'* si sientes que es el momento perfecto. 🌟"
+        
+        print(f"[RESPUESTA HÍBRIDA] Generada para: '{user_message[:50]}...'")
+        return full_response
+        
+    except Exception as e:
+        print(f"Error generando respuesta híbrida: {e}")
+        # Fallback a respuesta básica pero mejorada
+        return get_fallback_empathetic_response()
+
+def get_direct_rag_response(query):
+    """
+    Respuesta directa usando cadenas RAG sin necesidad de OpenAI
+    Sistema de fallback cuando la API de OpenAI no está disponible
+    """
+    try:
+        query_lower = query.lower().strip()
+        
+        # Detectar intención y usar la cadena RAG apropiada
+        if any(keyword in query_lower for keyword in ['precio', 'costo', 'tarifa', 'valor', 'sirius', 'antares', 'polaris']):
+            try:
+                response = qa_chains['domos_precios'](query)
+                return f"**PRECIOS DE DOMOS**\n\n{response['result']}"
+            except:
+                return (
+                    "**PRECIOS DE NUESTROS DOMOS:**\n\n"
+                    "**DOMO ANTARES** (con jacuzzi): $650,000 COP por noche\n"
+                    "**DOMO POLARIS** (amplio): $550,000 COP por noche\n"
+                    "**DOMO SIRIUS** (economico): $350,000 COP por noche\n\n"
+                    "*Precios incluyen desayuno, WiFi y parqueadero*"
+                )
+        
+        elif any(keyword in query_lower for keyword in ['servicio', 'incluye', 'ofrece', 'wifi', 'desayuno']):
+            try:
+                response = qa_chains['servicios_incluidos'](query)
+                return f"**SERVICIOS INCLUIDOS**\n\n{response['result']}"
+            except:
+                return (
+                    "**SERVICIOS INCLUIDOS EN TODOS LOS DOMOS:**\n\n"
+                    "- Desayuno delicioso y nutritivo\n"
+                    "- WiFi de alta velocidad\n"
+                    "- Parqueadero gratuito\n"
+                    "- Amenidades basicas\n"
+                    "- Acceso a zonas comunes\n\n"
+                    "*Todos nuestros domos incluyen estos servicios sin costo adicional*"
+                )
+        
+        elif any(keyword in query_lower for keyword in ['ubicación', 'dirección', 'donde', 'contacto', 'teléfono']):
+            try:
+                response = qa_chains['ubicacion_contacto'](query)
+                return f"🗺️ **UBICACIÓN Y CONTACTO**\n\n{response['result']}"
+            except:
+                return (
+                    "🗺️ **UBICACIÓN Y CONTACTO:**\n\n"
+                    "📍 **Ubicación:** Guatavita, Cundinamarca\n"
+                    "🌊 Con vista espectacular a la represa de Tominé\n"
+                    "📞 **Contacto:** Vía WhatsApp\n"
+                    "🏝️ RNT: Registro Nacional de Turismo\n\n"
+                    "*Ubicación privilégiada en la naturaleza de Cundinamarca*"
+                )
+        
+        elif any(keyword in query_lower for keyword in ['actividad', 'hacer', 'turismo', 'paseo', 'diversión']):
+            try:
+                response = qa_chains['servicios_externos'](query)
+                return f"🎯 **ACTIVIDADES Y TURISMO**\n\n{response['result']}"
+            except:
+                return (
+                    "🎯 **ACTIVIDADES EN GUATAVITA:**\n\n"
+                    "• Visita a la Laguna Sagrada de Guatavita\n"
+                    "• Jet ski en la represa de Tominé\n"
+                    "• Paseos a caballo\n"
+                    "• Avistamiento de aves\n"
+                    "• Navegación y deportes acuáticos\n"
+                    "• Caminatas ecológicas\n\n"
+                    "*Experiencias únicas en contacto con la naturaleza*"
+                )
+        
+        elif any(keyword in query_lower for keyword in ['domo', 'tipo', 'característica', 'diferencia']):
+            try:
+                response = qa_chains['domos_info'](query)
+                return f"🏕️ **INFORMACIÓN DE DOMOS**\n\n{response['result']}"
+            except:
+                return (
+                    "🏕️ **NUESTROS DOMOS GEODÉSICOS:**\n\n"
+                    "🌠 **ANTARES:** Domo de lujo con jacuzzi privado\n"
+                    "🌟 **POLARIS:** Domo amplio para mayor comodidad\n"
+                    "✨ **SIRIUS:** Domo acogedor y económico\n\n"
+                    "*Todos con vista panorámica y diseño único*"
+                )
+        
+        elif any(keyword in query_lower for keyword in ['disponibilidad', 'disponible', 'fecha', 'reservar']):
+            return (
+                "📅 **CONSULTA DE DISPONIBILIDAD:**\n\n"
+                "Para consultar disponibilidad específica, por favor proporciona:\n"
+                "• Fechas deseadas (entrada y salida)\n"
+                "• Cantidad de personas\n"
+                "• Tipo de domo preferido\n\n"
+                "*Te ayudaré a encontrar las mejores opciones para tu estadía*\n\n"
+                "O escribe *'reservar'* para iniciar el proceso completo."
+            )
+        
+        else:
+            # Respuesta general con menu
+            return (
+                "**Hola! Soy Maria, tu asistente de Glamping Brillo de Luna**\n\n"
+                "Actualmente tengo limitaciones tecnicas, pero puedo ayudarte con:\n\n"
+                "1. **Precios** - Escribe 'precios' o 'costos'\n"
+                "2. **Servicios** - Escribe 'servicios' o 'que incluye'\n"
+                "3. **Ubicacion** - Escribe 'ubicacion' o 'direccion'\n"
+                "4. **Actividades** - Escribe 'actividades' o 'que hacer'\n"
+                "5. **Domos** - Escribe 'domos' o 'tipos'\n\n"
+                "O simplemente menciona lo que necesites saber. Estoy aqui para ayudarte!"
+            )
+            
+    except Exception as e:
+        print(f"Error en respuesta RAG directa: {e}")
+        return (
+            "Disculpa, tengo dificultades técnicas temporales. 🔧\n\n"
+            "Mientras tanto, estas son las opciones principales:\n\n"
+            "• **Domos:** Antares ($650k), Polaris ($550k), Sirius ($350k)\n"
+            "• **Servicios:** Desayuno, WiFi, parqueadero incluidos\n"
+            "• **Ubicación:** Guatavita con vista a represa Tominé\n\n"
+            "Por favor, inténtalo de nuevo en unos minutos."
+        )
+
+def get_fallback_empathetic_response():
+    """
+    Respuesta de respaldo más empática que la anterior
     """
     return (
-        "🏕️ Soy María, la asistente especializada de *Glamping Brillo de Luna*.\n\n"
-        "Solo puedo ayudarte con información sobre:\n"
-        "• Nuestros domos y servicios\n"
-        "• Reservas y disponibilidad\n"
-        "• Precios y políticas\n"
-        "• Ubicación y actividades\n"
-        "• Cualquier consulta relacionada con tu estadía\n\n"
-        "*¿Te gustaría saber algo sobre nuestro glamping?*\n\n"
-        "Puedes seleccionar una opción:\n"
-        "1️⃣ *Domos* - Tipos y características\n"
-        "2️⃣ *Servicios* - Todo lo que ofrecemos\n"
-        "3️⃣ *Disponibilidad* - Consultar fechas\n"
-        "4️⃣ *Información General* - Ubicación y políticas\n\n"
-        "O escribir *'reservar'* si deseas hacer una reserva. ✨"
+        "Entiendo que hay muchas cosas en la vida más allá del glamping. 🤗\n\n"
+        "A veces todos necesitamos un espacio para respirar, reconectar y encontrar paz. "
+        "La naturaleza tiene una manera especial de ayudarnos a procesar nuestras emociones y encontrar claridad.\n\n"
+        "En Glamping Brillo de Luna, muchos de nuestros huéspedes llegan buscando exactamente eso: "
+        "un refugio tranquilo donde puedan desconectarse del ruido y reconectarse consigo mismos.\n\n"
+        "Si en algún momento sientes que necesitas ese escape, estaré aquí para ayudarte. "
+        "Mientras tanto, ¿hay algo relacionado con el glamping en lo que pueda apoyarte?\n\n"
+        "1️⃣ *Domos* - Espacios de tranquilidad\n"
+        "2️⃣ *Servicios* - Experiencias relajantes\n"
+        "3️⃣ *Disponibilidad* - Fechas disponibles\n"
+        "4️⃣ *Información General* - Conoce nuestro refugio natural 🌿"
     )
 
 def should_bypass_filter(message):
@@ -2690,15 +2942,20 @@ def whatsapp_webhook():
             else:
                 print(f"ERROR: Error ejecutando agente: {run_error}")
                 
-                # Fallback inteligente basado en el tipo de error
-                if "rate limit" in run_error.lower():
+                # Intentar fallback inteligente con RAG directo si hay problemas de API
+                if "401" in str(run_error) or "invalid_api_key" in str(run_error):
+                    print("[FALLBACK] API key inválida, intentando respuesta directa con RAG...")
+                    agent_answer = get_direct_rag_response(incoming_msg)
+                elif "rate limit" in run_error.lower():
                     agent_answer = "[BUSY] Nuestro sistema está un poco ocupado en este momento. Por favor, intenta de nuevo en unos segundos."
                 elif "timeout" in run_error.lower():
                     agent_answer = "[TIMEOUT] Tu mensaje está siendo procesado, pero está tomando más tiempo del esperado. ¿Podrías intentar con un mensaje más corto?"
                 elif "parsing" in run_error.lower():
                     agent_answer = "[THINKING] Tuve un problema interpretando tu mensaje. ¿Podrías reformularlo de manera más simple?"
                 else:
-                    agent_answer = "[PROCESSING] Disculpa, tuve un problema procesando tu mensaje. ¿Podrías intentar de nuevo o ser más específico en tu consulta?"
+                    # También intentar RAG directo para otros errores
+                    print("[FALLBACK] Error general, intentando respuesta directa con RAG...")
+                    agent_answer = get_direct_rag_response(incoming_msg)
         
         # Guardar memoria independientemente del resultado
         save_user_memory(from_number, memory)
@@ -3066,8 +3323,8 @@ def chat():
         # Verificar si el mensaje está relacionado con glamping (excepto bypass)
         if not should_bypass_filter(user_input):
             if not is_glamping_related(user_input):
-                print(f"[FILTRO] Mensaje off-topic bloqueado en /chat: '{user_input}'")
-                off_topic_response = get_off_topic_response()
+                print(f"[FILTRO] Aplicando redirección estratégica para /chat: '{user_input}'")
+                off_topic_response = get_strategic_redirect_response(user_input)
                 response_output = off_topic_response
                 
                 # Agregar a la memoria
@@ -3131,14 +3388,19 @@ Consulta original del usuario: {user_input}
                 print(f"ERROR: Error ejecutando agente para {session_id}: {run_error}")
                 
                 # Fallback inteligente basado en el tipo de error
-                if "rate limit" in run_error.lower():
+                if "401" in str(run_error) or "invalid_api_key" in str(run_error):
+                    print(f"[FALLBACK CHAT] API key inválida, intentando respuesta directa con RAG...")
+                    response_output = get_direct_rag_response(user_input)
+                elif "rate limit" in run_error.lower():
                     response_output = "[BUSY] Nuestro sistema está un poco ocupado en este momento. Por favor, intenta de nuevo en unos segundos."
                 elif "timeout" in run_error.lower():
                     response_output = "[TIMEOUT] Tu mensaje está siendo procesado, pero está tomando más tiempo del esperado. ¿Podrías intentar con un mensaje más corto?"
                 elif "parsing" in run_error.lower():
                     response_output = "[THINKING] Tuve un problema interpretando tu mensaje. ¿Podrías reformularlo de manera más simple?"
                 else:
-                    response_output = "[PROCESSING] Disculpa, tuve un problema procesando tu mensaje. ¿Podrías intentar de nuevo o ser más específico en tu consulta?"
+                    # También intentar RAG directo para otros errores
+                    print(f"[FALLBACK CHAT] Error general, intentando respuesta directa con RAG...")
+                    response_output = get_direct_rag_response(user_input)
     
     # Añadir mensajes a la memoria con API compatible
     try:
