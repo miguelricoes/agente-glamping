@@ -1641,7 +1641,7 @@ def process_ai_agent(user_message: str, memory, tools, initialize_agent_safe_fun
 💬 **¿En qué puedo ayudarte?** 🌟"""
         else:
             # Execute agent with robust handling
-            run_success, result, run_error = run_agent_safe_func(custom_agent, user_message)
+            run_success, result, run_error = run_agent_safe_func(custom_agent, user_message, user_id)
             
             if run_success:
                 agent_answer = result
@@ -2396,7 +2396,7 @@ def handle_intelligent_recommendations(user_input: str, user_state: dict, memory
                     raise Exception(f"No se pudo inicializar el agente LLM: {init_error}")
                 
                 # Ejecutar el agente con el prompt construido
-                run_success, result, run_error = run_agent_safe_func(agent, prompt)
+                run_success, result, run_error = run_agent_safe_func(agent, prompt, user_id)
                 
                 if run_success:
                     if isinstance(result, dict) and "output" in result:
