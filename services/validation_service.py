@@ -302,7 +302,7 @@ class ValidationService:
                 admin_handler = conversation_handlers['admin_contact']
                 
                 # El handler debería retornar el formato esperado
-                should_share, trigger_type, reason = admin_handler(message)
+                should_share, trigger_type, reason = admin_handler(message, self)
                 
                 if should_share:
                     logger.info(f"Solicitud de contacto admin detectada: {trigger_type} - {reason}", 
@@ -339,7 +339,7 @@ class ValidationService:
                 reservation_handler = conversation_handlers['reservation_intent']
                 
                 # El handler debería retornar el formato esperado
-                intent_type, action, reason = reservation_handler(message)
+                intent_type, action, reason = reservation_handler(message, self)
                 
                 logger.info(f"Intención de reserva analizada: {intent_type} -> {action}", 
                            extra={"component": "validation_service", "reservation_intent": intent_type})

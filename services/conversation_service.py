@@ -162,81 +162,109 @@ def handle_menu_selection_unified(user_message: str, user_state: dict, memory, q
                                 is_menu_selection_func, validation_service=None) -> Tuple[bool, Union[str, dict]]:
     """Unified menu selection handling with improved flexibility - returns (handled, response)"""
     
-    logger.info(f"handle_menu_selection_unified called with: user_message='{user_message}', current_flow='{user_state.get('current_flow')}'", 
-               extra={"component": "conversation_service"})
+    try:
+        logger.info(f"handle_menu_selection_unified called with: user_message='{user_message}', current_flow='{user_state.get('current_flow')}'", 
+                   extra={"component": "conversation_service"})
+        
+        # VALIDACIÓN DE PARÁMETROS ANTES DE PROCEDER
+        if validation_service is None:
+            logger.warning("validation_service no disponible, usando fallback", 
+                          extra={"component": "conversation_service"})
+            # Importar función de fallback desde routes
+            from routes.whatsapp_routes import handle_fallback_menu_response
+            fallback_response = handle_fallback_menu_response(user_message, user_state.get('current_flow', 'none'))
+            return True, fallback_response
+        
+        if not user_message or not isinstance(user_message, str):
+            logger.warning(f"user_message inválido: {user_message}", 
+                          extra={"component": "conversation_service"})
+            return False, "Por favor, envía un mensaje válido."
+        
+        if not user_state or not isinstance(user_state, dict):
+            logger.warning("user_state inválido, inicializando nuevo estado", 
+                          extra={"component": "conversation_service"})
+            user_state = {"current_flow": "none"}
+        
+        # Always use improved menu service - create validation service if not provided
+        if validation_service is None:
+            from services.validation_service import ValidationService
+            validation_service = ValidationService()
     
-    # Always use improved menu service - create validation service if not provided
-    if validation_service is None:
-        from services.validation_service import ValidationService
-        validation_service = ValidationService()
-    
-    is_menu_sel = validation_service.is_menu_selection(user_message)
-    current_flow_none = user_state["current_flow"] == "none"
-    
-    if is_menu_sel and current_flow_none:
-        try:
-            logger.info("Using improved menu service", extra={"component": "conversation_service"})
-            # Import and use the new menu service
-            from services.menu_service import create_menu_service
-            menu_service = create_menu_service(qa_chains, validation_service)
-            menu_response = menu_service.handle_menu_selection(user_message, user_state)
-            
-            # Handle dictionary response (option 3 - availability, option 1 - domos followup, option 2 - servicios followup)
-            if isinstance(menu_response, dict):
-                if "set_waiting_for_availability" in menu_response:
-                    user_state["waiting_for_availability"] = True
-                    user_state["current_flow"] = "availability"
-                elif "set_waiting_for_domos_followup" in menu_response:
-                    user_state["waiting_for_domos_followup"] = True
-                    user_state["current_flow"] = "domos_followup"
-                elif "set_waiting_for_servicios_followup" in menu_response:
-                    user_state["waiting_for_servicios_followup"] = True
-                    user_state["current_flow"] = "servicios_followup"
+        is_menu_sel = validation_service.is_menu_selection(user_message)
+        current_flow_none = user_state["current_flow"] == "none"
+        
+        if is_menu_sel and current_flow_none:
+            try:
+                logger.info("Using improved menu service", extra={"component": "conversation_service"})
+                # Import and use the new menu service
+                from services.menu_service import create_menu_service
+                menu_service = create_menu_service(qa_chains, validation_service)
+                menu_response = menu_service.handle_menu_selection(user_message, user_state)
+                
+                # Handle dictionary response (option 3 - availability, option 1 - domos followup, option 2 - servicios followup)
+                if isinstance(menu_response, dict):
+                    if "set_waiting_for_availability" in menu_response:
+                        user_state["waiting_for_availability"] = True
+                        user_state["current_flow"] = "availability"
+                    elif "set_waiting_for_domos_followup" in menu_response:
+                        user_state["waiting_for_domos_followup"] = True
+                        user_state["current_flow"] = "domos_followup"
+                    elif "set_waiting_for_servicios_followup" in menu_response:
+                        user_state["waiting_for_servicios_followup"] = True
+                        user_state["current_flow"] = "servicios_followup"
+                        
+                    add_message_to_memory(memory, user_message, menu_response["message"])
+                    save_user_memory_func(user_id, memory)
+                    return True, menu_response
+                else:
+                    # String response
+                    add_message_to_memory(memory, user_message, menu_response)
+                    save_user_memory_func(user_id, memory)
+                    return True, menu_response
                     
-                add_message_to_memory(memory, user_message, menu_response["message"])
-                save_user_memory_func(user_id, memory)
-                return True, menu_response
-            else:
-                # String response
-                add_message_to_memory(memory, user_message, menu_response)
-                save_user_memory_func(user_id, memory)
-                return True, menu_response
-                
-        except Exception as e:
-            logger.error(f"Error en manejo de menú mejorado: {e}", 
-                        extra={"component": "conversation_service", "user_id": user_id})
-            import traceback
-            logger.error(f"Traceback: {traceback.format_exc()}", 
-                        extra={"component": "conversation_service"})
-            # Fallback to original menu handling
+            except Exception as e:
+                logger.error(f"Error en manejo de menú mejorado: {e}", 
+                            extra={"component": "conversation_service", "user_id": user_id})
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}", 
+                            extra={"component": "conversation_service"})
+                # Fallback to original menu handling
     
-    # Fallback to original menu selection handling
-    logger.info("Falling back to original menu selection handling", extra={"component": "conversation_service"})
-    if is_menu_selection_func(user_message) and user_state["current_flow"] == "none":
-        try:
-            logger.info("Using fallback menu service", extra={"component": "conversation_service"})
-            menu_response = handle_menu_selection_func(user_message, qa_chains)
-            
-            # Handle dictionary response (option 3)
-            if isinstance(menu_response, dict):
-                message_text = menu_response["message"]
-                if menu_response.get("set_waiting_for_availability"):
-                    user_state["waiting_for_availability"] = True
-                add_message_to_memory(memory, user_message, message_text)
-                save_user_memory_func(user_id, memory)
-                return True, menu_response
-            else:
-                # Normal string response
-                add_message_to_memory(memory, user_message, menu_response)
-                save_user_memory_func(user_id, memory)
-                return True, menu_response
+        # Fallback to original menu selection handling
+        logger.info("Falling back to original menu selection handling", extra={"component": "conversation_service"})
+        if is_menu_selection_func(user_message) and user_state["current_flow"] == "none":
+            try:
+                logger.info("Using fallback menu service", extra={"component": "conversation_service"})
+                menu_response = handle_menu_selection_func(user_message, qa_chains)
                 
-        except Exception as e:
-            logger.error(f"Error en manejo de menú: {e}", extra={"phase": "conversation", "component": "menu_selection"})
-            error_response = "Disculpa, hubo un error procesando tu selección. ¿Podrías intentar de nuevo?"
-            return True, error_response
+                # Handle dictionary response (option 3)
+                if isinstance(menu_response, dict):
+                    message_text = menu_response["message"]
+                    if menu_response.get("set_waiting_for_availability"):
+                        user_state["waiting_for_availability"] = True
+                    add_message_to_memory(memory, user_message, message_text)
+                    save_user_memory_func(user_id, memory)
+                    return True, menu_response
+                else:
+                    # Normal string response
+                    add_message_to_memory(memory, user_message, menu_response)
+                    save_user_memory_func(user_id, memory)
+                    return True, menu_response
+                    
+            except Exception as e:
+                logger.error(f"Error en manejo de menú: {e}", extra={"phase": "conversation", "component": "menu_selection"})
+                error_response = "Disculpa, hubo un error procesando tu selección. ¿Podrías intentar de nuevo?"
+                return True, error_response
     
-    return False, ""
+        return False, ""
+    
+    except Exception as e:
+        logger.error(f"Error crítico en handle_menu_selection_unified: {e}", 
+                    extra={"component": "conversation_service"})
+        # Importar función de fallback desde routes
+        from routes.whatsapp_routes import generate_simple_menu_response
+        fallback_response = generate_simple_menu_response('menu_principal')
+        return True, fallback_response
 
 def detect_cancellation_intent(user_message: str) -> bool:
     """

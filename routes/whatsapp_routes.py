@@ -330,6 +330,13 @@ Responde de manera completa, útil y con la calidez característica de la hospit
 
         context_service = resolver.get_service('context_service')
         validation_service = resolver.get_service('validation_service')
+        
+        # ASEGURAR QUE VALIDATION_SERVICE ESTÉ DISPONIBLE
+        if not validation_service:
+            from services.validation_service import ValidationService
+            validation_service = ValidationService()
+            logger.warning("validation_service no estaba disponible, creando nueva instancia")
+        
         domain_filter = get_domain_validation_service()
         personality = get_personality_service()
 
@@ -604,5 +611,206 @@ Responde de manera completa, útil y con la calidez característica de la hospit
                                 "directamente a nuestro equipo de soporte.")
             resp.message(emergency_response)
             return str(resp)
+
+def handle_fallback_menu_response(user_message, current_flow):
+    """
+    Manejar respuestas de menú sin servicios avanzados
+    Implementa lógica básica de navegación por menús sin depender de validation_service o IA
+    """
+    user_msg_lower = user_message.lower().strip()
+    
+    # Detección básica de opciones de menú
+    if any(indicator in user_msg_lower for indicator in ['1', 'uno', 'domo', 'domos', 'habitacion']):
+        return generate_simple_menu_response('domos')
+    elif any(indicator in user_msg_lower for indicator in ['2', 'dos', 'servicio', 'servicios', 'incluido']):
+        return generate_simple_menu_response('servicios')
+    elif any(indicator in user_msg_lower for indicator in ['3', 'tres', 'disponibilidad', 'reserva', 'reservar', 'fecha']):
+        return generate_simple_menu_response('disponibilidad')
+    elif any(indicator in user_msg_lower for indicator in ['4', 'cuatro', 'precio', 'tarifa', 'costo']):
+        return generate_simple_menu_response('precios')
+    elif any(indicator in user_msg_lower for indicator in ['5', 'cinco', 'ubicacion', 'donde', 'direccion']):
+        return generate_simple_menu_response('ubicacion')
+    elif any(indicator in user_msg_lower for indicator in ['politica', 'cancelacion', 'reembolso']):
+        return generate_simple_menu_response('politicas')
+    elif any(indicator in user_msg_lower for indicator in ['contacto', 'ayuda', 'soporte', 'administrador']):
+        return generate_simple_menu_response('contacto')
+    else:
+        # Respuesta de menú principal si no se detecta opción específica
+        return generate_simple_menu_response('menu_principal')
+
+def generate_simple_menu_response(menu_option):
+    """
+    Generar respuestas estáticas para opciones de menú
+    Implementa respuestas hardcodeadas para cada opción como backup cuando IA no funciona
+    """
+    responses = {
+        'domos': """🏕️ **NUESTROS DOMOS - BRILLO DE LUNA**
+
+🌟 **Domo Luna** (2 personas)
+• Cama king size
+• Baño privado con agua caliente
+• Terraza privada con vista panorámica
+• Desde $280.000/noche
+
+🌟 **Domo Estrella** (4 personas)  
+• 2 camas queen
+• Baño privado amplio
+• Sala de estar
+• Terraza con jacuzzi privado
+• Desde $450.000/noche
+
+🏔️ Ubicados en las montañas de Boyacá con vistas espectaculares.
+
+¿Te interesa alguno en particular?""",
+
+        'servicios': """✨ **SERVICIOS INCLUIDOS**
+
+🍽️ **Alimentación:**
+• Desayuno continental
+• Cena gourmet (opcional)
+
+🎯 **Actividades:**
+• Senderismo guiado
+• Observación de estrellas
+• Fogata nocturna
+• Juegos de mesa
+
+🛁 **Comodidades:**
+• Agua caliente 24/7
+• Calefacción
+• WiFi en áreas comunes
+• Parqueadero privado
+
+🌿 **Experiencias adicionales:**
+• Masajes relajantes
+• Tours ecológicos
+• Workshops de astronomía
+
+¿Qué servicio te interesa más?""",
+
+        'disponibilidad': """📅 **CONSULTA DE DISPONIBILIDAD**
+
+Para consultar disponibilidad necesito:
+
+📋 **Información requerida:**
+• Fechas de entrada y salida
+• Número de personas
+• Tipo de domo preferido
+
+📞 **Contacto directo:**
+• WhatsApp: +57 300 123 4567
+• Email: reservas@brillodeluna.com
+
+⏰ **Horario de atención:**
+• Lunes a Domingo: 8:00 AM - 8:00 PM
+
+Por favor compárteme tus fechas para verificar disponibilidad.""",
+
+        'precios': """💰 **TARIFAS Y PRECIOS**
+
+🏕️ **Domo Luna (2 personas):**
+• Temporada baja: $280.000/noche
+• Temporada alta: $350.000/noche
+
+🏕️ **Domo Estrella (4 personas):**
+• Temporada baja: $450.000/noche  
+• Temporada alta: $580.000/noche
+
+📋 **Incluye:**
+• Alojamiento
+• Desayuno
+• Actividades básicas
+• Parqueadero
+
+💳 **Formas de pago:**
+• Transferencia bancaria
+• PSE
+• Tarjetas de crédito
+
+¿Necesitas cotización personalizada?""",
+
+        'ubicacion': """📍 **UBICACIÓN - BRILLO DE LUNA**
+
+🗺️ **Dirección:**
+Vereda San Isidro, Km 15
+Villa de Leyva, Boyacá
+
+🚗 **Cómo llegar:**
+• 2.5 horas desde Bogotá
+• 15 minutos desde Villa de Leyva
+• Coordenadas GPS: 5.6311, -73.5308
+
+🛣️ **Rutas de acceso:**
+• Por autopista Norte
+• Vía Tunja - Villa de Leyva
+• Carretera destapada los últimos 3km
+
+🅿️ Parqueadero privado disponible
+📶 Señal de celular limitada
+
+¿Necesitas indicaciones más detalladas?""",
+
+        'politicas': """📋 **POLÍTICAS DE CANCELACIÓN Y RESERVA**
+
+❌ **Cancelaciones:**
+• 48+ horas: Reembolso 100%
+• 24-48 horas: Reembolso 50%
+• Menos de 24h: Sin reembolso
+
+💳 **Reservas:**
+• Anticipo: 50% del valor total
+• Saldo: Al momento del check-in
+• Check-in: 3:00 PM
+• Check-out: 12:00 PM
+
+📝 **Requisitos:**
+• Documento de identidad
+• Depósito de garantía: $100.000
+• Máximo ruido hasta 10:00 PM
+
+🚫 **No permitido:**
+• Mascotas
+• Fumar en domos
+• Fiestas o eventos grandes
+
+¿Tienes alguna pregunta específica?""",
+
+        'contacto': """📞 **CONTACTO - BRILLO DE LUNA**
+
+👨‍💼 **Atención al cliente:**
+• WhatsApp: +57 300 123 4567
+• Teléfono: +57 (8) 732 0456
+• Email: info@brillodeluna.com
+
+💼 **Reservas:**
+• Email: reservas@brillodeluna.com
+• WhatsApp: Este mismo número
+
+⏰ **Horarios:**
+• Lunes a Domingo: 8:00 AM - 8:00 PM
+• Atención 24/7 para huéspedes
+
+🌐 **Redes sociales:**
+• Instagram: @brillodeluna_glamping
+• Facebook: Brillo de Luna Glamping
+
+¿En qué más puedo ayudarte?""",
+
+        'menu_principal': """🌙 **BRILLO DE LUNA GLAMPING** 
+
+¡Bienvenido! ¿En qué puedo ayudarte hoy?
+
+1️⃣ Información sobre domos
+2️⃣ Servicios incluidos
+3️⃣ Consultar disponibilidad  
+4️⃣ Precios y tarifas
+5️⃣ Ubicación y cómo llegar
+📋 Políticas de cancelación
+📞 Contacto y soporte
+
+Escribe el número o tema que te interese."""
+    }
+    
+    return responses.get(menu_option, responses['menu_principal'])
     
     return app

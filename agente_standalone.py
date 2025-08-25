@@ -157,7 +157,8 @@ class StandaloneAgent:
                        extra={"component": "standalone_agent", "action": "init_services"})
             
             # Inicializar servicios básicos
-            self.services['validation'] = ValidationService()
+            self.services['validation_service'] = ValidationService()
+            self.services['validation'] = self.services['validation_service']  # Compatibilidad
             
             # Servicios que requieren base de datos
             if self.db and self.database_config:
@@ -451,7 +452,9 @@ class StandaloneAgent:
                 tools=tools,
                 initialize_agent_safe=initialize_agent_safe,
                 run_agent_safe=run_agent_safe,
-                qa_chains=self.llm_service.qa_chains if self.llm_service else {}
+                qa_chains=self.llm_service.qa_chains if self.llm_service else {},
+                get_welcome_menu=get_welcome_menu,
+                is_menu_selection=is_menu_selection_standalone
             )
             
             # Registrar rutas API
