@@ -401,13 +401,15 @@ Responde de manera completa, útil y con la calidez característica de la hospit
             return str(resp)
 
         # 2. FALLBACK: Handle specific dome queries without AI (Error 429 prevention)
-        dome_response = handle_dome_query_fallback(incoming_msg)
-        if dome_response:
-            enhanced_response = personality.apply_personality_to_response(dome_response, "information")
-            resp.message(enhanced_response)
-            logger.info(f"Dome fallback response sent to {from_number}", 
-                       extra={"user_id": from_number, "phase": "dome_fallback"})
-            return str(resp)
+        # DESHABILITADO: Causaba respuestas incorrectas de domos para saludos
+        # La lógica mejorada está en el paso 4.5 más abajo
+        # dome_response = handle_dome_query_fallback(incoming_msg)
+        # if dome_response:
+        #     enhanced_response = personality.apply_personality_to_response(dome_response, "information")
+        #     resp.message(enhanced_response)
+        #     logger.info(f"Dome fallback response sent to {from_number}", 
+        #                extra={"user_id": from_number, "phase": "dome_fallback"})
+        #     return str(resp)
 
         # 3. Handle greeting in new conversation
         handled, response = handle_greeting_new_conversation(
