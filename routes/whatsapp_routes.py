@@ -18,9 +18,70 @@ from utils.logger import get_logger, log_request, log_response, log_error
 # PERFORMANCE OPTIMIZATIONS
 from services.performance_service import get_performance_optimizer, performance_monitor
 from services.async_llm_service import create_async_llm_service, get_global_async_llm_service
+from services.llm_service import LLMService
+from services.llm_recovery_service import get_llm_recovery_service
 
 # Inicializar logger para este módulo
 logger = get_logger(__name__)
+
+# Inicializar instancia global de LLMService para reinicialización
+global_llm_service = None
+
+def get_or_create_llm_service() -> LLMService:
+    """Obtiene o crea la instancia global del LLMService"""
+    global global_llm_service
+    if global_llm_service is None:
+        global_llm_service = LLMService()
+        global_llm_service.initialize_llm()
+        logger.info("LLMService global inicializado para reinicialización")
+    return global_llm_service
+
+def attempt_proactive_recovery(context: str = "general") -> bool:
+    """
+    Intenta recovery proactivo del LLM si es apropiado
+    
+    Args:
+        context: Contexto donde se llama el recovery (para logging)
+        
+    Returns:
+        bool: True si recovery fue exitoso o no era necesario
+    """
+    try:
+        recovery_service = get_llm_recovery_service()
+        
+        if not recovery_service.is_recovery_healthy():
+            logger.info(f"Recovery service no saludable en contexto: {context}")
+            
+            if recovery_service.should_attempt_recovery():
+                logger.info(f"Intentando recovery proactivo - contexto: {context}")
+                recovery_success, recovery_msg = recovery_service.attempt_llm_recovery()
+                
+                if recovery_success:
+                    logger.info(f"Recovery exitoso en {context}: {recovery_msg}")
+                    
+                    # Reinicializar LLMService si está disponible
+                    try:
+                        global_llm = get_or_create_llm_service()
+                        if global_llm and not global_llm.is_llm_available():
+                            logger.info(f"Reinicializando LLMService tras recovery - contexto: {context}")
+                            global_llm.initialize_llm()
+                    except Exception as reinit_error:
+                        logger.warning(f"Error reinicializando LLMService en {context}: {reinit_error}")
+                    
+                    return True
+                else:
+                    logger.warning(f"Recovery falló en {context}: {recovery_msg}")
+                    return False
+            else:
+                logger.debug(f"Recovery no disponible en {context} - cooldown o límite alcanzado")
+                return False
+        else:
+            # Recovery service está saludable, no es necesario
+            return True
+            
+    except Exception as recovery_error:
+        logger.warning(f"Error en recovery proactivo - contexto {context}: {recovery_error}")
+        return False
 
 def validate_twilio_signature(f):
     """Decorator para validar firma de Twilio con seguridad condicional por entorno"""
@@ -322,6 +383,9 @@ Responde de manera completa, útil y con la calidez característica de la hospit
                            extra={"user_id": from_number, "cached": True, "processing_time": processing_time})
                 return str(resp)
 
+        # 0. SISTEMA DE RECOVERY LLM (INTENTO DE RECUPERACIÓN PROACTIVA)
+        attempt_proactive_recovery("webhook_init")
+
         # Initialize user memory and state
         if from_number not in user_memories:
             user_memories[from_number] = load_user_memory(from_number)
@@ -497,6 +561,242 @@ Responde de manera completa, útil y con la calidez característica de la hospit
                        extra={"user_id": from_number, "phase": "dome_direct"})
             return str(resp)
 
+        # 4.6. SISTEMA DE FALLBACKS ESPECÍFICOS (SIN LLM)
+        def detect_topic_and_provide_fallback(message: str) -> tuple[bool, str, str]:
+            """
+            Detecta tema específico y proporciona fallback directo
+            Returns: (handled, response, topic)
+            """
+            message_lower = message.lower().strip()
+
+            # UBICACIÓN Y CONTACTO
+            ubicacion_patterns = [
+                'ubicacion', 'ubicación', 'donde', 'dónde', 'dirección', 'direccion',
+                'como llegar', 'cómo llegar', 'maps', 'coordenadas', 'lugar',
+                'localización', 'localizacion', 'address'
+            ]
+
+            if any(pattern in message_lower for pattern in ubicacion_patterns):
+                response = """📍 **UBICACIÓN - BRILLO DE LUNA GLAMPING**
+
+🗺️ **Dirección completa:**
+Vereda Pueblo Viejo, Km 15 vía Guatavita
+Guatavita, Cundinamarca, Colombia
+
+🚗 **Cómo llegar desde Bogotá:**
+• Toma la Autopista Norte hasta Briceño
+• Continúa por la vía hacia Sesquilé
+• Sigue hacia Guatavita (aprox. 1.5 horas)
+• En Guatavita, toma la vía hacia Pueblo Viejo
+• Son 15 km adicionales por carretera destapada
+
+📱 **Coordenadas GPS:**
+• Latitud: 4.9234567
+• Longitud: -73.8234567
+
+🚙 **Recomendaciones:**
+• Vehículo con buen despeje (últimos 15 km)
+• Llenar tanque en Guatavita
+• Comunicarse al llegar a Guatavita para guía final
+
+📞 **Contacto para indicaciones:**
+• WhatsApp: +57 305 461 4926
+• Llamadas: Mismo número"""
+
+                return True, response, "ubicacion"
+
+            # CONCEPTOS Y FILOSOFÍA DEL GLAMPING
+            concepto_patterns = [
+                'concepto', 'conceptos', 'que es glamping', 'qué es glamping',
+                'filosofia', 'filosofía', 'sobre el glamping', 'brillo de luna',
+                'historia', 'mision', 'misión', 'vision', 'visión', 'nosotros'
+            ]
+
+            if any(pattern in message_lower for pattern in concepto_patterns):
+                response = """🌙 **BRILLO DE LUNA GLAMPING - NUESTRA FILOSOFÍA**
+
+✨ **¿Qué es Glamping?**
+Glamping combina lo mejor del camping tradicional con el lujo y comodidad de un hotel. Es "Glamorous Camping" -
+acampar con estilo y sin renunciar a las comodidades.
+
+🏔️ **Nuestra Misión:**
+Ofrecer una experiencia única de conexión con la naturaleza en las montañas de Cundinamarca, sin sacrificar
+comodidad ni seguridad.
+
+🌟 **Filosofía Brillo de Luna:**
+• **Sostenibilidad:** Respetamos y protegemos nuestro entorno natural
+• **Autenticidad:** Experiencia genuina lejos del ruido urbano
+• **Comodidad:** Domos equipados con todas las amenidades
+• **Tranquilidad:** Espacio para desconectar y reconectar contigo mismo
+
+🍃 **Nuestra Experiencia:**
+• Ubicados en Guatavita, Cundinamarca
+• Vista panorámica a la Represa del Tominé
+• 4 domos únicos con personalidad propia
+• Conexión total con la naturaleza sin renunciar al confort
+
+💫 **Lo que nos hace especiales:**
+• Atención personalizada y cálida
+• Experiencias diseñadas para cada huésped
+• Gastronomía local y saludable
+• Actividades de conexión con la naturaleza"""
+
+                return True, response, "concepto"
+
+            # SERVICIOS INCLUIDOS
+            servicios_patterns = [
+                'servicios', 'servicio', 'que incluyen', 'qué incluyen',
+                'que ofrecen', 'qué ofrecen', 'incluido', 'amenidades',
+                'comodidades', 'beneficios', 'extras'
+            ]
+
+            if any(pattern in message_lower for pattern in servicios_patterns):
+                response = """🛎️ **SERVICIOS BRILLO DE LUNA GLAMPING**
+
+✅ **INCLUIDO EN TODOS LOS DOMOS:**
+• 🍳 Desayuno natural y saludable
+• 🌐 WiFi gratuito en áreas comunes
+• 🚗 Parqueadero privado y seguro
+• 🔥 BBQ y zona de fogata comunitaria
+• 🚿 Baño privado con agua caliente
+• 🛏️ Ropa de cama premium y toallas
+• ☕ Cafetera y kit de bienvenida
+• 🧴 Amenidades de baño ecológicas
+
+🎯 **SERVICIOS ADICIONALES DISPONIBLES:**
+• 🧘 Yoga matutino con vista a la represa
+• 🚶 Senderismo guiado por la naturaleza
+• 📸 Sesiones fotográficas profesionales
+• 🍽️ Cena romántica bajo las estrellas
+• 🎣 Pesca deportiva en la represa
+• 🚴 Alquiler de bicicletas
+• 💆 Masajes relajantes (bajo reserva)
+
+🍽️ **GASTRONOMÍA:**
+• Desayuno continental incluido
+• Menús personalizados disponibles
+• Productos locales y orgánicos
+• Opciones vegetarianas y veganas
+• Picnic para excursiones
+
+⭐ **EXPERIENCIAS ESPECIALES:**
+• Observación de estrellas con telescopio
+• Talleres de fotografía de naturaleza
+• Meditación al amanecer
+• Fogatas con marshmallows y historias"""
+
+                return True, response, "servicios"
+
+            # ACTIVIDADES
+            actividades_patterns = [
+                'actividades', 'actividad', 'hacer', 'planes', 'entretenimiento',
+                'diversión', 'pasear', 'experiencias', 'turismo', 'excursiones'
+            ]
+
+            if any(pattern in message_lower for pattern in actividades_patterns):
+                response = """🎯 **ACTIVIDADES EN BRILLO DE LUNA**
+
+🌅 **ACTIVIDADES MATUTINAS:**
+• ☀️ Yoga al amanecer con vista panorámica
+• 🚶 Senderismo por senderos naturales
+• 📸 Fotografía de paisajes y fauna
+• ☕ Desayuno contemplativo en terraza
+• 🚴 Ciclomontañismo por la región
+
+🌞 **ACTIVIDADES DIURNAS:**
+• 🎣 Pesca deportiva en Represa del Tominé
+• 🛶 Kayak y deportes acuáticos (temporadas)
+• 🏔️ Trekking a miradores naturales
+• 🌿 Tours de reconocimiento de flora local
+• 📚 Lectura en hamacas con vista
+
+🌅 **ACTIVIDADES VESPERTINAS:**
+• 🔥 Fogatas comunitarias con marshmallows
+• ⭐ Observación astronómica con telescopio
+• 🎸 Noches de música acústica
+• 🍷 Cata de vinos locales (fines de semana)
+• 💆 Masajes relajantes bajo las estrellas
+
+🌙 **EXPERIENCIAS NOCTURNAS:**
+• 🔭 Astronomía y constelaciones
+• 🦉 Avistamiento de fauna nocturna
+• 🔥 Historias alrededor del fuego
+• 🧘 Meditación nocturna
+• 🌌 Fotografía de la Vía Láctea
+
+🎨 **TALLERES ESPECIALES:**
+• 🖼️ Pintura de paisajes naturales
+• 📷 Fotografía de naturaleza
+• 🌱 Jardinería y plantas medicinales
+• 🍳 Cocina tradicional colombiana"""
+
+                return True, response, "actividades"
+
+            # POLÍTICAS
+            politicas_patterns = [
+                'politicas', 'políticas', 'normas', 'reglas', 'cancelacion', 'cancelación',
+                'reembolso', 'devolucion', 'devolución', 'términos', 'terminos',
+                'condiciones', 'policy', 'policies'
+            ]
+
+            if any(pattern in message_lower for pattern in politicas_patterns):
+                response = """📋 **POLÍTICAS BRILLO DE LUNA GLAMPING**
+
+💳 **RESERVAS Y PAGOS:**
+• Anticipo: 50% para confirmar reserva
+• Saldo: Al momento del check-in
+• Métodos: Efectivo, transferencia, tarjetas
+• Confirmación: WhatsApp o email
+
+🕐 **CHECK-IN / CHECK-OUT:**
+• Check-in: 3:00 PM - 8:00 PM
+• Check-out: Hasta las 12:00 PM
+• Check-in tardío: Coordinar previamente
+• Depósito de garantía: $100.000 COP
+
+❌ **CANCELACIONES:**
+• **+48 horas:** Reembolso 100%
+• **24-48 horas:** Reembolso 50%
+• **-24 horas:** Sin reembolso
+• Emergencias médicas: Caso por caso
+
+🚫 **POLÍTICAS GENERALES:**
+• **Mascotas:** No permitidas (alergias otros huéspedes)
+• **Fumar:** Prohibido en domos (permitido en terrazas)
+• **Ruido:** Respeto después de 10:00 PM
+• **Capacidad:** Máximo según domo elegido
+• **Fiestas:** No permitidas (ambiente tranquilo)
+
+🛡️ **RESPONSABILIDADES:**
+• Huésped responde por daños
+• Objetos de valor: Bajo responsabilidad del huésped
+• Seguro médico: Recomendado
+• Menores: Bajo supervisión adulta
+
+🌿 **COMPROMISO AMBIENTAL:**
+• Separación de residuos obligatoria
+• Uso consciente del agua
+• Respeto por flora y fauna
+• Prohibido cortar plantas o molestar animales
+
+📱 **COMUNICACIÓN:**
+• WhatsApp: +57 305 461 4926
+• Email: glampingbrillodelunaguatavita@gmail.com
+• Respuesta: Máximo 2 horas"""
+
+                return True, response, "politicas"
+
+            return False, "", ""
+
+        # IMPLEMENTAR LA DETECCIÓN DE FALLBACKS ESPECÍFICOS
+        handled_fallback, fallback_response, topic = detect_topic_and_provide_fallback(incoming_msg)
+        if handled_fallback:
+            enhanced_response = personality.apply_personality_to_response(fallback_response, "fallback_specific")
+            resp.message(enhanced_response)
+            logger.info(f"Topic fallback response sent to {from_number}: {topic}",
+                       extra={"user_id": from_number, "phase": "topic_fallback", "topic": topic})
+            return str(resp)
+
         # 5. Handle availability request
         handled, response = handle_availability_request_unified(
             incoming_msg, user_state, memory, qa_chains, handle_availability_request, 
@@ -568,6 +868,9 @@ Responde de manera completa, útil y con la calidez característica de la hospit
         if should_auto_activate:
             logger.info(f"Auto-activando agente IA para: {trigger_type} con contexto: {rag_context}")
 
+            # VERIFICACIÓN ADICIONAL DE RECOVERY ANTES DE IA
+            attempt_proactive_recovery("pre_ai_agent")
+
             contextual_prompt = create_contextual_ai_prompt(incoming_msg, trigger_type, rag_context)
             agent_answer = process_ai_agent_with_context(
                 contextual_prompt, memory, tools, initialize_agent_safe, run_agent_safe,
@@ -598,6 +901,9 @@ Responde de manera completa, útil y con la calidez característica de la hospit
                 'source': 'fallback_general'
             }
             
+            # VERIFICACIÓN DE RECOVERY ANTES DE ASYNC LLM
+            attempt_proactive_recovery("pre_async_llm")
+
             # Usar async LLM service si está disponible
             async_llm_service = get_global_async_llm_service()
             if async_llm_service:
@@ -665,15 +971,78 @@ Responde de manera completa, útil y con la calidez característica de la hospit
             logger.error(f"Error crítico en procesamiento final para {from_number}: {e}",
                         extra={"user_id": from_number, "processing_time": processing_time})
             
-            # NUEVO: Fallback específico para error 429 (Quota exceeded)
+            # NUEVO: Manejo inteligente de errores LLM con reinicialización
+            llm_service = get_or_create_llm_service()
+            should_retry, error_type = llm_service.handle_llm_error(e, from_number)
+            
             if "429" in str(e) or "insufficient_quota" in str(e) or "quota" in str(e).lower():
                 logger.warning(f"Quota OpenAI excedida, usando respuesta de fallback para {from_number}")
-                
-                # Usar respuesta de emergencia basada en el tipo de consulta
+
+                # PRIMERO: Intentar fallback específico por tema
+                handled_fallback, fallback_response, topic = detect_topic_and_provide_fallback(incoming_msg)
+                if handled_fallback:
+                    enhanced_response = personality.apply_personality_to_response(fallback_response, "emergency_specific")
+                    resp.message(enhanced_response)
+                    logger.info(f"Emergency topic fallback used: {topic}",
+                               extra={"user_id": from_number, "emergency_topic": topic})
+                    return str(resp)
+
+                # SEGUNDO: Fallback genérico solo si no hay específico
                 fallback_response = generate_fallback_response(incoming_msg, user_state)
                 enhanced_response = personality.apply_personality_to_response(fallback_response, "emergency")
                 resp.message(enhanced_response)
                 return str(resp)
+            
+            # MANEJO DE OTROS ERRORES CON POSIBLE REINICIALIZACIÓN INTELIGENTE
+            elif should_retry and error_type in ["connection_error", "unknown_error"]:
+                logger.info(f"LLM reinicializado tras {error_type}, reintentando respuesta para {from_number}")
+                
+                # Intentar recovery adicional si está disponible
+                recovery_service = get_llm_recovery_service()
+                if recovery_service.should_attempt_recovery():
+                    logger.info("Intentando recovery adicional del LLM")
+                    recovery_success, recovery_msg = recovery_service.attempt_llm_recovery()
+                    
+                    if recovery_success:
+                        logger.info(f"Recovery exitoso: {recovery_msg}")
+                    else:
+                        logger.warning(f"Recovery falló: {recovery_msg}")
+                
+                # Intentar respuesta específica por tema tras reinicialización
+                handled_fallback, fallback_response, topic = detect_topic_and_provide_fallback(incoming_msg)
+                if handled_fallback:
+                    enhanced_response = personality.apply_personality_to_response(fallback_response, "post_reinit")
+                    resp.message(enhanced_response)
+                    logger.info(f"Post-reinit topic fallback used: {topic}",
+                               extra={"user_id": from_number, "reinit_topic": topic})
+                    return str(resp)
+                    
+                # Si no hay tema específico, usar fallback genérico
+                fallback_response = generate_fallback_response(incoming_msg, user_state)
+                enhanced_response = personality.apply_personality_to_response(fallback_response, "post_reinit")
+                resp.message(enhanced_response)
+                return str(resp)
+            
+            # RECOVERY AUTOMÁTICO PARA ERRORES NO MANEJADOS ESPECÍFICAMENTE
+            else:
+                recovery_service = get_llm_recovery_service()
+                if recovery_service.should_attempt_recovery():
+                    logger.info("Intentando recovery automático para error no clasificado")
+                    recovery_success, recovery_msg = recovery_service.attempt_llm_recovery()
+                    
+                    if recovery_success:
+                        logger.info(f"Recovery automático exitoso: {recovery_msg}")
+                        
+                        # Tras recovery exitoso, intentar respuesta específica
+                        handled_fallback, fallback_response, topic = detect_topic_and_provide_fallback(incoming_msg)
+                        if handled_fallback:
+                            enhanced_response = personality.apply_personality_to_response(fallback_response, "auto_recovery")
+                            resp.message(enhanced_response)
+                            logger.info(f"Auto-recovery topic fallback used: {topic}",
+                                       extra={"user_id": from_number, "recovery_topic": topic})
+                            return str(resp)
+                    else:
+                        logger.warning(f"Recovery automático falló: {recovery_msg}")
             
             # Respuesta de emergencia genérica para otros errores
             emergency_response = ("Disculpa, estoy experimentando dificultades técnicas. "
@@ -1071,6 +1440,28 @@ Te atenderemos personalmente para resolver todas tus dudas."""
 def handle_dome_query_fallback(message: str) -> str:
     """Manejar consultas específicas de domos sin IA (fallback que ya existía en el código)"""
     return generate_simple_domo_response(message)
+
+    # ENDPOINT OPCIONAL: Monitoreo del LLM Recovery Service
+    @app.route('/llm_recovery_status', methods=['GET'])
+    def llm_recovery_status():
+        """Endpoint para monitorear el estado del servicio de recovery"""
+        try:
+            recovery_service = get_llm_recovery_service()
+            stats = recovery_service.get_recovery_stats()
+            
+            return {
+                "status": "healthy" if recovery_service.is_recovery_healthy() else "degraded",
+                "recovery_stats": stats,
+                "timestamp": time.time()
+            }, 200
+            
+        except Exception as e:
+            logger.error(f"Error obteniendo status de recovery: {e}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "timestamp": time.time()
+            }, 500
 
     # Fin de la función register_whatsapp_routes
     return app

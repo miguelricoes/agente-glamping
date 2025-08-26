@@ -341,6 +341,153 @@ class LLMService:
             logger.error(f"Error inicializando LLM: {e}", 
                         extra={"component": "llm_service"})
             return False
+
+    def reinitialize_llm(self, force: bool = False) -> bool:
+        """
+        Reinicializa el LLM en caso de errores críticos como Error 429
+        
+        Args:
+            force: Si True, fuerza reinicialización aunque LLM parezca funcionar
+            
+        Returns:
+            bool: True si la reinicialización fue exitosa
+        """
+        try:
+            logger.warning("Iniciando reinicialización del LLM", 
+                          extra={"component": "llm_service", "action": "reinit_llm", "force": force})
+            
+            # Limpiar instancia actual
+            if self.llm:
+                del self.llm
+                self.llm = None
+                logger.info("LLM anterior limpiado de memoria")
+            
+            # Limpiar caches relacionados
+            if hasattr(self, 'response_cache'):
+                self.response_cache.clear()
+                logger.info("Cache de respuestas limpiado")
+            
+            # Verificar API key nuevamente
+            openai_api_key = os.getenv("OPENAI_API_KEY")
+            if not openai_api_key or openai_api_key == "fallback-mode":
+                logger.error("OPENAI_API_KEY no válida para reinicialización")
+                return False
+            
+            # Esperar un poco antes de reinicializar (útil para rate limiting)
+            time.sleep(2)
+            
+            # Reinicializar LLM
+            success = self.initialize_llm()
+            
+            if success:
+                logger.info("LLM reinicializado exitosamente", 
+                           extra={"component": "llm_service", "action": "reinit_success"})
+                
+                # Probar que funcione con una consulta simple
+                test_success = self._test_llm_functionality()
+                if test_success:
+                    logger.info("Test de funcionalidad post-reinicialización exitoso")
+                    return True
+                else:
+                    logger.warning("Reinicialización completa pero test de funcionalidad falló")
+                    return False
+            else:
+                logger.error("Falló la reinicialización del LLM")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error durante reinicialización del LLM: {e}", 
+                        extra={"component": "llm_service", "action": "reinit_error"})
+            return False
+
+    def _test_llm_functionality(self) -> bool:
+        """
+        Prueba básica para verificar que el LLM funciona después de reinicialización
+        
+        Returns:
+            bool: True si el LLM responde correctamente
+        """
+        try:
+            if not self.llm:
+                return False
+            
+            # Test simple que no debe consumir muchos tokens
+            test_prompt = "Responde solo: OK"
+            
+            # Intentar una llamada simple
+            response = self.llm.predict(test_prompt)
+            
+            if response and len(response.strip()) > 0:
+                logger.debug(f"Test LLM exitoso: {response[:20]}...")
+                return True
+            else:
+                logger.warning("Test LLM falló: respuesta vacía")
+                return False
+                
+        except Exception as e:
+            logger.warning(f"Test de funcionalidad LLM falló: {e}")
+            return False
+
+    def is_llm_available(self) -> bool:
+        """
+        Verifica si el LLM está disponible y funcionando
+        
+        Returns:
+            bool: True si LLM está disponible
+        """
+        return self.llm is not None
+
+    def handle_llm_error(self, error: Exception, user_id: str = None) -> Tuple[bool, str]:
+        """
+        Maneja errores del LLM y decide si reinicializar
+        
+        Args:
+            error: Error ocurrido
+            user_id: ID del usuario para logging
+            
+        Returns:
+            Tuple[bool, str]: (should_retry, error_type)
+        """
+        error_str = str(error).lower()
+        
+        # Errores de quota (429)
+        if "429" in error_str or "quota" in error_str or "insufficient_quota" in error_str:
+            logger.warning(f"Error de quota detectado para usuario {user_id}: {error}")
+            return False, "quota_exceeded"  # No reinicializar para quota, usar fallbacks
+        
+        # Errores de conexión/red
+        elif "connection" in error_str or "network" in error_str or "timeout" in error_str:
+            logger.warning(f"Error de conexión detectado para usuario {user_id}: {error}")
+            
+            # Intentar reinicialización para errores de conexión
+            reinit_success = self.reinitialize_llm()
+            
+            # Si reinicialización falla, usar recovery service como backup
+            if not reinit_success:
+                try:
+                    from services.llm_recovery_service import get_llm_recovery_service
+                    recovery_service = get_llm_recovery_service()
+                    if recovery_service.should_attempt_recovery():
+                        recovery_success, recovery_msg = recovery_service.attempt_llm_recovery()
+                        logger.info(f"Recovery service resultado: {recovery_success} - {recovery_msg}")
+                        return recovery_success, "connection_error_with_recovery"
+                except Exception as recovery_error:
+                    logger.warning(f"Recovery service falló: {recovery_error}")
+            
+            return reinit_success, "connection_error"
+        
+        # Errores de autenticación
+        elif "authentication" in error_str or "unauthorized" in error_str or "api" in error_str:
+            logger.error(f"Error de autenticación detectado para usuario {user_id}: {error}")
+            return False, "auth_error"  # No reinicializar para problemas de auth
+        
+        # Otros errores generales
+        else:
+            logger.error(f"Error LLM desconocido para usuario {user_id}: {error}")
+            
+            # Para errores desconocidos, intentar una reinicialización
+            reinit_success = self.reinitialize_llm()
+            return reinit_success, "unknown_error"
     
     def initialize_qa_chains(self, vector_store_configs: Optional[Dict[str, Any]] = None) -> bool:
         """
