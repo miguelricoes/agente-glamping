@@ -384,7 +384,9 @@ class StandaloneAgent:
 
 💬 **Escribe el número de tu opción o pregúntame directamente**
 
-✨ *Estoy aquí para hacer tu experiencia inolvidable*"""
+✨ *Estoy aquí para hacer tu experiencia inolvidable*
+
+🔧 **VERSION: 2025-08-26 HOTFIX - SALUDO CORREGIDO**"""
             
             def is_menu_selection_standalone(message: str) -> bool:
                 """
