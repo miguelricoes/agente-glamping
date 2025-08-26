@@ -890,124 +890,118 @@ def generate_simple_domo_response(message: str) -> str:
     message_clean = message.lower().strip()
     
     if 'polaris' in message_clean:
-        return """🌟 **DOMO POLARIS** - Experiencia Premium
+        return """⭐ **DOMO POLARIS** - Amplio y Acogedor
 
-✨ **Características exclusivas:**
-• Capacidad: 2-4 personas
-• Cama king size + sofá cama
-• Jacuzzi privado con vista panorámica
-• Terraza amplia con zona de descanso
-• Baño completo con ducha de lluvia
-• Calefacción para noches frías
+✨ **Características principales:**
+• Capacidad: 2-4 personas (tarifa base por pareja)
+• Domo amplio con dos pisos
+• Sala con sofá cama (1er piso)
+• Cama principal en segundo piso
+• Cocineta equipada: nevera, estufa, menaje, cafetera
 
-🏔️ **Ubicación privilegiada:**
-• Vista 360° a las montañas de Boyacá
-• Orientación este para ver el amanecer
-• Privacidad total rodeado de naturaleza
+🏔️ **Vista espectacular:**
+• Vista maravillosa a la represa del Tominé
+• Vista panorámica a la montaña
+• Ambiente acogedor y relajante
 
 💰 **Tarifas Polaris:**
-• Temporada baja: $420.000/noche
-• Temporada alta: $520.000/noche
-• Incluye desayuno y actividades básicas
+• **$550.000 COP por noche** (tarifa base por pareja)
+• **+$100.000 COP** por persona adicional
+• Incluye: desayuno, WiFi, parqueadero, BBQ y fogata
 
-¿Te gustaría conocer disponibilidad para fechas específicas?"""
+¿Te interesa conocer disponibilidad para fechas específicas?"""
 
     elif 'antares' in message_clean:
-        return """⭐ **DOMO ANTARES** - Romance y Naturaleza
+        return """🌟 **DOMO ANTARES** - Nido de Amor
 
 ✨ **Características especiales:**
-• Capacidad: 2 personas (ideal parejas)
-• Cama king size ultra confortable
-• Mini jacuzzi privado
-• Terraza íntima con hamaca
-• Baño privado con amenidades premium
-• Chimenea para ambiente romántico
+• Capacidad: 2 personas (diseñado para parejas)
+• Hermoso "nido de amor" amplio con dos pisos
+• **Cuenta con jacuzzi privado**
+• Malla catamarán con vista a represa y montaña
+• Terraza linda con parasol
+• Cocineta equipada: nevera, tetera, menaje, estufa, cafetera
+• Cama principal en segundo piso
 
-🌙 **Experiencia única:**
-• Diseño orientado a la observación estelar
-• Vista directa a la Vía Láctea
-• Ambiente íntimo y privado
+🏔️ **Vista privilegiada:**
+• Bella vista a la represa de Tominé
+• Vista espectacular a la montaña
+• Sala con vista maravillosa (1er piso)
 
 💰 **Tarifas Antares:**
-• Temporada baja: $350.000/noche
-• Temporada alta: $450.000/noche
-• Incluye desayuno romántico
+• **$650.000 COP por noche** (por pareja)
+• Incluye: desayuno, WiFi, parqueadero, BBQ y fogata
 
-¿Quisieras reservar una fecha especial?"""
+¿Te interesa reservar este romántico refugio?"""
 
     elif 'sirius' in message_clean:
-        return """🌠 **DOMO SIRIUS** - Confort Familiar
+        return """✨ **DOMO SIRIUS** - Elegancia Sencilla
 
-✨ **Características familiares:**
-• Capacidad: 4-6 personas
-• 2 camas queen + literas
-• Jacuzzi familiar amplio
-• Terraza grande con zona de juegos
-• Baño espacioso con doble lavamanos
-• Cocina básica equipada
+✨ **Características principales:**
+• Capacidad: 2 personas (ideal para parejas)
+• Domo de un solo piso cómodo y funcional
+• Linda terraza para relajarse
+• Equipado con nevera y cafetera
 
-👨‍👩‍👧‍👦 **Ideal para familias:**
-• Espacio amplio y seguro para niños
-• Vista a zona de juegos naturales
-• Acceso fácil a senderos familiares
+🏔️ **Vista natural:**
+• Bella vista a la represa de Tominé
+• Vista panorámica a la montaña
+• Ambiente tranquilo y sereno
 
 💰 **Tarifas Sirius:**
-• Temporada baja: $480.000/noche
-• Temporada alta: $580.000/noche
-• Incluye desayuno familiar
+• **$450.000 COP por noche** (por pareja)
+• Incluye: desayuno, WiFi, parqueadero, BBQ y fogata
 
-¿Planeas unas vacaciones familiares?"""
+¿Te interesa este acogedor refugio natural?"""
 
     elif 'centaury' in message_clean or 'centauro' in message_clean:
-        return """🔥 **DOMO CENTAURY** - Aventura y Comodidad
+        return """💫 **DOMO CENTAURY** - Tranquilidad Natural
 
-✨ **Características aventureras:**
-• Capacidad: 3-4 personas
-• Cama king + cama individual
-• Jacuzzi con vista al bosque
-• Terraza con zona de fogata privada
-• Baño rústico-elegante
-• Zona de equipos para trekking
+✨ **Características principales:**
+• Capacidad: 2 personas (ideal para parejas)
+• Domo de un solo piso cómodo
+• Linda terraza para contemplar la naturaleza
+• Equipado con nevera y cafetera
+• Diseño similar al Domo Sirius
 
-🏃‍♂️ **Para aventureros:**
-• Acceso directo a rutas de senderismo
-• Zona de equipamiento outdoor
-• Vista a cascadas naturales cercanas
+🏔️ **Vista relajante:**
+• Bella vista a la represa de Tominé
+• Vista panorámica a la montaña
+• Ambiente peaceful y renovador
 
 💰 **Tarifas Centaury:**
-• Temporada baja: $390.000/noche
-• Temporada alta: $490.000/noche
-• Incluye desayuno energético
+• **$450.000 COP por noche** (por pareja)
+• Incluye: desayuno, WiFi, parqueadero, BBQ y fogata
 
-¿Listo para tu próxima aventura?"""
+¿Te interesa este tranquilo refugio natural?"""
 
     else:
         # Respuesta general si menciona varios domos
         return """🏠 **NUESTROS 4 DOMOS ÚNICOS**
 
-⭐ **ANTARES** (2 pers) - Romance
-• Ideal parejas, jacuzzi íntimo
-• Desde $350.000/noche
+🌟 **ANTARES** (2 pers) - Nido de Amor
+• Con jacuzzi, dos pisos, ultra romántico
+• **$650.000/noche**
 
-🌟 **POLARIS** (2-4 pers) - Premium  
-• Vista 360°, jacuzzi panorámico
-• Desde $420.000/noche
+⭐ **POLARIS** (2-4 pers) - Amplio y Premium  
+• Dos pisos, sofá cama, cocineta completa
+• **$550.000/noche** (+$100k persona adicional)
 
-🌠 **SIRIUS** (4-6 pers) - Familiar
-• Espacioso, perfecto familias
-• Desde $480.000/noche
+✨ **SIRIUS** (2 pers) - Elegancia Sencilla
+• Un piso, terraza, nevera y cafetera
+• **$450.000/noche**
 
-🔥 **CENTAURY** (3-4 pers) - Aventura
-• Acceso senderos, zona fogata
-• Desde $390.000/noche
+💫 **CENTAURY** (2 pers) - Tranquilidad
+• Un piso, terraza, similar a Sirius
+• **$450.000/noche**
 
 🏔️ **Todos incluyen:**
-✓ Desayuno gourmet
-✓ Jacuzzi privado  
-✓ WiFi en áreas comunes
-✓ Parqueadero privado
+✓ Desayuno natural y saludable
+✓ Vista a represa de Tominé y montaña
+✓ WiFi gratis y parqueadero
+✓ BBQ y fogata
 
-¿Cuál llama más tu atención?"""
+¿Cuál despierta más tu interés?"""
 
 def generate_fallback_response(user_input: str, user_state: dict) -> str:
     """Genera respuesta de emergencia cuando OpenAI no está disponible"""
