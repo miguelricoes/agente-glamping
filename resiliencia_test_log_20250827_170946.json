@@ -1,0 +1,291 @@
+{
+  "test_session": {
+    "user_id": "test_resilience_fd09c937",
+    "session_id": "66ff3432-5f6b-438c-be31-fe70a1d16247",
+    "timestamp": "2025-08-27T17:09:46.831385",
+    "services_available": {
+      "conversation": true,
+      "llm": true,
+      "validation": true,
+      "memory": true,
+      "database": false
+    }
+  },
+  "results_summary": {
+    "total_tests": 28,
+    "passed_tests": 22,
+    "failed_tests": 6,
+    "categories": {
+      "flow_detection": {
+        "passed": 9,
+        "total": 11
+      },
+      "memory_coherence": {
+        "passed": 4,
+        "total": 5
+      },
+      "strategic_redirect": {
+        "passed": 3,
+        "total": 6
+      },
+      "conversation_quality": {
+        "passed": 6,
+        "total": 6
+      }
+    }
+  },
+  "detailed_log": [
+    {
+      "timestamp": "2025-08-27T17:09:46.828394",
+      "category": "flow_detection",
+      "test_name": "Flujo: Debe mostrar información de domos",
+      "success": false,
+      "input": "1",
+      "output": "🏠 **Nuestros Domos Glamping**\n\nTenemos 4 tipos de experiencias únicas:\n\n**🌟 Antares** - Domo romántico \n• Capacidad: 2 personas\n• Perfecto para parejas\n• Incluye: Cama king, baño privado, vista panorá...",
+      "notes": "Relevante: ✅, Específico: ❌"
+    },
+    {
+      "timestamp": "2025-08-27T17:09:46.828394",
+      "category": "flow_detection",
+      "test_name": "Flujo: Debe mostrar políticas y servicios",
+      "success": true,
+      "input": "2",
+      "output": "📋 **Políticas y Servicios**\n\n**Check-in & Check-out:**\n• Check-in: 3:00 PM - 8:00 PM\n• Check-out: 7:00 AM - 12:00 PM\n\n**Incluido en tu estadía:**\n• Desayuno completo\n• WiFi de alta velocidad\n• Estacio...",
+      "notes": "Relevante: ✅, Específico: ✅"
+    },
+    {
+      "timestamp": "2025-08-27T17:09:46.828394",
+      "category": "flow_detection",
+      "test_name": "Flujo: Debe iniciar proceso de reserva",
+      "success": true,
+      "input": "3",
+      "output": "📅 **Proceso de Reserva**\n\n¡Perfecto! Para hacer tu reserva necesito algunos datos:\n\n1️⃣ **Fechas deseadas** (Ej: del 15 al 17 de diciembre)\n2️⃣ **Número de personas** \n3️⃣ **Tipo de domo preferido** (...",
+      "notes": "Relevante: ✅, Específico: ✅"
+    },
+    {
+      "timestamp": "2025-08-27T17:09:46.828394",
+      "category": "flow_detection",
+      "test_name": "Flujo: Debe listar todos los domos disponibles",
+      "success": true,
+      "input": "domos",
+      "output": "🏠 **Nuestros Domos Glamping**\n\nTenemos 4 tipos de experiencias únicas:\n\n**🌟 Antares** - Domo romántico \n• Capacidad: 2 personas\n• Perfecto para parejas\n• Incluye: Cama king, baño privado, vista panorá...",
+      "notes": "Relevante: ✅, Específico: ✅"
+    },
+    {
+      "timestamp": "2025-08-27T17:09:46.828394",
+      "category": "flow_detection",
+      "test_name": "Flujo: Debe dar detalles de domos",
+      "success": true,
+      "input": "información sobre domos",
+      "output": "🏠 **Nuestros Domos Glamping**\n\nTenemos 4 tipos de experiencias únicas:\n\n**🌟 Antares** - Domo romántico \n• Capacidad: 2 personas\n• Perfecto para parejas\n• Incluye: Cama king, baño privado, vista panorá...",
+      "notes": "Relevante: ✅, Específico: ✅"
+    },
+    {
+      "timestamp": "2025-08-27T17:09:46.828394",
+      "category": "flow_detection",
+      "test_name": "Flujo: Debe guiar proceso de reserva",
+      "success": true,
+      "input": "quiero hacer una reserva",
+      "output": "📅 **Proceso de Reserva**\n\n¡Perfecto! Para hacer tu reserva necesito algunos datos:\n\n1️⃣ **Fechas deseadas** (Ej: del 15 al 17 de diciembre)\n2️⃣ **Número de personas** \n3️⃣ **Tipo de domo preferido** (...",
+      "notes": "Relevante: ✅, Específico: ✅"
+    },
+    {
+      "timestamp": "2025-08-27T17:09:46.828394",
+      "category": "flow_detection",
+      "test_name": "Flujo: Debe solicitar fechas específicas",
+      "success": true,
+      "input": "disponibilidad",
+      "output": "📅 **Consulta de Disponibilidad**\n\nPara verificar disponibilidad en tiempo real necesito:\n\n1️⃣ **Fechas específicas** que tienes en mente\n2️⃣ **Número de personas**  \n3️⃣ **Preferencia de domo** (opcio...",
+      "notes": "Relevante: ✅, Específico: ✅"
+    },
+    {
+      "timestamp": "2025-08-27T17:09:46.828394",
+      "category": "flow_detection",
+      "test_name": "Flujo: Debe mostrar tabla de precios",
+      "success": false,
+      "input": "precios",
+      "output": "💰 **Tarifas Glamping Brillo de Luna**\n\n**🌟 Domo Antares (2 personas):**\n• Temporada baja: $420.000/noche\n• Temporada alta: $520.000/noche\n\n**🌟 Domo Polaris (4 personas):**\n• Temporada baja: $480.000/n...",
+      "notes": "Relevante: ✅, Específico: ❌"
+    },
+    {
+      "timestamp": "2025-08-27T17:09:46.828394",
+      "category": "flow_detection",
+      "test_name": "Flujo: Debe dar información específica de Polaris",
+      "success": true,
+      "input": "Domo Polaris",
+      "output": "🏠 **Nuestros Domos Glamping**\n\nTenemos 4 tipos de experiencias únicas:\n\n**🌟 Antares** - Domo romántico \n• Capacidad: 2 personas\n• Perfecto para parejas\n• Incluye: Cama king, baño privado, vista panorá...",
+      "notes": "Relevante: ✅, Específico: ✅"
+    },
+    {
+      "timestamp": "2025-08-27T17:09:46.828394",
+      "category": "flow_detection",
+      "test_name": "Flujo: Debe responder precio específico",
+      "success": true,
+      "input": "¿Cuánto cuesta el Antares?",
+      "output": "🌟 **Domo Antares - Romance en la Naturaleza**\n\n**Experiencia romántica:**\n• Diseñado específicamente para parejas\n• Cama king size con sábanas premium\n• Vista panorámica desde la cama\n• Ambiente íntim...",
+      "notes": "Relevante: ✅, Específico: ✅"
+    },
+    {
+      "timestamp": "2025-08-27T17:09:46.828394",
+      "category": "flow_detection",
+      "test_name": "Flujo: Debe explicar políticas",
+      "success": true,
+      "input": "políticas de cancelación",
+      "output": "📋 **Políticas y Servicios**\n\n**Check-in & Check-out:**\n• Check-in: 3:00 PM - 8:00 PM\n• Check-out: 7:00 AM - 12:00 PM\n\n**Incluido en tu estadía:**\n• Desayuno completo\n• WiFi de alta velocidad\n• Estacio...",
+      "notes": "Relevante: ✅, Específico: ✅"
+    },
+    {
+      "timestamp": "2025-08-27T17:09:46.828394",
+      "category": "memory_coherence",
+      "test_name": "Paso 1: Debe listar todos los domos",
+      "success": true,
+      "input": "¿Qué domos tienen?",
+      "output": "🏠 **Nuestros Domos Glamping**\n\nTenemos 4 tipos de experiencias únicas:\n\n**🌟 Antares** - Domo romántico \n• Capacidad: 2 personas\n• Perfecto para parejas\n• Incluye: Cama king, baño privado, vista panorá...",
+      "notes": "Contexto: ✅"
+    },
+    {
+      "timestamp": "2025-08-27T17:09:46.828394",
+      "category": "memory_coherence",
+      "test_name": "Paso 2: Debe dar detalles específicos de Polaris",
+      "success": true,
+      "input": "Cuéntame más sobre el Polaris",
+      "output": "🌟 **Domo Polaris - Experiencia Familiar**\n\n**Capacidad y comodidades:**\n• 4 personas cómodamente\n• 2 camas matrimoniales\n• Baño privado completo\n• Área de estar independiente\n\n**Servicios incluidos:**...",
+      "notes": "Contexto: ✅"
+    },
+    {
+      "timestamp": "2025-08-27T17:09:46.828394",
+      "category": "memory_coherence",
+      "test_name": "Paso 3: Debe referirse al Polaris mencionado antes",
+      "success": true,
+      "input": "¿Cuál es el precio de ese domo?",
+      "output": "🏠 **Nuestros Domos Glamping**\n\nTenemos 4 tipos de experiencias únicas:\n\n**🌟 Antares** - Domo romántico \n• Capacidad: 2 personas\n• Perfecto para parejas\n• Incluye: Cama king, baño privado, vista panorá...",
+      "notes": "Contexto: ✅"
+    },
+    {
+      "timestamp": "2025-08-27T17:09:46.828394",
+      "category": "memory_coherence",
+      "test_name": "Paso 4: Debe mantener contexto del Polaris",
+      "success": false,
+      "input": "¿Y para cuántas personas es?",
+      "output": "🌟 **¡Hola! Soy tu asistente de Glamping Brillo de Luna**\n\nNo estoy seguro de entender exactamente qué necesitas, pero estoy aquí para ayudarte con todo sobre tu experiencia glamping.\n\n**Puedo ayudarte...",
+      "notes": "Contexto: ❌"
+    },
+    {
+      "timestamp": "2025-08-27T17:09:46.828394",
+      "category": "memory_coherence",
+      "test_name": "Recuperación de contexto post-cambio",
+      "success": true,
+      "input": "Context recovery test",
+      "output": "🏠 **Nuestros Domos Glamping**\n\nTenemos 4 tipos de experiencias únicas:\n\n**🌟 Antares** - Domo romántico \n• Capacidad: 2 personas\n• Perfecto para parejas\n• Incluye: Cama king, baño privado, vista panorá...",
+      "notes": "Contexto recuperado: ✅"
+    },
+    {
+      "timestamp": "2025-08-27T17:09:46.828394",
+      "category": "strategic_redirect",
+      "test_name": "Debe redirigir mencionando clima del glamping",
+      "success": true,
+      "input": "¿Cómo está el clima hoy?",
+      "output": "😊 Entiendo tu curiosidad, pero me especializo completamente en **Glamping Brillo de Luna** y todo lo relacionado con tu experiencia de naturaleza y descanso.\n\n🌿 **¿Sabías que nuestro glamping es perfe...",
+      "notes": "Evita respuesta directa: ✅, Menciona glamping: ✅, Empático: ✅, Evita menú: ✅"
+    },
+    {
+      "timestamp": "2025-08-27T17:09:46.828394",
+      "category": "strategic_redirect",
+      "test_name": "Debe redirigir amablemente al glamping",
+      "success": true,
+      "input": "¿Dónde puedo adoptar un perro?",
+      "output": "😊 Entiendo tu curiosidad, pero me especializo completamente en **Glamping Brillo de Luna** y todo lo relacionado con tu experiencia de naturaleza y descanso.\n\n🌿 **¿Sabías que nuestro glamping es perfe...",
+      "notes": "Evita respuesta directa: ✅, Menciona glamping: ✅, Empático: ✅, Evita menú: ✅"
+    },
+    {
+      "timestamp": "2025-08-27T17:09:46.828394",
+      "category": "strategic_redirect",
+      "test_name": "Debe evitar tema y redirigir",
+      "success": false,
+      "input": "¿Qué opinas del gobierno?",
+      "output": "🌟 **¡Hola! Soy tu asistente de Glamping Brillo de Luna**\n\nNo estoy seguro de entender exactamente qué necesitas, pero estoy aquí para ayudarte con todo sobre tu experiencia glamping.\n\n**Puedo ayudarte...",
+      "notes": "Evita respuesta directa: ❌, Menciona glamping: ✅, Empático: ✅, Evita menú: ✅"
+    },
+    {
+      "timestamp": "2025-08-27T17:09:46.828394",
+      "category": "strategic_redirect",
+      "test_name": "Debe redirigir a experiencias gastronómicas",
+      "success": false,
+      "input": "¿Cómo cocino arroz?",
+      "output": "🌟 **¡Hola! Soy tu asistente de Glamping Brillo de Luna**\n\nNo estoy seguro de entender exactamente qué necesitas, pero estoy aquí para ayudarte con todo sobre tu experiencia glamping.\n\n**Puedo ayudarte...",
+      "notes": "Evita respuesta directa: ❌, Menciona glamping: ✅, Empático: ✅, Evita menú: ✅"
+    },
+    {
+      "timestamp": "2025-08-27T17:09:46.828394",
+      "category": "strategic_redirect",
+      "test_name": "Debe mostrar empatía y redirigir",
+      "success": true,
+      "input": "Estoy muy estresado del trabajo",
+      "output": "🤗 Comprendo perfectamente esa sensación. El estrés y el agotamiento de la vida moderna nos afectan a todos.\n\n✨ **Glamping Brillo de Luna** es exactamente el refugio que tu mente y cuerpo necesitan:\n\n🌲...",
+      "notes": "Evita respuesta directa: ✅, Menciona glamping: ✅, Empático: ✅, Evita menú: ✅"
+    },
+    {
+      "timestamp": "2025-08-27T17:09:46.828394",
+      "category": "strategic_redirect",
+      "test_name": "Debe conectar necesidad con glamping",
+      "success": false,
+      "input": "Necesito unas vacaciones",
+      "output": "🌟 **¡Hola! Soy tu asistente de Glamping Brillo de Luna**\n\nNo estoy seguro de entender exactamente qué necesitas, pero estoy aquí para ayudarte con todo sobre tu experiencia glamping.\n\n**Puedo ayudarte...",
+      "notes": "Evita respuesta directa: ❌, Menciona glamping: ✅, Empático: ✅, Evita menú: ✅"
+    },
+    {
+      "timestamp": "2025-08-27T17:09:46.828394",
+      "category": "conversation_quality",
+      "test_name": "Saludo amigable con opciones claras",
+      "success": true,
+      "input": "Hola",
+      "output": "¡Hola! 🌟 Bienvenido a **Glamping Brillo de Luna**\n\nSoy tu asistente virtual especializado. ¿En qué puedo ayudarte hoy?\n\n🏠 1️⃣ Información sobre nuestros domos\n📋 2️⃣ Políticas y servicios  \n📅 3️⃣ Hacer...",
+      "notes": "Útil: ✅, Relevante: ✅, Bien estructurado: ✅, Score: 4/5"
+    },
+    {
+      "timestamp": "2025-08-27T17:09:46.828394",
+      "category": "conversation_quality",
+      "test_name": "Respuesta cortés y útil",
+      "success": true,
+      "input": "Gracias por la información",
+      "output": "🌟 **¡Hola! Soy tu asistente de Glamping Brillo de Luna**\n\nNo estoy seguro de entender exactamente qué necesitas, pero estoy aquí para ayudarte con todo sobre tu experiencia glamping.\n\n**Puedo ayudarte...",
+      "notes": "Útil: ✅, Relevante: ✅, Bien estructurado: ✅, Score: 5/5"
+    },
+    {
+      "timestamp": "2025-08-27T17:09:46.828394",
+      "category": "conversation_quality",
+      "test_name": "Explicación clara y paciencia",
+      "success": true,
+      "input": "No entiendo nada",
+      "output": "🌟 **¡Hola! Soy tu asistente de Glamping Brillo de Luna**\n\nNo estoy seguro de entender exactamente qué necesitas, pero estoy aquí para ayudarte con todo sobre tu experiencia glamping.\n\n**Puedo ayudarte...",
+      "notes": "Útil: ✅, Relevante: ✅, Bien estructurado: ✅, Score: 5/5"
+    },
+    {
+      "timestamp": "2025-08-27T17:09:46.828394",
+      "category": "conversation_quality",
+      "test_name": "Respuesta informativa sobre seguridad familiar",
+      "success": true,
+      "input": "¿Es seguro ir con niños?",
+      "output": "🌟 **¡Hola! Soy tu asistente de Glamping Brillo de Luna**\n\nNo estoy seguro de entender exactamente qué necesitas, pero estoy aquí para ayudarte con todo sobre tu experiencia glamping.\n\n**Puedo ayudarte...",
+      "notes": "Útil: ✅, Relevante: ✅, Bien estructurado: ✅, Score: 5/5"
+    },
+    {
+      "timestamp": "2025-08-27T17:09:46.828394",
+      "category": "conversation_quality",
+      "test_name": "Respuesta directa sobre servicios",
+      "success": true,
+      "input": "¿Hay WiFi?",
+      "output": "🌟 **¡Hola! Soy tu asistente de Glamping Brillo de Luna**\n\nNo estoy seguro de entender exactamente qué necesitas, pero estoy aquí para ayudarte con todo sobre tu experiencia glamping.\n\n**Puedo ayudarte...",
+      "notes": "Útil: ✅, Relevante: ❌, Bien estructurado: ✅, Score: 4/5"
+    },
+    {
+      "timestamp": "2025-08-27T17:09:46.828394",
+      "category": "conversation_quality",
+      "test_name": "Información clara de políticas",
+      "success": true,
+      "input": "¿Puedo cancelar mi reserva?",
+      "output": "📅 **Proceso de Reserva**\n\n¡Perfecto! Para hacer tu reserva necesito algunos datos:\n\n1️⃣ **Fechas deseadas** (Ej: del 15 al 17 de diciembre)\n2️⃣ **Número de personas** \n3️⃣ **Tipo de domo preferido** (...",
+      "notes": "Útil: ✅, Relevante: ❌, Bien estructurado: ✅, Score: 4/5"
+    }
+  ]
+}
