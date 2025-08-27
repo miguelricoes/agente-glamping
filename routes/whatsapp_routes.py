@@ -531,7 +531,35 @@ Responde de manera completa, útil y con la calidez característica de la hospit
                 resp.message(response)
             return str(resp)
 
-        # 4.5. Detección específica para nombres de domos (PREVIENE ERROR 429)
+        # 4.5. PROCESAMIENTO DE RESERVAS (FIX 3: PRIORIDAD MÁXIMA)
+        # Mover ANTES de detección de domos para evitar interceptación
+        
+        # Handle reservation flow initiation
+        if user_state["current_flow"] == "none" and detect_reservation_intent(incoming_msg, button_payload):
+            response = initiate_reservation_flow(user_state, memory, save_user_memory, from_number)
+            resp.message(response)
+            return str(resp)
+        
+        # Process reservation step 1 (data collection) - MÁXIMA PRIORIDAD
+        if user_state["current_flow"] == "reserva" and user_state["reserva_step"] == 1:
+            resp.message("🔄 Procesando tu solicitud de reserva, por favor espera un momento...")
+            response = process_reservation_step_1(
+                incoming_msg, user_state, memory, save_user_memory, from_number,
+                parse_reservation_details, validate_and_process_reservation_data, calcular_precio_reserva
+            )
+            resp.message(response)
+            return str(resp)
+
+        # Process reservation step 2 (confirmation)
+        if user_state["current_flow"] == "reserva" and user_state["reserva_step"] == 2:
+            response = process_reservation_step_2(
+                incoming_msg, user_state, memory, save_user_memory, from_number,
+                db, Reserva, calcular_precio_reserva, save_reservation_to_pinecone
+            )
+            resp.message(response)
+            return str(resp)
+
+        # 4.6. Detección específica para nombres de domos (PREVIENE ERROR 429)
         # SOLO cuando se pregunta específicamente por un domo
         domo_names = ['antares', 'polaris', 'sirius', 'centaury', 'centauro']
         specific_domo_queries = [
@@ -573,7 +601,7 @@ Responde de manera completa, útil y con la calidez característica de la hospit
                        extra={"user_id": from_number, "phase": "dome_direct"})
             return str(resp)
 
-        # 4.6. SISTEMA DE FALLBACKS ESPECÍFICOS (SIN LLM) - FUNCIÓN MOVIDA FUERA DEL SCOPE
+        # 4.7. SISTEMA DE FALLBACKS ESPECÍFICOS (SIN LLM) - FUNCIÓN MOVIDA FUERA DEL SCOPE
 
         # 5. Handle availability request
         handled, response = handle_availability_request_unified(
@@ -584,30 +612,7 @@ Responde de manera completa, útil y con la calidez característica de la hospit
             resp.message(response)
             return str(resp)
 
-        # 5. Handle reservation flow
-        if user_state["current_flow"] == "none" and detect_reservation_intent(incoming_msg, button_payload):
-            response = initiate_reservation_flow(user_state, memory, save_user_memory, from_number)
-            resp.message(response)
-            return str(resp)
-        
-        # 6. Process reservation step 1 (data collection)
-        if user_state["current_flow"] == "reserva" and user_state["reserva_step"] == 1:
-            resp.message("🔄 Procesando tu solicitud de reserva, por favor espera un momento...")
-            response = process_reservation_step_1(
-                incoming_msg, user_state, memory, save_user_memory, from_number,
-                parse_reservation_details, validate_and_process_reservation_data, calcular_precio_reserva
-            )
-            resp.message(response)
-            return str(resp)
-
-        # 7. Process reservation step 2 (confirmation)
-        if user_state["current_flow"] == "reserva" and user_state["reserva_step"] == 2:
-            response = process_reservation_step_2(
-                incoming_msg, user_state, memory, save_user_memory, from_number,
-                db, Reserva, calcular_precio_reserva, save_reservation_to_pinecone
-            )
-            resp.message(response)
-            return str(resp)
+        # 6. RESERVAS YA PROCESADAS ARRIBA (FIX 3: Movidas a prioridad máxima)
 
         # 8. Handle website link requests (Variable 1 implementation)
         conversation_handlers = resolver.get_service('conversation_handlers')
