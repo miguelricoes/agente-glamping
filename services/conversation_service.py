@@ -506,7 +506,10 @@ def handle_cancellation_gracefully(user_message: str, user_state: dict, memory,
     if current_flow == "availability":
         response = """✅ **Consulta de disponibilidad cancelada**
 
-🏠 ¿Te gustaría explorar algo más?
+🏠 **Explora más opciones:**
+• Escribe "domos" para ver alojamientos
+• Escribe "servicios" para actividades  
+• Escribe "menú" para opciones principales
 
 **Puedo ayudarte con:**
 • 🏠 **Información de domos** - Características y precios
@@ -1339,7 +1342,7 @@ def get_domos_information(qa_chains: dict = None) -> str:
 
 {domos_info}
 
-💡 **¿Te interesa algo específico?**
+💡 **Opciones disponibles:**
 • Escribe "disponibilidad" para consultar fechas
 • Escribe "reservar" para hacer una reserva
 • Escribe "fotos" para ver imágenes
@@ -1375,7 +1378,7 @@ def get_servicios_information(qa_chains: dict = None) -> str:
 
 {servicios_info}
 
-💡 **¿Te interesa algo específico?**
+💡 **Opciones disponibles:**
 • Escribe "precios" para ver tarifas completas
 • Escribe "reservar" para incluir servicios en tu estadía
 • Pregúntame sobre actividades específicas
@@ -1440,7 +1443,8 @@ def get_precios_information(qa_chains: dict = None) -> str:
 • Cena romántica: $120.000/pareja
 • Actividades desde: $20.000/persona
 
-📅 **¿Quieres consultar disponibilidad para fechas específicas?**
+📅 **Para consultar disponibilidad:**
+• Escribe "disponibilidad" con tu fecha preferida
 Escribe "disponibilidad" y te ayudo 😊"""
 
 def get_reserva_information() -> str:
@@ -1464,7 +1468,7 @@ Para hacer tu reserva necesito:
 • Efectivo
 • Tarjeta de crédito/débito
 
-📞 **¿Quieres iniciar tu reserva?**
+📞 **Para reservar:**
 • Escribe "quiero hacer una reserva"
 • O dame las fechas que te interesan
 
@@ -1582,7 +1586,7 @@ Responde de manera clara, útil y empática como el asistente de Glamping Brillo
 
 💡 **Intenta reformular tu pregunta de manera más específica:**
 • ¿Qué información necesitas sobre los domos?
-• ¿Quieres saber sobre precios y disponibilidad?
+• Escribe "precios" o "disponibilidad" para más información
 • ¿Necesitas ayuda con una reserva?
 
 🌟 ¡Estoy aquí para ayudarte!"""
@@ -2372,7 +2376,8 @@ def generate_template_recommendation(user_input: str, qa_chains: dict = None) ->
 📞 **CONTACTO DIRECTO:**
 WhatsApp: +57 305 461 4926
 
-💬 **¿Te interesa conocer disponibilidad para fechas específicas?**
+💬 **Para consultar fechas:**
+• Escribe "disponibilidad" seguido de tu fecha preferida
 
 ¡Estoy aquí para ayudarte a planificar tu experiencia perfecta! 🌙✨"""
     

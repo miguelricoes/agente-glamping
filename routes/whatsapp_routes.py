@@ -915,7 +915,7 @@ def generate_simple_menu_response(menu_option):
 
 🏔️ Ubicados en las montañas de Boyacá con vistas espectaculares.
 
-¿Te interesa alguno en particular?""",
+Escribe el nombre del domo para más información.""",
 
         'servicios': """✨ **SERVICIOS INCLUIDOS**
 
@@ -1093,7 +1093,7 @@ def generate_simple_domo_response(message: str) -> str:
 • **+$100.000 COP** por persona adicional
 • Incluye: desayuno, WiFi, parqueadero, BBQ y fogata
 
-¿Te interesa conocer disponibilidad para fechas específicas?"""
+Escribe "disponibilidad" con tu fecha preferida."""
 
     elif 'antares' in message_clean:
         return """🌟 **DOMO ANTARES** - Nido de Amor
@@ -1116,7 +1116,7 @@ def generate_simple_domo_response(message: str) -> str:
 • **$650.000 COP por noche** (por pareja)
 • Incluye: desayuno, WiFi, parqueadero, BBQ y fogata
 
-¿Te interesa reservar este romántico refugio?"""
+Escribe "reservar" para este romántico refugio."""
 
     elif 'sirius' in message_clean:
         return """✨ **DOMO SIRIUS** - Elegancia Sencilla
@@ -1136,7 +1136,7 @@ def generate_simple_domo_response(message: str) -> str:
 • **$450.000 COP por noche** (por pareja)
 • Incluye: desayuno, WiFi, parqueadero, BBQ y fogata
 
-¿Te interesa este acogedor refugio natural?"""
+Escribe "reservar" para este acogedor refugio natural."""
 
     elif 'centaury' in message_clean or 'centauro' in message_clean:
         return """💫 **DOMO CENTAURY** - Tranquilidad Natural
@@ -1157,7 +1157,7 @@ def generate_simple_domo_response(message: str) -> str:
 • **$450.000 COP por noche** (por pareja)
 • Incluye: desayuno, WiFi, parqueadero, BBQ y fogata
 
-¿Te interesa este tranquilo refugio natural?"""
+Escribe "reservar" para este tranquilo refugio natural."""
 
     else:
         # Respuesta general si menciona varios domos

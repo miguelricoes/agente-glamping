@@ -48,7 +48,7 @@ Mantén este tono en todas las respuestas."""
             # Agregar calidez y personalidad según el contexto
             if "domo" in context.lower():
                 prefix = "🌟 "
-                suffix = " ¿Te gustaría conocer más detalles de algún domo en particular?"
+                suffix = " Escribe el nombre del domo para conocer más detalles específicos."
             elif "precio" in context.lower():
                 prefix = "💫 "
                 suffix = " ¡Nuestras tarifas incluyen una experiencia completa bajo las estrellas!"

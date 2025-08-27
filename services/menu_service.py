@@ -173,16 +173,11 @@ class MenuService:
 💰 **PRECIOS Y TARIFAS:**
 {domos_precios}
 
-❓ **¿Te gustaría saber algo más específico sobre nuestros domos?**
-
-📋 Puedo contarte sobre:
-• Un domo en particular (Antares, Polaris, Sirius, Centaury)
-• Características detalladas 
-• Servicios incluidos
-• Capacidad y ubicación
-• Ver fotos e imágenes
-
-💬 Responde **"Sí"** si quieres más información específica o **"No"** si necesitas ayuda con otra cosa."""
+📋 **Para más información específica:**
+• Escribe el nombre del domo (Antares, Polaris, Sirius, Centaury)
+• Escribe "disponibilidad" para consultar fechas
+• Escribe "reservar" para hacer una reserva
+• Escribe "menú" para volver al menú principal"""
             
             logger.info("Información de domos proporcionada con seguimiento", 
                        extra={"component": "menu_service", "option": "1"})
@@ -222,7 +217,10 @@ class MenuService:
 • **Reservas de servicios** - Cómo contratar servicios adicionales
 • **Recomendaciones** - Qué actividades son más populares
 
-💬 Responde **"Sí"** si quieres información más específica o **"No"** si necesitas ayuda con otra cosa."""
+📋 **Para más información:**
+• Escribe el nombre del domo (Antares, Polaris, Sirius, Centaury)
+• Escribe "disponibilidad" para consultar fechas
+• Escribe "menú" para volver al menú principal"""
             
             logger.info("Información de servicios combinados proporcionada", 
                        extra={"component": "menu_service", "option": "4"})
@@ -574,9 +572,10 @@ Para consultar disponibilidad necesito algunos datos:
 💰 **Precios desde:** $150.000 por noche
 📋 **Incluye:** Desayuno, WiFi, parqueadero
 
-❓ **¿Deseas reservar estas fechas?**
-
-💬 Responde **"Sí"** para iniciar el proceso de reserva o **"No"** si necesitas consultar algo más."""
+📅 **Para continuar:**
+• Escribe "reservar" para iniciar el proceso de reserva
+• Escribe "otras fechas" para consultar disponibilidad diferente
+• Escribe "menú" para volver al menú principal"""
             
             else:
                 # Fechas NO DISPONIBLES - Preguntar por otras fechas
@@ -591,16 +590,17 @@ Para consultar disponibilidad necesito algunos datos:
 
 🗓️ **Estas fechas ya están reservadas o no disponibles**
 
-💡 **¿Te gustaría consultar otras fechas?**
+📅 **Opciones disponibles:**
 
 ✨ **Sugerencias:**
 • Fechas una semana antes o después
 • Fechas en días laborales (mejor precio)
 • Estadías más cortas o largas
 
-❓ **¿Quieres que te ayude a encontrar fechas alternativas?**
-
-💬 Responde **"Sí"** para buscar otras fechas o **"No"** si prefieres intentar más tarde."""
+📅 **Para continuar:**
+• Escribe "otras fechas" o "alternativas" para buscar disponibilidad diferente
+• Escribe "disponibilidad" para consultar otro período
+• Escribe "menú" para volver al menú principal"""
                 
         except Exception as e:
             logger.error(f"Error procesando consulta de disponibilidad: {e}", 
@@ -1651,7 +1651,7 @@ O escribe "menú" para volver al menú principal 😊"""
 
 {characteristics}
 
-💡 **¿Te interesa algún domo en particular?**
+🏕️ **Explora nuestros domos:**
 • Escribe "Antares", "Polaris", "Sirius" o "Centaury" para información específica
 • O pregúntame sobre disponibilidad, precios o reservas 😊"""
     
@@ -1668,7 +1668,9 @@ O escribe "menú" para volver al menú principal 😊"""
 
 {prices}
 
-📅 **¿Quieres consultar disponibilidad para fechas específicas?**
+📅 **Para consultar disponibilidad:**
+• Escribe "disponibilidad" seguido de tu fecha
+• Ejemplo: "disponibilidad 15 diciembre"
 • Escribe "disponibilidad" 
 • O dime las fechas que te interesan
 • También puedo ayudarte con el proceso de reserva 😊"""
@@ -1702,7 +1704,7 @@ Puedes ver todas las fotos en nuestros enlaces oficiales:
 
 {services}
 
-💡 **¿Te interesan servicios adicionales?**
+🎯 **Servicios adicionales disponibles:**
 • Escribe "actividades" para servicios extra
 • Escribe "reservar" para hacer una reserva
 • O pregúntame cualquier otra cosa 😊"""
@@ -1720,7 +1722,9 @@ Puedes ver todas las fotos en nuestros enlaces oficiales:
 
 {capacity}
 
-📅 **¿Quieres verificar disponibilidad para tu grupo?**
+📅 **Para verificar disponibilidad:**
+• Escribe "disponibilidad" con tu fecha preferida
+• Ejemplo: "disponibilidad 20 enero"
 • Escribe "disponibilidad" y te ayudo
 • O dime cuántas personas son y las fechas que te interesan 😊"""
     
@@ -1901,7 +1905,7 @@ Puedes ver todas las fotos en nuestros enlaces oficiales:
 
 {included_services}
 
-💡 **¿Te interesa algún servicio en particular?**
+🎯 **Servicios destacados:**
 • Escribe "servicios externos" para ver actividades adicionales
 • Escribe "reservar" para hacer una reserva
 • O pregúntame cualquier otra cosa sobre Brillo de Luna 😊"""
@@ -1919,7 +1923,9 @@ Puedes ver todas las fotos en nuestros enlaces oficiales:
 
 {external_services}
 
-📝 **¿Quieres reservar alguna actividad?**
+📝 **Para reservar actividades:**
+• Escribe el nombre de la actividad que te interesa
+• Ejemplo: "yoga" o "senderismo"
 • Escribe "reservar" para incluir servicios en tu estadía
 • Escribe "precios" para más detalles de tarifas
 • O pregúntame sobre disponibilidad y otros servicios 😊"""
@@ -1965,7 +1971,9 @@ Puedes ver todas las fotos en nuestros enlaces oficiales:
 
 {prices}
 
-📅 **¿Quieres incluir servicios en tu reserva?**
+📅 **Para incluir servicios:**
+• Escribe "servicios" para ver opciones completas
+• Menciona el servicio específico que te interesa
 • Escribe "reservar" para hacer una reserva completa
 • Escribe "disponibilidad" para ver fechas
 • O pregúntame sobre domos y alojamiento 😊"""
@@ -1983,7 +1991,7 @@ Puedes ver todas las fotos en nuestros enlaces oficiales:
 
 {characteristics}
 
-💡 **¿Te interesa algún servicio específico?**
+💡 **Servicios populares:**
 • Escribe el nombre del servicio para más detalles
 • Escribe "precios" para información de tarifas
 • O pregúntame sobre reservas y disponibilidad 😊"""
@@ -2006,7 +2014,9 @@ Puedes ver todas las fotos en nuestros enlaces oficiales:
 • Escribe "disponibilidad" para ver fechas
 • Pregúntame sobre servicios específicos
 
-¿Quieres iniciar tu reserva ahora? 😊"""
+📞 **Para iniciar tu reserva:**
+• Escribe "reservar" para comenzar el proceso
+• Escribe "contacto" para hablar con un asesor 😊"""
     
     def _handle_general_servicios_query(self, user_message: str) -> str:
         """Maneja consultas generales usando IA"""
@@ -2068,7 +2078,7 @@ Puedes ver todas las fotos en nuestros enlaces oficiales:
 • Reservas con 24 horas de anticipación
 • Descuentos para huéspedes del glamping
 
-📝 **¿Te interesa alguna actividad específica?**
+📝 **Actividades destacadas:**
 • Pregúntame sobre horarios y disponibilidad
 • Puedo ayudarte a incluirlas en tu reserva
 • También manejo información sobre precios
@@ -2295,7 +2305,7 @@ Puedes ver todas las fotos en nuestros enlaces oficiales:
 • Acceso a todas las instalaciones
 • Kit de bienvenida
 
-❓ **¿Te interesa algún domo específico?**
+🏕️ **Domos disponibles:**
 
 📋 Puedo ayudarte con:
 • Disponibilidad para fechas específicas

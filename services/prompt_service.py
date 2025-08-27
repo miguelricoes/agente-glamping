@@ -204,7 +204,7 @@ EJEMPLO DE ESTRUCTURA:
 
 Si te interesa [conexión con glamping], te puedo contar sobre [aspecto relevante del glamping].
 
-¿Te gustaría conocer más sobre nuestra experiencia de glamping en Guatavita?"
+Escribe "información" o "menú" para conocer más sobre nuestra experiencia de glamping en Guatavita."
 
 Responde siguiendo esta estructura pero adaptada a la consulta específica."""
 
