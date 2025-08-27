@@ -556,7 +556,15 @@ Responde de manera completa, útil y con la calidez característica de la hospit
             'hola', 'servicios', 'qué ofrecen', 'que ofrecen', 'actividades', 'pasear', 'hacer'
         ])
 
-        if is_domo_specific and not is_general_query:
+        # Detectar si es parte de datos de reserva (FIX 2: Detección más robusta)
+        is_reservation_data = (
+            'correo' in incoming_lower or 'email' in incoming_lower or
+            'huéspedes' in incoming_lower or 'personas' in incoming_lower or
+            'entrada' in incoming_lower or 'salida' in incoming_lower or
+            'pago' in incoming_lower
+        )
+
+        if is_domo_specific and not is_general_query and not is_reservation_data and user_state.get("current_flow") == "none":
             # Usar respuesta directa sin IA
             domo_response = generate_simple_domo_response(incoming_msg)
             enhanced_response = personality.apply_personality_to_response(domo_response, "information")
