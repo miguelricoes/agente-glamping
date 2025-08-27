@@ -1598,7 +1598,18 @@ Responde de manera clara, útil y empática como el asistente de Glamping Brillo
 💬 ¿En qué puedo ayudarte específicamente?"""
         
         else:
-            # General error template
+            # NUEVO: Intentar fallback específico antes de respuesta genérica
+            try:
+                from services.fallback_service import detect_topic_and_provide_fallback
+                handled, fallback_response, topic = detect_topic_and_provide_fallback(user_message)
+
+                if handled and fallback_response:
+                    logger.info(f"Fallback topic used in process_simple_response_with_prompt: {topic}")
+                    return fallback_response
+            except Exception as fallback_error:
+                logger.warning(f"Fallback failed in process_simple_response_with_prompt: {fallback_error}")
+
+            # General error template (fallback final)
             return """🛠️ Tuve un inconveniente técnico temporal.
 
 🏕️ **Glamping Brillo de Luna está aquí para ti:**
@@ -1657,8 +1668,25 @@ def process_ai_agent(user_message: str, memory, tools, initialize_agent_safe_fun
                     from services.prompt_service import get_prompt_service
                     prompt_service = get_prompt_service()
                     
-                    # Reset user state on critical errors
+                    # NUEVO: MANEJAR ESTADO DE CONVERSACIÓN ANTES DE RESETEAR
                     if user_state and ("rate limit" in run_error.lower() or "quota" in run_error.lower() or "429" in run_error):
+                        # Si está esperando sub-opción de información general, procesarla directamente
+                        if (user_state.get("waiting_for_informacion_suboption") and
+                            user_state.get("current_flow") == "informacion_general"):
+                            try:
+                                from services.menu_service import create_menu_service
+                                menu_service = create_menu_service({}, None)  # qa_chains y validation_service pueden ser None para fallback
+                                response = menu_service.handle_informacion_general_suboptions(user_message, user_state)
+
+                                logger.info(f"Information suboption processed during 429 error in conversation_service: {user_message[:30]}",
+                                           extra={"user_id": user_id, "flow": "informacion_general"})
+                                return response
+
+                            except Exception as suboption_error:
+                                logger.error(f"Error procesando sub-opción durante 429 en conversation_service: {suboption_error}")
+                                # Continuar con lógica de reset si falla
+
+                        # Solo resetear estado si NO pudimos procesar la sub-opción
                         reset_user_state_on_error(user_state, user_id)
                     
                     # Generate dynamic error responses using PromptService
