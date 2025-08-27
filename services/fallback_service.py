@@ -48,10 +48,68 @@ Guatavita, Cundinamarca, Colombia
         logger.info(f"Topic fallback triggered: ubicacion", extra={"topic": "ubicacion"})
         return True, response, "ubicacion"
 
-    # CONCEPTOS Y FILOSOFÍA DEL GLAMPING
+    # POLÍTICAS - EVALUADAS PRIMERO PARA EVITAR CONFLICTOS
+    politicas_patterns = [
+        'politicas', 'políticas', 'normas', 'reglas', 'cancelacion', 'cancelación',
+        'reembolso', 'devolucion', 'devolución', 'términos', 'terminos',
+        'condiciones', 'policy', 'policies',
+        # Variantes adicionales
+        'politica', 'política', 'regla', 'norma', 'condicion', 'condición',
+        'cancelar', 'devolver', 'reglamento', 'reglamentos'
+    ]
+
+    if any(pattern in message_lower for pattern in politicas_patterns):
+        response = """📋 **POLÍTICAS BRILLO DE LUNA GLAMPING**
+
+💳 **RESERVAS Y PAGOS:**
+• Anticipo: 50% para confirmar reserva
+• Saldo: Al momento del check-in
+• Métodos: Efectivo, transferencia, tarjetas
+• Confirmación: WhatsApp o email
+
+🕐 **CHECK-IN / CHECK-OUT:**
+• Check-in: 3:00 PM - 8:00 PM
+• Check-out: Hasta las 12:00 PM
+• Check-in tardío: Coordinar previamente
+• Depósito de garantía: $100.000 COP
+
+❌ **CANCELACIONES:**
+• **+48 horas:** Reembolso 100%
+• **24-48 horas:** Reembolso 50%
+• **-24 horas:** Sin reembolso
+• Emergencias médicas: Caso por caso
+
+🚫 **POLÍTICAS GENERALES:**
+• **Mascotas:** No permitidas (alergias otros huéspedes)
+• **Fumar:** Prohibido en domos (permitido en terrazas)
+• **Ruido:** Respeto después de 10:00 PM
+• **Capacidad:** Máximo según domo elegido
+• **Fiestas:** No permitidas (ambiente tranquilo)
+
+🛡️ **RESPONSABILIDADES:**
+• Huésped responde por daños
+• Objetos de valor: Bajo responsabilidad del huésped
+• Seguro médico: Recomendado
+• Menores: Bajo supervisión adulta
+
+🌿 **COMPROMISO AMBIENTAL:**
+• Separación de residuos obligatoria
+• Uso consciente del agua
+• Respeto por flora y fauna
+• Prohibido cortar plantas o molestar animales
+
+📱 **COMUNICACIÓN:**
+• WhatsApp: +57 305 461 4926
+• Email: glampingbrillodelunaguatavita@gmail.com
+• Respuesta: Máximo 2 horas"""
+
+        logger.info(f"Topic fallback triggered: politicas", extra={"topic": "politicas"})
+        return True, response, "politicas"
+
+    # CONCEPTOS Y FILOSOFÍA DEL GLAMPING  
     concepto_patterns = [
         'concepto', 'conceptos', 'que es glamping', 'qué es glamping',
-        'filosofia', 'filosofía', 'sobre el glamping', 'brillo de luna',
+        'filosofia', 'filosofía', 'sobre el glamping',
         'historia', 'mision', 'misión', 'vision', 'visión', 'nosotros'
     ]
 
@@ -183,63 +241,7 @@ Contáctanos y personalizamos tu experiencia."""
         logger.info(f"Topic fallback triggered: actividades", extra={"topic": "actividades"})
         return True, response, "actividades"
 
-    # POLÍTICAS
-    politicas_patterns = [
-        'politicas', 'políticas', 'normas', 'reglas', 'cancelacion', 'cancelación',
-        'reembolso', 'devolucion', 'devolución', 'términos', 'terminos',
-        'condiciones', 'policy', 'policies',
-        # Variantes adicionales
-        'politica', 'política', 'regla', 'norma', 'condicion', 'condición',
-        'cancelar', 'devolver', 'reglamento', 'reglamentos'
-    ]
-
-    if any(pattern in message_lower for pattern in politicas_patterns):
-        response = """📋 **POLÍTICAS BRILLO DE LUNA GLAMPING**
-
-💳 **RESERVAS Y PAGOS:**
-• Anticipo: 50% para confirmar reserva
-• Saldo: Al momento del check-in
-• Métodos: Efectivo, transferencia, tarjetas
-• Confirmación: WhatsApp o email
-
-🕐 **CHECK-IN / CHECK-OUT:**
-• Check-in: 3:00 PM - 8:00 PM
-• Check-out: Hasta las 12:00 PM
-• Check-in tardío: Coordinar previamente
-• Depósito de garantía: $100.000 COP
-
-❌ **CANCELACIONES:**
-• **+48 horas:** Reembolso 100%
-• **24-48 horas:** Reembolso 50%
-• **-24 horas:** Sin reembolso
-• Emergencias médicas: Caso por caso
-
-🚫 **POLÍTICAS GENERALES:**
-• **Mascotas:** No permitidas (alergias otros huéspedes)
-• **Fumar:** Prohibido en domos (permitido en terrazas)
-• **Ruido:** Respeto después de 10:00 PM
-• **Capacidad:** Máximo según domo elegido
-• **Fiestas:** No permitidas (ambiente tranquilo)
-
-🛡️ **RESPONSABILIDADES:**
-• Huésped responde por daños
-• Objetos de valor: Bajo responsabilidad del huésped
-• Seguro médico: Recomendado
-• Menores: Bajo supervisión adulta
-
-🌿 **COMPROMISO AMBIENTAL:**
-• Separación de residuos obligatoria
-• Uso consciente del agua
-• Respeto por flora y fauna
-• Prohibido cortar plantas o molestar animales
-
-📱 **COMUNICACIÓN:**
-• WhatsApp: +57 305 461 4926
-• Email: glampingbrillodelunaguatavita@gmail.com
-• Respuesta: Máximo 2 horas"""
-
-        logger.info(f"Topic fallback triggered: politicas", extra={"topic": "politicas"})
-        return True, response, "politicas"
+    # POLÍTICAS - ELIMINADA DUPLICACIÓN (YA MOVIDA ARRIBA)
 
     logger.debug(f"No topic fallback found for message: {message[:50]}")
     return False, "", ""
