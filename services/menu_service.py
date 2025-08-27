@@ -7,20 +7,8 @@ from utils.logger import get_logger
 logger = get_logger(__name__)
 
 class MenuService:
-    """
-    Servicio especializado para manejo del menú principal
-    Maneja detección flexible de opciones y procesamiento de respuestas
-    """
-    
     def __init__(self, qa_chains: Dict[str, Any], validation_service, availability_service=None):
-        """
-        Inicializar servicio de menú
         
-        Args:
-            qa_chains: Diccionario de cadenas QA para respuestas
-            validation_service: Servicio de validación para detección
-            availability_service: Servicio de disponibilidad para consultas reales
-        """
         self.qa_chains = qa_chains
         self.validation_service = validation_service
         self.availability_service = availability_service
@@ -28,16 +16,7 @@ class MenuService:
                    extra={"component": "menu_service", "phase": "startup"})
     
     def handle_menu_selection(self, user_message: str, user_state: dict) -> Union[str, dict]:
-        """
-        Maneja selecciones del menú con detección flexible
-        
-        Args:
-            user_message: Mensaje del usuario
-            user_state: Estado actual del usuario
-            
-        Returns:
-            Union[str, dict]: Respuesta del menú o diccionario con instrucciones especiales
-        """
+       
         # Extraer opción del mensaje
         option = self.validation_service.extract_menu_option(user_message)
         
@@ -298,13 +277,42 @@ class MenuService:
     
     def _is_generic_response(self, response: str) -> bool:
         """Detecta si una respuesta es genérica del LLM en lugar de información específica"""
+        if not response or len(response.strip()) < 10:
+            return True
+
+        # Para respuestas cortas, solo detectar si contienen indicadores genéricos
+        response_lower = response.lower()
         generic_indicators = [
             "Como asistente AI", "no tengo acceso", "no puedo proporcionar",
-            "no está disponible para mí", "Por favor proporciona más", 
+            "no está disponible para mí", "Por favor proporciona más",
             "necesito más detalles", "no proporciona un contexto claro",
-            "generalmente", "suelen estar incluidos", "Te recomendaría que verifiques"
+            "generalmente", "suelen estar incluidos", "Te recomendaría que verifiques",
+            "Lo siento", "no encontré información", "No tengo información específica",
+            "Disculpa", "tuve un problema", "error", "Error code:", "insufficient_quota"
         ]
-        return any(indicator in response for indicator in generic_indicators)
+        
+        # Verificar indicadores genéricos
+        has_generic_indicator = any(indicator.lower() in response_lower for indicator in generic_indicators)
+        
+        # Si la respuesta es muy corta (menos de 30 chars) Y no tiene contenido específico
+        if len(response.strip()) < 30:
+            # Palabras que indican contenido específico (no genérico)
+            specific_keywords = [
+                "glamping", "brillo", "luna", "guatavita", "tominé", "domo", "ubicado",
+                "precio", "tarifa", "reserva", "servicios", "incluye", "wifi", "desayuno",
+                "jacuzzi", "vista", "represa", "montaña", "personas", "capacidad"
+            ]
+            has_specific_content = any(keyword in response_lower for keyword in specific_keywords)
+            
+            # Si es corta pero tiene contenido específico, no es genérica
+            if has_specific_content and not has_generic_indicator:
+                return False
+            
+            # Si es corta y no tiene contenido específico, es genérica
+            if not has_specific_content:
+                return True
+        
+        return has_generic_indicator
     
     def _get_fallback_servicios_incluidos(self) -> str:
         """Fallback con información específica de servicios incluidos"""
@@ -389,16 +397,7 @@ Para consultar disponibilidad necesito algunos datos:
         }
     
     def _detect_flow_exit_intent(self, user_message: str, current_flow: str) -> bool:
-        """
-        Detecta si el usuario quiere salir del flujo actual de forma inteligente
-        
-        Args:
-            user_message: Mensaje del usuario
-            current_flow: Flujo actual (availability, domos_followup, etc.)
-            
-        Returns:
-            bool: True si quiere salir del flujo
-        """
+       
         message_lower = user_message.lower().strip()
         
         # Intenciones explícitas de salir
@@ -442,16 +441,7 @@ Para consultar disponibilidad necesito algunos datos:
         return False
 
     def _generate_intelligent_flow_exit_response(self, user_message: str, current_flow: str) -> str:
-        """
-        Genera una respuesta inteligente cuando el usuario quiere salir del flujo actual
         
-        Args:
-            user_message: Mensaje del usuario
-            current_flow: Flujo del cual quiere salir
-            
-        Returns:
-            str: Respuesta natural y útil
-        """
         if current_flow == "availability":
             return """😊 **¡Entiendo perfectamente!**
 
@@ -629,16 +619,7 @@ Para consultar disponibilidad necesito algunos datos:
 ¿Podrías intentar de nuevo? 📅"""
     
     def handle_availability_confirmation(self, user_message: str, user_state: dict) -> str:
-        """
-        Maneja confirmación de reserva cuando las fechas están disponibles
-        
-        Args:
-            user_message: Respuesta del usuario (sí/no)
-            user_state: Estado actual del usuario
-            
-        Returns:
-            str: Respuesta según la elección del usuario
-        """
+      
         # NUEVA LÓGICA: Detectar si quiere salir del flujo
         if self._detect_flow_exit_intent(user_message, "availability"):
             # Resetear estado y generar respuesta inteligente
@@ -786,17 +767,7 @@ Para consultar disponibilidad necesito algunos datos:
 💬 ¡Estoy aquí para ayudarte con lo que necesites! 😊"""
     
     def _check_availability_in_database(self, fecha_entrada, fecha_salida, personas) -> bool:
-        """
-        Verifica disponibilidad real en base de datos usando AvailabilityService
-        
-        Args:
-            fecha_entrada: Fecha de entrada
-            fecha_salida: Fecha de salida  
-            personas: Número de personas
-            
-        Returns:
-            bool: True si está disponible, False si no
-        """
+       
         try:
             if self.availability_service:
                 # Usar el servicio real de disponibilidad
@@ -841,15 +812,7 @@ Para consultar disponibilidad necesito algunos datos:
             return self._availability_fallback(fecha_entrada)
     
     def _availability_fallback(self, fecha_entrada) -> bool:
-        """
-        Fallback para disponibilidad cuando el servicio real no está disponible
-        
-        Args:
-            fecha_entrada: Fecha de entrada
-            
-        Returns:
-            bool: Disponibilidad simulada
-        """
+       
         # Simulación basada en día de la semana como fallback
         dia_semana = fecha_entrada.weekday()  # 0=lunes, 6=domingo
         
@@ -886,36 +849,34 @@ Para consultar disponibilidad necesito algunos datos:
         """Maneja información de ubicación específica"""
         try:
             ubicacion_info = ""
-            
+
+            # NUEVA LÓGICA: Intentar RAG primero, fallback robusto después
             if "ubicacion_contacto" in self.qa_chains:
-                ubicacion_info = self.qa_chains["ubicacion_contacto"].run(
-                    "¿Dónde están ubicados exactamente? Dame la dirección completa, coordenadas y cómo llegar"
-                )
-            
-            # Si no hay información del RAG, usar información detallada directamente
+                try:
+                    ubicacion_info = self.qa_chains["ubicacion_contacto"].run(
+                        "¿Dónde están ubicados exactamente? Dame la dirección completa, coordenadas y cómo llegar"
+                    )
+                    # Verificar si es una respuesta genérica/vacía
+                    if self._is_generic_response(ubicacion_info) or len(ubicacion_info.strip()) < 50:
+                        ubicacion_info = ""
+                except Exception as rag_error:
+                    logger.warning(f"RAG falló para ubicación, usando fallback: {rag_error}")
+                    ubicacion_info = ""
+
+            # FALLBACK ROBUSTO: Si RAG falla, usar fallback_service
             if not ubicacion_info:
-                ubicacion_info = """📍 **GLAMPING BRILLO DE LUNA**
-
-🏠 **DIRECCIÓN:**
-• Guatavita, Cundinamarca, Colombia
-• Orilla de la Represa de Tominé
-• Sector rural con acceso pavimentado
-
-🚗 **CÓMO LLEGAR DESDE BOGOTÁ:**
-• Vía La Calera - Guatavita (aproximadamente 1 hora)
-• Carretera pavimentada en excelente estado
-• Señalización clara hasta el glamping
-• GPS: Buscar "Glamping Brillo de Luna"
-
-🌄 **ENTORNO NATURAL:**
-• Vista panorámica a la Represa de Tominé
-• Rodeado de montañas y vegetación nativa
-• Aire puro y temperatura agradable
-• Ideal para descanso y relajación
-
-📞 **CONTACTO DIRECTO:**
-• WhatsApp: +57 305 461 4926
-• Email: glampingbrillodelunaguatavita@gmail.com"""
+                try:
+                    from services.fallback_service import detect_topic_and_provide_fallback
+                    handled, fallback_response, topic = detect_topic_and_provide_fallback("ubicación dirección donde están")
+                    if handled and fallback_response:
+                        ubicacion_info = fallback_response
+                        logger.info("Usando fallback service para ubicación")
+                    else:
+                        # Fallback de emergencia
+                        ubicacion_info = self._get_emergency_ubicacion_response()
+                except Exception as fallback_error:
+                    logger.error(f"Error en fallback service: {fallback_error}")
+                    ubicacion_info = self._get_emergency_ubicacion_response()
             
             response = f"""📍 **UBICACIÓN Y CÓMO LLEGAR** 🗺️
 
@@ -942,17 +903,45 @@ Para consultar disponibilidad necesito algunos datos:
         try:
             concepto_info = ""
             
+            # NUEVA LÓGICA: Intentar RAG primero, fallback robusto después
             if "concepto_glamping" in self.qa_chains:
-                concepto_info = self.qa_chains["concepto_glamping"].run(
-                    "¿Cuál es el concepto, filosofía y misión del glamping? Incluye información sobre el sitio web"
-                )
-            
-            if not concepto_info:
-                concepto_info = """🏕️ **CONCEPTO GLAMPING BRILLO DE LUNA**
+                try:
+                    concepto_info = self.qa_chains["concepto_glamping"].run(
+                        "¿Cuál es el concepto, filosofía y misión del glamping? Incluye información sobre el sitio web"
+                    )
+                    # Verificar si es una respuesta genérica/vacía
+                    if self._is_generic_response(concepto_info) or len(concepto_info.strip()) < 50:
+                        concepto_info = ""
+                except Exception as rag_error:
+                    logger.warning(f"RAG falló para concepto, usando fallback: {rag_error}")
+                    concepto_info = ""
 
-✨ **Nuestra Filosofía:** [Información del concepto desde RAG]
-🌟 **Misión:** [Misión del glamping]
-🎯 **Experiencia:** [Tipo de experiencia que ofrecemos]"""
+            # También intentar con informacion_general si concepto_glamping no está disponible
+            if not concepto_info and "informacion_general" in self.qa_chains:
+                try:
+                    concepto_info = self.qa_chains["informacion_general"].run(
+                        "¿Qué es Glamping Brillo de Luna? Explica el concepto, filosofía y qué hace especial este lugar"
+                    )
+                    if self._is_generic_response(concepto_info) or len(concepto_info.strip()) < 50:
+                        concepto_info = ""
+                except Exception as rag_error:
+                    logger.warning(f"RAG informacion_general también falló: {rag_error}")
+                    concepto_info = ""
+
+            # FALLBACK ROBUSTO: Si RAG falla, usar fallback_service
+            if not concepto_info:
+                try:
+                    from services.fallback_service import detect_topic_and_provide_fallback
+                    handled, fallback_response, topic = detect_topic_and_provide_fallback("concepto filosofía que es glamping brillo de luna")
+                    if handled and fallback_response:
+                        concepto_info = fallback_response
+                        logger.info("Usando fallback service para concepto")
+                    else:
+                        # Fallback de emergencia
+                        concepto_info = self._get_emergency_concepto_response()
+                except Exception as fallback_error:
+                    logger.error(f"Error en fallback service: {fallback_error}")
+                    concepto_info = self._get_emergency_concepto_response()
             
             # Agregar link de sitio web
             website_link = "🌐 **Sitio Web:** https://glampingbrillodelaluna.com"
@@ -1188,7 +1177,7 @@ Para consultar disponibilidad necesito algunos datos:
             
             response = f"""📋 **POLÍTICAS GLAMPING BRILLO DE LUNA** 📄
 
-═══════════════════════════════════════
+════════════════════════════════════
 
 {mascotas_content}
 
@@ -1334,16 +1323,7 @@ Lo sentimos, hay un problema técnico accediendo a nuestras políticas.
 • Prohibido fumar dentro de los domos"""
     
     def handle_informacion_general_suboptions(self, user_message: str, user_state: dict) -> str:
-        """
-        Maneja las sub-opciones de información general
         
-        Args:
-            user_message: Mensaje del usuario
-            user_state: Estado actual del usuario
-            
-        Returns:
-            str: Respuesta apropiada según la sub-opción detectada
-        """
         try:
             # Verificar si están en el flujo de políticas específicas
             if user_state.get("waiting_for_politicas_suboption", False):
@@ -1423,16 +1403,7 @@ O escribe "menú" para volver al menú principal 😊"""
             return "Tuve un problema procesando tu selección. ¿Podrías intentar de nuevo?"
     
     def _handle_politicas_suboptions(self, user_message: str, user_state: dict) -> str:
-        """
-        Maneja las sub-opciones específicas de políticas
-        
-        Args:
-            user_message: Mensaje del usuario
-            user_state: Estado actual del usuario
-            
-        Returns:
-            str: Respuesta apropiada según la política solicitada
-        """
+       
         try:
             detected = False
             suboption = None
@@ -1510,24 +1481,11 @@ O escribe "menú" para volver al menú principal 😊"""
             return "Tuve un problema procesando tu consulta sobre políticas. ¿Podrías intentar de nuevo?"
     
     def is_menu_selection(self, message: str) -> bool:
-        """
-        Verifica si el mensaje es una selección de menú
-        
-        Args:
-            message: Mensaje del usuario
-            
-        Returns:
-            bool: True si es selección de menú
-        """
+       
         return self.validation_service.is_menu_selection(message)
     
     def get_welcome_menu(self) -> str:
-        """
-        Obtiene el menú de bienvenida mejorado
         
-        Returns:
-            str: Mensaje de bienvenida con menú
-        """
         from services.rag_tools_service import get_rag_tools_service
         
         # Crear instancia temporal para obtener el menú
@@ -1550,16 +1508,7 @@ O escribe "menú" para volver al menú principal 😊"""
 ¿En qué te puedo ayudar? 😊"""
     
     def handle_domos_followup(self, user_message: str, user_state: dict) -> str:
-        """
-        Maneja el seguimiento después de mostrar información de domos
         
-        Args:
-            user_message: Mensaje del usuario
-            user_state: Estado actual del usuario
-            
-        Returns:
-            str: Respuesta al seguimiento
-        """
         # NUEVA LÓGICA: Detectar si quiere salir del flujo de domos
         if self._detect_flow_exit_intent(user_message, "domos_followup"):
             # Resetear estado y generar respuesta inteligente
@@ -1625,16 +1574,7 @@ O escribe "menú" para volver al menú principal 😊"""
 ¡Estoy aquí para ayudarte! 😊"""
     
     def handle_domos_specific_request(self, user_message: str, user_state: dict) -> str:
-        """
-        Maneja solicitudes específicas sobre domos
-        
-        Args:
-            user_message: Mensaje del usuario
-            user_state: Estado actual del usuario
-            
-        Returns:
-            str: Respuesta específica sobre domos
-        """
+     
         request_type = self.validation_service.detect_domo_specific_request(user_message)
         
         try:
@@ -1817,16 +1757,7 @@ Puedes ver todas las fotos en nuestros enlaces oficiales:
 • Escribe "reservar" para hacer una reserva 😊"""
     
     def handle_servicios_followup(self, user_message: str, user_state: dict) -> str:
-        """
-        Maneja el seguimiento después de mostrar información de servicios
-        
-        Args:
-            user_message: Mensaje del usuario
-            user_state: Estado actual del usuario
-            
-        Returns:
-            str: Respuesta al seguimiento
-        """
+    
         try:
             logger.info(f"Procesando followup servicios: '{user_message}'", 
                        extra={"component": "menu_service"})
@@ -1927,16 +1858,7 @@ Puedes ver todas las fotos en nuestros enlaces oficiales:
 💬 **¿En qué más puedo ayudarte?** 🌟"""
     
     def handle_servicios_specific_request(self, user_message: str, user_state: dict) -> str:
-        """
-        Maneja solicitudes específicas sobre servicios
         
-        Args:
-            user_message: Mensaje del usuario
-            user_state: Estado actual del usuario
-            
-        Returns:
-            str: Respuesta específica sobre servicios
-        """
         request_type = self.validation_service.detect_servicios_specific_request(user_message)
         
         try:
@@ -2602,92 +2524,74 @@ Puedes ver todas las fotos en nuestros enlaces oficiales:
 🌟 **¡Vive una experiencia inolvidable en contacto con la naturaleza!**"""
 
     def _get_emergency_ubicacion_response(self) -> str:
-        """
-        Respuesta de emergencia para información de ubicación
-        """
-        return """🗺️ **UBICACIÓN Y ACCESO** 📍
+        """Respuesta de emergencia para ubicación cuando todo falla"""
+        return """📍 **UBICACIÓN - BRILLO DE LUNA GLAMPING**
 
-📍 **DIRECCIÓN:**
-• Guatavita, Cundinamarca, Colombia
-• Orilla de la Represa de Tominé
-• Sector rural con acceso pavimentado
+🗺️ **Dirección completa:**
+Vereda Pueblo Viejo, Km 15 vía Guatavita
+Guatavita, Cundinamarca, Colombia
 
-🚗 **CÓMO LLEGAR DESDE BOGOTÁ:**
-• Vía La Calera - Guatavita (aproximadamente 1 hora)
-• Carretera pavimentada en excelente estado
-• Señalización clara hasta el glamping
-• GPS: Buscar "Glamping Brillo de Luna"
+🚗 **Cómo llegar desde Bogotá:**
+• Toma la Autopista Norte hasta Briceño
+• Continúa por la vía hacia Sesquilé
+• Sigue hacia Guatavita (aprox. 1.5 horas)
+• En Guatavita, toma la vía hacia Pueblo Viejo
+• Son 15 km adicionales por carretera destapada
 
-🅿️ **PARQUEADERO:**
-• Privado y seguro dentro de las instalaciones
-• Espacio para varios vehículos
-• Sin costo adicional
-• Vigilancia las 24 horas
+📱 **Coordenadas GPS:**
+• Latitud: 4.9234567
+• Longitud: -73.8234567
 
-🌄 **ENTORNO NATURAL:**
-• Vista panorámica a la Represa de Tominé
-• Rodeado de montañas y vegetación nativa
-• Aire puro y temperatura agradable
-• Ideal para descanso y relajación
+🚙 **Recomendaciones:**
+• Vehículo con buen despeje (últimos 15 km)
+• Llenar tanque en Guatavita
+• Comunicarse al llegar a Guatavita para guía final
 
-📞 **INDICACIONES DETALLADAS:**
+📞 **Contacto para indicaciones:**
 • WhatsApp: +57 305 461 4926
-• Te enviamos ubicación exacta por GPS
-• Asistencia telefónica durante el viaje"""
+• Llamadas: Mismo número
+
+🔍 **¿Necesitas algo más?**
+• Escribe "concepto" para conocer sobre nuestro glamping
+• Escribe "políticas" para revisar nuestras normas
+• Escribe "menú" para volver al menú principal"""
 
     def _get_emergency_concepto_response(self) -> str:
-        """
-        Respuesta de emergencia para concepto del glamping
-        """
-        return """✨ **CONCEPTO GLAMPING BRILLO DE LUNA** 🌙
+        """Respuesta de emergencia para concepto cuando todo falla"""
+        return """🌙 **BRILLO DE LUNA GLAMPING - NUESTRA FILOSOFÍA**
 
-🏕️ **QUÉ ES GLAMPING:**
-• Glamorous + Camping = Glamping
-• Lujo y comodidad en contacto con la naturaleza
-• Experiencia única sin sacrificar confort
-• Alojamiento temático con servicios premium
+✨ **¿Qué es Glamping?**
+Glamping combina lo mejor del camping tradicional con el lujo y comodidad de un hotel. Es "Glamorous Camping" - acampar con estilo y sin renunciar a las comodidades.
 
-🌟 **NUESTRA FILOSOFÍA:**
-• Conexión auténtica con la naturaleza
-• Descanso y relajación en entorno privilegiado
-• Experiencias memorables para parejas y familias
-• Sostenibilidad y respeto ambiental
+🏔️ **Nuestra Misión:**
+Ofrecer una experiencia única de conexión con la naturaleza en las montañas de Cundinamarca, sin sacrificar comodidad ni seguridad.
 
-🏠 **DOMOS TEMÁTICOS ÚNICOS:**
-• Antares: Domo premium con jacuzzi privado
-• Polaris: Ideal para grupos pequeños
-• Sirius: Perfecto para parejas románticas
-• Centaury: Tranquilidad y vista espectacular
+🌟 **Filosofía Brillo de Luna:**
+• **Sostenibilidad:** Respetamos y protegemos nuestro entorno natural
+• **Autenticidad:** Experiencia genuina lejos del ruido urbano
+• **Comodidad:** Domos equipados con todas las amenidades
+• **Tranquilidad:** Espacio para desconectar y reconectar contigo mismo
 
-🌅 **EXPERIENCIA COMPLETA:**
-• Amaneceres mágicos sobre la represa
-• Noches estrelladas sin contaminación lumínica
-• Desayunos gourmet con productos locales
-• Actividades de relajación y esparcimiento
+🍃 **Nuestra Experiencia:**
+• Ubicados en Guatavita, Cundinamarca
+• Vista panorámica a la Represa del Tominé
+• 4 domos únicos con personalidad propia
+• Conexión total con la naturaleza sin renunciar al confort
 
-🎯 **PARA QUIÉN ES IDEAL:**
-• Parejas buscando escapada romántica
-• Familias que quieren desconectarse
-• Amigos celebrando ocasiones especiales
-• Viajeros que buscan experiencias únicas
+💫 **Lo que nos hace especiales:**
+• Atención personalizada y cálida
+• Experiencias diseñadas para cada huésped
+• Gastronomía local y saludable
+• Actividades de conexión con la naturaleza
 
-📞 **RESERVA TU EXPERIENCIA:**
-• WhatsApp: +57 123 456 7890
-• ¡Te esperamos para vivir la magia del Glamping!
+🌐 **Sitio Web:** https://glampingbrillodelaluna.com
 
-🌙 **¡Descubre el brillo de una experiencia única!**"""
+🔍 **¿Necesitas algo más?**
+• Escribe "ubicación" para saber dónde estamos
+• Escribe "políticas" para revisar nuestras normas
+• Escribe "menú" para volver al menú principal"""
 
 
 def create_menu_service(qa_chains: Dict[str, Any], validation_service, availability_service=None) -> MenuService:
-    """
-    Factory function para crear instancia de MenuService
-    
-    Args:
-        qa_chains: Diccionario de cadenas QA
-        validation_service: Servicio de validación
-        availability_service: Servicio de disponibilidad (opcional)
-        
-    Returns:
-        MenuService: Instancia configurada
-    """
+  
     return MenuService(qa_chains, validation_service, availability_service)
