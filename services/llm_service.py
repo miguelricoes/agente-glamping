@@ -281,7 +281,8 @@ class LLMService:
         self.qa_chains = {}
         self.tools = []
         self.response_cache = ResponseCache(cache_duration_minutes=10)  # Cache de 10 minutos
-        self.rate_limiter = RateLimiter(max_calls_per_minute=60, max_calls_per_user_per_minute=1)
+        # Rate limiter más flexible para conversaciones naturales
+        self.rate_limiter = RateLimiter(max_calls_per_minute=100, max_calls_per_user_per_minute=8)
         self.throttler = RequestThrottler()
         
         logger.info("LLMService inicializado con cache inteligente, rate limiting y throttling", 
@@ -767,11 +768,26 @@ class LLMService:
                 else:  # Si es mucho tiempo, devolver mensaje
                     return False, "", f"Sistema temporalmente limitado. Intenta en {throttle_wait:.0f} segundos."
             
-            # Verificar rate limiting por usuario
+            # Verificar rate limiting por usuario CON LÓGICA INTELIGENTE
             can_proceed, limit_reason, wait_seconds = self.rate_limiter.can_make_request(user_id)
             if not can_proceed:
                 logger.warning(f"Rate limit exceeded para {user_id}: {limit_reason}", 
                              extra={"component": "llm_service", "user_id": user_id})
+
+                # NUEVA LÓGICA: Si es una consulta de información específica, intentar fallback
+                try:
+                    from services.fallback_service import detect_topic_and_provide_fallback
+                    handled, fallback_response, topic = detect_topic_and_provide_fallback(user_input)
+
+                    if handled and fallback_response:
+                        logger.info(f"Rate limit bypassed using fallback for topic: {topic}",
+                                   extra={"component": "llm_service", "user_id": user_id, "topic": topic})
+                        return True, fallback_response, ""
+
+                except Exception as fallback_error:
+                    logger.error(f"Error en fallback durante rate limit: {fallback_error}")
+
+                # Fallback original si no se pudo usar fallback específico
                 return False, "", f"Has alcanzado el límite de consultas. {limit_reason}. Intenta en {wait_seconds} segundos."
             
             # Registrar la llamada en el rate limiter
