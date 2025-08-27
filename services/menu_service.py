@@ -1000,8 +1000,8 @@ Para consultar disponibilidad necesito algunos datos:
         try:
             politicas_info = ""
             
-            if "politicas_glamping" in self.qa_chains:
-                politicas_info = self.qa_chains["politicas_glamping"].run(
+            if "politicas_completas" in self.qa_chains:
+                politicas_info = self.qa_chains["politicas_completas"].run(
                     "¿Cuáles son las políticas específicas sobre mascotas y animales?"
                 )
             
@@ -1052,8 +1052,8 @@ Para consultar disponibilidad necesito algunos datos:
         try:
             privacidad_info = ""
             
-            if "politicas_glamping" in self.qa_chains:
-                privacidad_info = self.qa_chains["politicas_glamping"].run(
+            if "politicas_completas" in self.qa_chains:
+                privacidad_info = self.qa_chains["politicas_completas"].run(
                     "¿Cuáles son las políticas de privacidad y protección de datos personales?"
                 )
             
@@ -1109,8 +1109,8 @@ Para consultar disponibilidad necesito algunos datos:
         try:
             reservas_info = ""
             
-            if "politicas_glamping" in self.qa_chains:
-                reservas_info = self.qa_chains["politicas_glamping"].run(
+            if "politicas_completas" in self.qa_chains:
+                reservas_info = self.qa_chains["politicas_completas"].run(
                     "¿Cuáles son las políticas de reservas, cancelaciones y reembolsos?"
                 )
             
@@ -1219,8 +1219,8 @@ Lo sentimos, hay un problema técnico accediendo a nuestras políticas.
     def _get_politicas_mascotas_content(self) -> str:
         """Obtiene solo el contenido de políticas de mascotas"""
         try:
-            if "politicas_glamping" in self.qa_chains:
-                politicas_info = self.qa_chains["politicas_glamping"].run(
+            if "politicas_completas" in self.qa_chains:
+                politicas_info = self.qa_chains["politicas_completas"].run(
                     "¿Cuáles son las políticas específicas sobre mascotas y animales?"
                 )
                 if politicas_info:
@@ -1251,8 +1251,8 @@ Lo sentimos, hay un problema técnico accediendo a nuestras políticas.
     def _get_politicas_privacidad_content(self) -> str:
         """Obtiene solo el contenido de políticas de privacidad"""
         try:
-            if "politicas_glamping" in self.qa_chains:
-                privacidad_info = self.qa_chains["politicas_glamping"].run(
+            if "politicas_completas" in self.qa_chains:
+                privacidad_info = self.qa_chains["politicas_completas"].run(
                     "¿Cuáles son las políticas de privacidad y protección de datos personales?"
                 )
                 if privacidad_info:
@@ -1284,8 +1284,8 @@ Lo sentimos, hay un problema técnico accediendo a nuestras políticas.
     def _get_politicas_reservas_content(self) -> str:
         """Obtiene solo el contenido de políticas de reservas"""
         try:
-            if "politicas_glamping" in self.qa_chains:
-                reservas_info = self.qa_chains["politicas_glamping"].run(
+            if "politicas_completas" in self.qa_chains:
+                reservas_info = self.qa_chains["politicas_completas"].run(
                     "¿Cuáles son las políticas de reservas, cancelaciones y reembolsos?"
                 )
                 if reservas_info:
@@ -2312,13 +2312,13 @@ Puedes ver todas las fotos en nuestros enlaces oficiales:
         try:
             # Intentar obtener respuesta de RAG si está disponible
             if "politicas_glamping" in self.qa_chains and self.qa_chains["politicas_glamping"]:
-                rag_response = self.qa_chains["politicas_glamping"].run(
+                rag_response = self.qa_chains["politicas_completas"].run(
                     {"query": "políticas del glamping"}
                 )
                 if rag_response and len(rag_response) > 50:
                     return rag_response
         except Exception as e:
-            logger.warning(f"RAG politicas_glamping falló, usando fallback: {e}")
+            logger.warning(f"RAG politicas_completas falló, usando fallback: {e}")
         
         # Fallback con información esencial
         return self._get_emergency_politicas_response()
