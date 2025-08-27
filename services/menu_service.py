@@ -2591,6 +2591,84 @@ Ofrecer una experiencia única de conexión con la naturaleza en las montañas d
 • Escribe "políticas" para revisar nuestras normas
 • Escribe "menú" para volver al menú principal"""
 
+    def handle_domos_followup_question(self, user_message: str, user_state: dict) -> str:
+        """Maneja preguntas de seguimiento sobre domos"""
+        try:
+            # Resetear estado
+            user_state["waiting_for_domos_followup"] = False
+            user_state["current_flow"] = "none"
+
+            # Usar fallback service para respuesta específica
+            from services.fallback_service import detect_topic_and_provide_fallback
+            handled, fallback_response, topic = detect_topic_and_provide_fallback(f"domos {user_message}")
+
+            if handled:
+                return fallback_response
+            else:
+                # Información general de domos como fallback
+                return """🏠 **DOMOS BRILLO DE LUNA**
+
+Tenemos 4 domos únicos:
+• **Antares** - Domo familiar con jacuzzi
+• **Polaris** - Domo romántico para parejas
+• **Sirius** - Domo con vista panorámica
+• **Centaury** - Domo ecológico premium
+
+💰 **Precios desde $150.000 COP por noche**
+
+📱 **Para más información:**
+WhatsApp: +57 305 461 4926
+
+🔍 **¿Necesitas algo más?**
+• Escribe "ubicación" para saber dónde estamos
+• Escribe "servicios" para conocer lo que incluye tu estadía
+• Escribe "menú" para volver al menú principal"""
+
+        except Exception as e:
+            logger.error(f"Error en handle_domos_followup_question: {e}")
+            return "Disculpa, tuve un problema procesando tu consulta sobre domos. ¿Podrías reformular tu pregunta?"
+
+    def handle_servicios_followup_question(self, user_message: str, user_state: dict) -> str:
+        """Maneja preguntas de seguimiento sobre servicios"""
+        try:
+            # Resetear estado
+            user_state["waiting_for_servicios_followup"] = False
+            user_state["current_flow"] = "none"
+
+            # Usar fallback service para respuesta específica
+            from services.fallback_service import detect_topic_and_provide_fallback
+            handled, fallback_response, topic = detect_topic_and_provide_fallback(f"servicios {user_message}")
+
+            if handled:
+                return fallback_response
+            else:
+                # Información general de servicios como fallback
+                return """🛎️ **SERVICIOS BRILLO DE LUNA**
+
+✅ **INCLUIDOS:**
+• Desayuno gourmet continental
+• WiFi de alta velocidad
+• Parqueadero privado y seguro
+• Kit de bienvenida
+
+🎯 **ADICIONALES:**
+• Actividades de naturaleza
+• Experiencias gastronómicas
+• Servicios de bienestar
+• Tours guiados
+
+📱 **Más información:**
+WhatsApp: +57 305 461 4926
+
+🔍 **¿Necesitas algo más?**
+• Escribe "ubicación" para saber dónde estamos
+• Escribe "domos" para conocer nuestros alojamientos
+• Escribe "menú" para volver al menú principal"""
+
+        except Exception as e:
+            logger.error(f"Error en handle_servicios_followup_question: {e}")
+            return "Disculpa, tuve un problema procesando tu consulta sobre servicios. ¿Podrías reformular tu pregunta?"
+
 
 def create_menu_service(qa_chains: Dict[str, Any], validation_service, availability_service=None) -> MenuService:
   

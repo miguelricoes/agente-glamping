@@ -748,7 +748,52 @@ Responde de manera completa, útil y con la calidez característica de la hospit
             if "429" in str(e) or "insufficient_quota" in str(e) or "quota" in str(e).lower():
                 logger.warning(f"Quota OpenAI excedida, usando respuesta de fallback para {from_number}")
 
-                # PRIMERO: Intentar fallback específico por tema
+                # NUEVO: VERIFICAR ESTADO DE CONVERSACIÓN ANTES DE FALLBACK
+                # Si está esperando sub-opción de información general, procesarla directamente
+                if (user_state.get("waiting_for_informacion_suboption") and
+                    user_state.get("current_flow") == "informacion_general"):
+                    try:
+                        from services.menu_service import create_menu_service
+                        menu_service = create_menu_service(qa_chains, validation_service)
+                        response = menu_service.handle_informacion_general_suboptions(incoming_msg, user_state)
+
+                        enhanced_response = personality.apply_personality_to_response(response, "information_suboption")
+                        resp.message(enhanced_response)
+
+                        logger.info(f"Information suboption processed during 429 error: {incoming_msg[:30]}",
+                                   extra={"user_id": from_number, "flow": "informacion_general"})
+                        return str(resp)
+
+                    except Exception as suboption_error:
+                        logger.error(f"Error procesando sub-opción durante 429: {suboption_error}")
+                        # Continuar con fallback normal si falla
+
+                # Si está esperando otras sub-opciones, también manejarlas
+                if user_state.get("waiting_for_domos_followup") or user_state.get("waiting_for_servicios_followup"):
+                    try:
+                        from services.menu_service import create_menu_service
+                        menu_service = create_menu_service(qa_chains, validation_service)
+
+                        # Determinar qué tipo de seguimiento
+                        if user_state.get("waiting_for_domos_followup"):
+                            response = menu_service.handle_domos_followup_question(incoming_msg, user_state)
+                        elif user_state.get("waiting_for_servicios_followup"):
+                            response = menu_service.handle_servicios_followup_question(incoming_msg, user_state)
+                        else:
+                            response = "No pude procesar tu consulta específica en este momento."
+
+                        enhanced_response = personality.apply_personality_to_response(response, "followup_during_error")
+                        resp.message(enhanced_response)
+
+                        logger.info(f"Followup question processed during 429 error",
+                                   extra={"user_id": from_number, "followup_type": "domos_or_servicios"})
+                        return str(resp)
+
+                    except Exception as followup_error:
+                        logger.error(f"Error procesando followup durante 429: {followup_error}")
+                        # Continuar con fallback normal si falla
+
+                # FALLBACK ESPECÍFICO POR TEMA (MEJORADO)
                 handled_fallback, fallback_response, topic = detect_topic_and_provide_fallback(incoming_msg)
                 if handled_fallback:
                     enhanced_response = personality.apply_personality_to_response(fallback_response, "emergency_specific")
@@ -757,7 +802,7 @@ Responde de manera completa, útil y con la calidez característica de la hospit
                                extra={"user_id": from_number, "emergency_topic": topic})
                     return str(resp)
 
-                # SEGUNDO: Fallback genérico solo si no hay específico
+                # FALLBACK GENÉRICO solo si no hay específico
                 fallback_response = generate_fallback_response(incoming_msg, user_state)
                 enhanced_response = personality.apply_personality_to_response(fallback_response, "emergency")
                 resp.message(enhanced_response)
