@@ -215,38 +215,46 @@ comodidad ni seguridad.
 
 ✅ **INCLUIDO EN TODOS LOS DOMOS:**
 • 🍳 Desayuno natural y saludable
-• 🌐 WiFi gratuito en áreas comunes
-• 🚗 Parqueadero privado y seguro
-• 🔥 BBQ y zona de fogata comunitaria
-• 🚿 Baño privado con agua caliente
-• 🛏️ Ropa de cama premium y toallas
-• ☕ Cafetera y kit de bienvenida
-• 🧴 Amenidades de baño ecológicas
+• 🎫 Tarjeta de asistencia al turista
+• 🚗 Parqueadero gratis y seguro
+• 🌐 WiFi gratuito
+• 🔥 BBQ y fogata (áreas comunes)
+• 🧹 Servicio diario de aseo del domo
+• 🚿 Baño incorporado con agua caliente
+• 🛏️ Colchón premium con toper de plumas
+• 🧺 Lencería de calidad
+• 🔌 Calienta camas eléctrico doble plaza
+• 🛌 Cobija eléctrica anti-frío
+• ☕ Café ilimitado disponible
 
-🎯 **SERVICIOS ADICIONALES DISPONIBLES:**
-• 🧘 Yoga matutino con vista a la represa
-• 🚶 Senderismo guiado por la naturaleza
-• 📸 Sesiones fotográficas profesionales
-• 🍽️ Cena romántica bajo las estrellas
-• 🎣 Pesca deportiva en la represa
-• 🚴 Alquiler de bicicletas
-• 💆 Masajes relajantes (bajo reserva)
+🏔️ **CARACTERÍSTICAS EXCLUSIVAS POR DOMO:**
+• 🌟 **Domo Antares:** Jacuzzi romántico + malla catamarán
+• 🌟 **Domos Antares & Polaris:** Cocinetas equipadas completas
+• 🌟 **Terrazas con parasol:** Vista panorámica a represa
+• 🌟 **Diseño para observación astronómica** en todos los domos
 
-🍽️ **GASTRONOMÍA:**
-• Desayuno continental incluido
+🎯 **SERVICIOS OPCIONALES (Costos adicionales):**
+• ⛵ Paseo en velero/lancha - Embalse Tominé
+• 💆 Masajes relajantes - Desde $90.000/persona
+• 🥾 Caminata Montecillo - 6km (3.5h, +500m altitud)
+• 🏞️ Caminata Pozo Azul - 10-14km (3-4h, +1km altitud)
+• 🎨 Decoraciones personalizadas - Desde $60.000
+
+🍽️ **EXPERIENCIAS GASTRONÓMICAS:**
+• Desayuno incluido con productos locales
 • Menús personalizados disponibles
-• Productos locales y orgánicos
 • Opciones vegetarianas y veganas
 • Picnic para excursiones
 
 ⭐ **EXPERIENCIAS ESPECIALES:**
-• Observación de estrellas con telescopio
-• Talleres de fotografía de naturaleza
-• Meditación al amanecer
-• Fogatas con marshmallows y historias
+• 🔭 Observación de estrellas con telescopio
+• 📸 Talleres de fotografía de naturaleza
+• 🧘 Yoga matutino vista panorámica
+• 🔥 Fogatas nocturnas con marshmallows
+• 🎣 Pesca deportiva en Represa Tominé
 
-💡 **¿Necesitas algo específico?**
-Contáctanos y personalizamos tu experiencia."""
+💬 **¿Necesitas algo específico?**
+Contáctanos al +57 305 461 4926 para personalizar tu experiencia."""
 
         logger.info(f"Topic fallback triggered: servicios", extra={"topic": "servicios"})
         return True, response, "servicios"

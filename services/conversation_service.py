@@ -181,10 +181,19 @@ def handle_menu_selection_unified(user_message: str, user_state: dict, memory, q
         if validation_service is None:
             logger.warning("validation_service no disponible, usando fallback", 
                           extra={"component": "conversation_service"})
-            # Importar función de fallback desde routes
-            from routes.whatsapp_routes import handle_fallback_menu_response
-            fallback_response = handle_fallback_menu_response(user_message, user_state.get('current_flow', 'none'))
-            return True, fallback_response
+            # Usar fallback service comprensivo en lugar del básico
+            from services.fallback_service import detect_topic_and_provide_fallback
+            handled, fallback_response, topic = detect_topic_and_provide_fallback(user_message)
+            
+            if handled:
+                logger.info(f"Fallback service manejó consulta: {topic}", 
+                           extra={"component": "conversation_service", "topic": topic})
+                return True, fallback_response
+            else:
+                # Si no se detectó tema específico, usar fallback básico como último recurso
+                from routes.whatsapp_routes import handle_fallback_menu_response
+                fallback_response = handle_fallback_menu_response(user_message, user_state.get('current_flow', 'none'))
+                return True, fallback_response
         
         if not user_message or not isinstance(user_message, str):
             logger.warning(f"user_message inválido: {user_message}", 
