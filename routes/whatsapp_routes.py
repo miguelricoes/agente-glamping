@@ -335,6 +335,37 @@ Responde de manera completa, útil y con la calidez característica de la hospit
     @rate_limit  # AGREGAR rate limiting
     # @performance_monitor  # DESHABILITADO: Causa error LogRecord
     def whatsapp_webhook():
+        # WRAPPER CRÍTICO PARA KEYERROR
+        try:
+            return main_webhook_process()
+        except KeyError as critical_key_error:
+            logger.error(f"🚨 CRITICAL KEYERROR: {critical_key_error}")
+            from_number = request.values.get('From', '')
+            
+            # Reinicializar estado de emergencia
+            if from_number and from_number in user_states:
+                user_states[from_number] = {
+                    "current_flow": "none", 
+                    "reserva_step": 0, 
+                    "reserva_data": {}, 
+                    "waiting_for_availability": False,
+                    "previous_context": "",
+                    "last_action": "",
+                    "waiting_for_continuation": False
+                }
+            
+            # Respuesta de emergencia
+            resp = MessagingResponse()
+            resp.message("""🛠️ Tuve un inconveniente técnico temporal.
+
+🏕️ **Glamping Brillo de Luna está aquí para ti:**
+📱 WhatsApp: +57 305 461 4926
+📧 Email: glampingbrillodelunaguatavita@gmail.com
+
+💫 ¿Podrías reformular tu pregunta? ¡Te ayudo enseguida!""")
+            return str(resp)
+            
+    def main_webhook_process():
         # VALIDACIÓN DE ENTRADA
         incoming_msg = request.values.get('Body', '').strip()
         from_number = request.values.get('From', '')
@@ -406,6 +437,39 @@ Responde de manera completa, útil y con la calidez característica de la hospit
                 
         memory = user_memories[from_number]
         user_state = user_states[from_number]
+        
+        # SEGURIDAD: Garantizar que user_state siempre tenga las claves necesarias
+        default_state = {
+            "current_flow": "none", 
+            "reserva_step": 0, 
+            "reserva_data": {}, 
+            "waiting_for_availability": False,
+            "previous_context": "",
+            "last_action": "",
+            "waiting_for_continuation": False
+        }
+        
+        # Asegurar que todas las claves existan
+        for key, default_value in default_state.items():
+            if key not in user_state:
+                user_state[key] = default_value
+                logger.warning(f"🔧 FIXED: user_state['{key}'] no existía, agregada con valor por defecto")
+        
+        # DEBUG: Log del estado actual para debugging
+        logger.info(f"🔍 USER_STATE DEBUG: current_flow={user_state.get('current_flow')}, keys={list(user_state.keys())}")
+        
+        # FUNCIÓN HELPER PARA ACCESO SEGURO A user_state
+        def safe_get_state(key, default=None):
+            try:
+                if key in user_state:
+                    return user_state[key]
+                else:
+                    logger.warning(f"🔧 MISSING KEY: user_state['{key}'] no existe, usando default: {default}")
+                    user_state[key] = default
+                    return default
+            except Exception as e:
+                logger.error(f"🚨 CRITICAL: Error accediendo user_state['{key}']: {e}")
+                return default
 
         # Inicializar servicios una vez al inicio
         resolver = get_import_resolver()
@@ -413,6 +477,19 @@ Responde de manera completa, útil y con la calidez característica de la hospit
 
         context_service = resolver.get_service('context_service')
         validation_service = resolver.get_service('validation_service')
+        
+        # VERIFICACIÓN FINAL: Asegurar que user_state es válido después de servicios
+        if not isinstance(user_state, dict) or not user_state:
+            logger.error("🚨 CRITICAL: user_state corrompido después de inicializar servicios")
+            user_state = user_states[from_number] = {
+                "current_flow": "none", 
+                "reserva_step": 0, 
+                "reserva_data": {}, 
+                "waiting_for_availability": False,
+                "previous_context": "",
+                "last_action": "",
+                "waiting_for_continuation": False
+            }
         
         # ASEGURAR QUE VALIDATION_SERVICE ESTÉ DISPONIBLE
         if not validation_service:
@@ -534,14 +611,31 @@ Responde de manera completa, útil y con la calidez característica de la hospit
         # 4.5. PROCESAMIENTO DE RESERVAS (FIX 3: PRIORIDAD MÁXIMA)
         # Mover ANTES de detección de domos para evitar interceptación
         
-        # Handle reservation flow initiation
-        if user_state["current_flow"] == "none" and detect_reservation_intent(incoming_msg, button_payload, user_state):
-            response = initiate_reservation_flow(user_state, memory, save_user_memory, from_number)
-            resp.message(response)
-            return str(resp)
+        # Handle reservation flow initiation - ACCESO ULTRA-SEGURO
+        try:
+            current_flow = safe_get_state("current_flow", "none")
+            if current_flow == "none" and detect_reservation_intent(incoming_msg, button_payload, user_state):
+                response = initiate_reservation_flow(user_state, memory, save_user_memory, from_number)
+                resp.message(response)
+                return str(resp)
+        except Exception as reservation_init_error:
+            logger.error(f"🚨 ERROR en reservation flow initiation: {reservation_init_error}")
+            logger.error(f"🔍 user_state actual: {user_state}")
+            # Reinicializar user_state COMPLETAMENTE
+            user_states[from_number] = user_state = {
+                "current_flow": "none", 
+                "reserva_step": 0, 
+                "reserva_data": {}, 
+                "waiting_for_availability": False,
+                "previous_context": "",
+                "last_action": "",
+                "waiting_for_continuation": False
+            }
+            logger.info("✅ user_state reinicializado después de error")
+            # Continuar con el flujo normal
         
         # Process reservation step 1 (data collection) - MÁXIMA PRIORIDAD
-        if user_state["current_flow"] == "reserva" and user_state["reserva_step"] == 1:
+        if safe_get_state("current_flow", "none") == "reserva" and safe_get_state("reserva_step", 0) == 1:
             logger.info(f"🔥 PROCESANDO RESERVA STEP 1: Usuario {from_number}, Mensaje: {incoming_msg[:100]}",
                        extra={"user_id": from_number, "flow": "reserva", "step": 1})
 
@@ -563,17 +657,30 @@ Responde de manera completa, útil y con la calidez característica de la hospit
                 logger.error(f"❌ ERROR EN PROCESS_RESERVATION_STEP_1: {reservation_error}",
                             extra={"user_id": from_number, "flow": "reserva", "step": 1, "error": str(reservation_error)})
 
-                # Reset del flujo y mensaje de error específico
-                user_state["current_flow"] = "none"
-                user_state["reserva_step"] = 0
-                user_state["reserva_data"] = {}
+                # Reset del flujo y mensaje de error específico - ACCESO SEGURO
+                try:
+                    user_state["current_flow"] = "none"
+                    user_state["reserva_step"] = 0  
+                    user_state["reserva_data"] = {}
+                except Exception as state_reset_error:
+                    logger.error(f"Error resetting user_state: {state_reset_error}")
+                    # Reinicializar completamente si falla
+                    user_states[from_number] = {
+                        "current_flow": "none", 
+                        "reserva_step": 0, 
+                        "reserva_data": {}, 
+                        "waiting_for_availability": False,
+                        "previous_context": "",
+                        "last_action": "",
+                        "waiting_for_continuation": False
+                    }
                 save_user_memory(from_number, memory)
 
                 resp.message("❌ Hubo un error procesando tu reserva. Por favor, intenta nuevamente escribiendo 'quiero hacer una reserva'.")
                 return str(resp)
 
         # Process reservation step 2 (confirmation)
-        if user_state["current_flow"] == "reserva" and user_state["reserva_step"] == 2:
+        if safe_get_state("current_flow", "none") == "reserva" and safe_get_state("reserva_step", 0) == 2:
             response = process_reservation_step_2(
                 incoming_msg, user_state, memory, save_user_memory, from_number,
                 db, Reserva, calcular_precio_reserva, save_reservation_to_pinecone
