@@ -726,7 +726,7 @@ Responde de manera completa, útil y con la calidez característica de la hospit
             
             # AGREGAR PERSONALIDAD A RESPUESTA FINAL
             enhanced_final_answer = personality.apply_personality_to_response(agent_answer, "general")
-            
+            # PERFORMANCE: Actualizar métricas
             # PERFORMANCE: Cachear respuesta si es apropiada
             # CACHE DESHABILITADO TEMPORALMENTE
             if False:  # perf_optimizer.should_cache_response(enhanced_final_answer, incoming_msg):
