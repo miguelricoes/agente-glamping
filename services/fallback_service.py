@@ -11,6 +11,18 @@ def detect_topic_and_provide_fallback(message: str) -> Tuple[bool, str, str]:
     """
     message_lower = message.lower().strip()
 
+    # NUEVO: No procesar si es claramente datos de reserva
+    reservation_indicators = [
+        'entrada' in message_lower and 'salida' in message_lower,
+        'huéspedes' in message_lower and ('correo' in message_lower or 'email' in message_lower),
+        'domo' in message_lower and 'pago' in message_lower,
+        message_lower.startswith('reserva para') or 'reserva para' in message_lower
+    ]
+
+    if any(reservation_indicators):
+        logger.debug(f"Mensaje detectado como datos de reserva, no aplicando fallback: {message[:50]}")
+        return False, "", ""
+
     # UBICACIÓN Y CONTACTO
     ubicacion_patterns = [
         'ubicacion', 'ubicación', 'donde', 'dónde', 'dirección', 'direccion',

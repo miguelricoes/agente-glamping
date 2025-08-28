@@ -542,11 +542,18 @@ Responde de manera completa, útil y con la calidez característica de la hospit
         
         # Process reservation step 1 (data collection) - MÁXIMA PRIORIDAD
         if user_state["current_flow"] == "reserva" and user_state["reserva_step"] == 1:
+            logger.info(f"🔥 PROCESANDO RESERVA STEP 1: Usuario {from_number}, Mensaje: {incoming_msg[:100]}",
+                       extra={"user_id": from_number, "flow": "reserva", "step": 1})
+
             resp.message("🔄 Procesando tu solicitud de reserva, por favor espera un momento...")
             response = process_reservation_step_1(
                 incoming_msg, user_state, memory, save_user_memory, from_number,
                 parse_reservation_details, validate_and_process_reservation_data, calcular_precio_reserva
             )
+
+            logger.info(f"✅ RESPUESTA RESERVA STEP 1: {response[:100]}...",
+                       extra={"user_id": from_number, "flow": "reserva", "step": 1})
+
             resp.message(response)
             return str(resp)
 
@@ -618,7 +625,7 @@ Responde de manera completa, útil y con la calidez característica de la hospit
         conversation_handlers = resolver.get_service('conversation_handlers')
         if conversation_handlers and 'website_link' in conversation_handlers:
             handled, link_response = conversation_handlers['website_link'](incoming_msg, validation_service)
-            if handled:
+            if handled and user_state.get("current_flow") == "none":
                 enhanced_response = personality.apply_personality_to_response(link_response, "website")
                 resp.message(enhanced_response)
                 logger.info(f"Website link response sent to {from_number}", 
@@ -628,7 +635,7 @@ Responde de manera completa, útil y con la calidez característica de la hospit
         # 9. Handle admin contact requests (Variable 2 implementation)
         if conversation_handlers and 'admin_contact' in conversation_handlers:
             handled, trigger_type, contact_response = conversation_handlers['admin_contact'](incoming_msg, validation_service)
-            if handled:
+            if handled and user_state.get("current_flow") == "none":
                 enhanced_response = personality.apply_personality_to_response(contact_response, "contact")
                 resp.message(enhanced_response)
                 logger.info(f"Admin contact response sent to {from_number}", 
@@ -638,7 +645,7 @@ Responde de manera completa, útil y con la calidez característica de la hospit
         # 10. Handle reservation intent requests (Variable 3 implementation)
         if conversation_handlers and 'reservation_intent' in conversation_handlers:
             handled, reservation_response = conversation_handlers['reservation_intent'](incoming_msg, validation_service, qa_chains)
-            if handled:
+            if handled and user_state.get("current_flow") == "none":
                 enhanced_response = personality.apply_personality_to_response(reservation_response, "reservation_intent")
                 resp.message(enhanced_response)
                 logger.info(f"Reservation intent response sent to {from_number}", 
@@ -808,7 +815,7 @@ Responde de manera completa, útil y con la calidez característica de la hospit
 
                 # FALLBACK ESPECÍFICO POR TEMA (MEJORADO)
                 handled_fallback, fallback_response, topic = detect_topic_and_provide_fallback(incoming_msg)
-                if handled_fallback:
+                if handled_fallback and user_state.get("current_flow") == "none":
                     enhanced_response = personality.apply_personality_to_response(fallback_response, "emergency_specific")
                     resp.message(enhanced_response)
                     logger.info(f"Emergency topic fallback used: {topic}",
