@@ -546,16 +546,31 @@ Responde de manera completa, útil y con la calidez característica de la hospit
                        extra={"user_id": from_number, "flow": "reserva", "step": 1})
 
             resp.message("🔄 Procesando tu solicitud de reserva, por favor espera un momento...")
-            response = process_reservation_step_1(
-                incoming_msg, user_state, memory, save_user_memory, from_number,
-                parse_reservation_details, validate_and_process_reservation_data, calcular_precio_reserva
-            )
 
-            logger.info(f"✅ RESPUESTA RESERVA STEP 1: {response[:100]}...",
-                       extra={"user_id": from_number, "flow": "reserva", "step": 1})
+            try:
+                response = process_reservation_step_1(
+                    incoming_msg, user_state, memory, save_user_memory, from_number,
+                    parse_reservation_details, validate_and_process_reservation_data, calcular_precio_reserva
+                )
 
-            resp.message(response)
-            return str(resp)
+                logger.info(f"✅ RESPUESTA RESERVA STEP 1: {response[:100]}...",
+                           extra={"user_id": from_number, "flow": "reserva", "step": 1})
+
+                resp.message(response)
+                return str(resp)
+
+            except Exception as reservation_error:
+                logger.error(f"❌ ERROR EN PROCESS_RESERVATION_STEP_1: {reservation_error}",
+                            extra={"user_id": from_number, "flow": "reserva", "step": 1, "error": str(reservation_error)})
+
+                # Reset del flujo y mensaje de error específico
+                user_state["current_flow"] = "none"
+                user_state["reserva_step"] = 0
+                user_state["reserva_data"] = {}
+                save_user_memory(from_number, memory)
+
+                resp.message("❌ Hubo un error procesando tu reserva. Por favor, intenta nuevamente escribiendo 'quiero hacer una reserva'.")
+                return str(resp)
 
         # Process reservation step 2 (confirmation)
         if user_state["current_flow"] == "reserva" and user_state["reserva_step"] == 2:
@@ -726,18 +741,9 @@ Responde de manera completa, útil y con la calidez característica de la hospit
             
             # AGREGAR PERSONALIDAD A RESPUESTA FINAL
             enhanced_final_answer = personality.apply_personality_to_response(agent_answer, "general")
-            # PERFORMANCE: Actualizar métricas
-            # PERFORMANCE: Cachear respuesta si es apropiada
-            # CACHE DESHABILITADO TEMPORALMENTE
-            if False:  # perf_optimizer.should_cache_response(enhanced_final_answer, incoming_msg):
-                pass  # perf_optimizer.cache_response(
-                # cache_key, 
-                # enhanced_final_answer, 
-                # ttl=180,  # 3 minutos para respuestas generales
-                # metadata={"user_id": from_number, "source": "fallback_general"}
-                # )
-                # logger.debug(f"Respuesta cacheada para futuras consultas similares")
-            
+          
+            if False:  
+                pass  
             resp.message(enhanced_final_answer)
             
             # PERFORMANCE: Actualizar métricas
@@ -814,13 +820,19 @@ Responde de manera completa, útil y con la calidez característica de la hospit
                         # Continuar con fallback normal si falla
 
                 # FALLBACK ESPECÍFICO POR TEMA (MEJORADO)
+                logger.info(f"🔍 BEFORE FALLBACK: current_flow = {user_state.get('current_flow')}, mensaje = {incoming_msg[:50]}")
                 handled_fallback, fallback_response, topic = detect_topic_and_provide_fallback(incoming_msg)
+                logger.info(f"🔍 FALLBACK RESULT: handled = {handled_fallback}, topic = {topic}")
+                
                 if handled_fallback and user_state.get("current_flow") == "none":
+                    logger.info(f"✅ EJECUTANDO FALLBACK: {topic}")
                     enhanced_response = personality.apply_personality_to_response(fallback_response, "emergency_specific")
                     resp.message(enhanced_response)
                     logger.info(f"Emergency topic fallback used: {topic}",
                                extra={"user_id": from_number, "emergency_topic": topic})
                     return str(resp)
+                else:
+                    logger.info(f"❌ FALLBACK NO EJECUTADO: handled={handled_fallback}, current_flow={user_state.get('current_flow')}")
 
                 # FALLBACK GENÉRICO solo si no hay específico
                 fallback_response = generate_fallback_response(incoming_msg, user_state)
@@ -845,7 +857,7 @@ Responde de manera completa, útil y con la calidez característica de la hospit
                 
                 # Intentar respuesta específica por tema tras reinicialización
                 handled_fallback, fallback_response, topic = detect_topic_and_provide_fallback(incoming_msg)
-                if handled_fallback:
+                if handled_fallback and user_state.get("current_flow") == "none":
                     enhanced_response = personality.apply_personality_to_response(fallback_response, "post_reinit")
                     resp.message(enhanced_response)
                     logger.info(f"Post-reinit topic fallback used: {topic}",
@@ -870,7 +882,7 @@ Responde de manera completa, útil y con la calidez característica de la hospit
                         
                         # Tras recovery exitoso, intentar respuesta específica
                         handled_fallback, fallback_response, topic = detect_topic_and_provide_fallback(incoming_msg)
-                        if handled_fallback:
+                        if handled_fallback and user_state.get("current_flow") == "none":
                             enhanced_response = personality.apply_personality_to_response(fallback_response, "auto_recovery")
                             resp.message(enhanced_response)
                             logger.info(f"Auto-recovery topic fallback used: {topic}",
