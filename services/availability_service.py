@@ -418,9 +418,9 @@ class AvailabilityService:
                 if parametros.get('fecha_inicio'):
                     try:
                         fecha_formateada = datetime.strptime(parametros['fecha_inicio'], '%Y-%m-%d').strftime('%d de %B de %Y')
-                        return f"❌ No tenemos domos disponibles para el {fecha_formateada}.\n\nEscribe "otras fechas" para consultar disponibilidad diferente 📅"
+                        return f"❌ No tenemos domos disponibles para el {fecha_formateada}.\n\nEscribe 'otras fechas' para consultar disponibilidad diferente 📅"
                     except:
-                        return f"❌ No tenemos domos disponibles para la fecha {parametros['fecha_inicio']}.\n\nEscribe "otras fechas" para consultar disponibilidad diferente 📅"
+                        return f"❌ No tenemos domos disponibles para la fecha {parametros['fecha_inicio']}.\n\nEscribe 'otras fechas' para consultar disponibilidad diferente 📅"
                 else:
                     return "❌ No encontré domos disponibles para las fechas consultadas.\n\n¿Podrías especificar otras fechas? 📅"
             
