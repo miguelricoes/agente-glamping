@@ -58,7 +58,13 @@ class DatabaseConfig:
         DATABASE_PUBLIC_URL = os.getenv('DATABASE_PUBLIC_URL')
         DATABASE_URL = os.getenv('DATABASE_URL')
         
+        # DIAGNÓSTICO: Log de variables de entorno
+        logger.info(f"🔍 DIAGNÓSTICO DB - DATABASE_PRIVATE_URL: {DATABASE_PRIVATE_URL is not None}")
+        logger.info(f"🔍 DIAGNÓSTICO DB - DATABASE_PUBLIC_URL: {DATABASE_PUBLIC_URL is not None}")
+        logger.info(f"🔍 DIAGNÓSTICO DB - DATABASE_URL: {DATABASE_URL is not None}")
+        
         database_url = DATABASE_PRIVATE_URL or DATABASE_PUBLIC_URL or DATABASE_URL
+        logger.info(f"🔍 DIAGNÓSTICO DB - URL final seleccionada: {database_url is not None}")
         
         # Verificar si estamos en entorno local y la URL es interna de Railway
         if database_url and "railway.internal" in database_url:
@@ -94,11 +100,15 @@ class DatabaseConfig:
         """
         try:
             # Obtener URL de base de datos
+            logger.info("🔍 DIAGNÓSTICO DB - Obteniendo URL de base de datos...")
             self.database_url = self.get_database_url()
             
             if not self.database_url:
+                logger.error("❌ DIAGNÓSTICO DB - No se encontró URL de base de datos válida")
                 self.database_available = False
                 return False
+            
+            logger.info("✅ DIAGNÓSTICO DB - URL de base de datos obtenida exitosamente")
             
             # Configurar Flask-SQLAlchemy
             app.config['SQLALCHEMY_DATABASE_URI'] = self.database_url
@@ -111,7 +121,9 @@ class DatabaseConfig:
             }
             
             # Inicializar SQLAlchemy
+            logger.info("🔍 DIAGNÓSTICO DB - Inicializando SQLAlchemy...")
             self.db = SQLAlchemy(app)
+            logger.info("✅ DIAGNÓSTICO DB - SQLAlchemy inicializado")
             log_startup(logger, "SQLAlchemy inicializado correctamente", "SUCCESS", "")
             
             # Verificar conexión

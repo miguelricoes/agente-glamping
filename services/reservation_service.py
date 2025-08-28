@@ -3,6 +3,7 @@
 
 import json
 import re
+import os
 from datetime import date, datetime, timedelta
 from typing import Dict, Any, Optional, Tuple, List
 from sqlalchemy.exc import SQLAlchemyError
@@ -28,9 +29,63 @@ class ReservationService:
         self.db = db
         self.Reserva = Reserva
         self.validation_service = ValidationService()
+        self.fallback_mode = (db is None or Reserva is None)
+        
+        if self.fallback_mode:
+            logger.warning("⚠️ ReservationService iniciado en MODO FALLBACK (sin base de datos)")
+            # Lista temporal para guardar reservas en memoria
+            self.temp_reservations = []
         
         logger.info("ReservationService inicializado", 
-                   extra={"component": "reservation_service", "phase": "startup"})
+                   extra={"component": "reservation_service", "phase": "startup", "fallback_mode": self.fallback_mode})
+    
+    def _save_reservation_fallback(self, reservation_data: Dict[str, Any]) -> Tuple[bool, str, Optional[int]]:
+        """
+        Guardar reserva en modo fallback (sin base de datos)
+        Guarda en memoria y archivo temporal
+        """
+        try:
+            # Agregar timestamp y ID único
+            reservation_data['timestamp'] = datetime.now().isoformat()
+            reservation_data['fallback_id'] = len(self.temp_reservations) + 1
+            
+            # Guardar en memoria
+            self.temp_reservations.append(reservation_data)
+            
+            # Guardar en archivo temporal
+            fallback_file = "/tmp/reservas_fallback.json"
+            try:
+                # Cargar reservas existentes o crear lista vacía
+                if os.path.exists(fallback_file):
+                    with open(fallback_file, 'r', encoding='utf-8') as f:
+                        existing_reservations = json.load(f)
+                else:
+                    existing_reservations = []
+                
+                # Agregar nueva reserva
+                existing_reservations.append(reservation_data)
+                
+                # Guardar de vuelta
+                with open(fallback_file, 'w', encoding='utf-8') as f:
+                    json.dump(existing_reservations, f, ensure_ascii=False, indent=2, default=str)
+                
+                logger.warning(f"⚠️ Reserva guardada en modo FALLBACK - archivo: {fallback_file}")
+                
+            except Exception as file_error:
+                logger.error(f"Error guardando archivo fallback: {file_error}")
+                # No fallar si no se puede guardar el archivo, al menos está en memoria
+            
+            # Log de la reserva para monitoreo
+            logger.info(f"✅ Reserva FALLBACK guardada - ID: {reservation_data['fallback_id']}, "
+                       f"Huésped: {reservation_data.get('email_contacto', 'N/A')}, "
+                       f"Domo: {reservation_data.get('domo', 'N/A')}, "
+                       f"Fechas: {reservation_data.get('fecha_entrada')} - {reservation_data.get('fecha_salida')}")
+            
+            return True, f"Reserva guardada exitosamente (ID fallback: {reservation_data['fallback_id']})", reservation_data['fallback_id']
+            
+        except Exception as e:
+            logger.error(f"Error en guardado fallback: {e}")
+            return False, f"Error guardando reserva en modo fallback: {str(e)}", None
     
     def calcular_precio_reserva(self, domo: str, cantidad_huespedes: int, 
                                fecha_entrada: date, fecha_salida: date, 
@@ -422,6 +477,11 @@ class ReservationService:
 
     def save_reservation_atomic(self, reservation_data: Dict[str, Any]) -> Tuple[bool, str, Optional[int]]:
         """Guardar reserva de forma atómica con validaciones"""
+        
+        # MODO FALLBACK - Si no hay BD, guardar en memoria y archivo
+        if self.fallback_mode:
+            return self._save_reservation_fallback(reservation_data)
+        
         try:
             with self.db.session.begin():  # Transacción automática
                 # 1. Validar datos antes de guardar

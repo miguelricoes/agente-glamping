@@ -377,8 +377,15 @@ class StandaloneAgent:
                             logger.error(f"❌ Error en inicialización de emergencia: {e}")
                             return False, {}, f"Error inicializando servicio: {str(e)}"
                     else:
-                        logger.error(f"❌ No es posible inicializar - db: {self.db is not None}, config: {self.database_config is not None}")
-                        return False, {}, "Base de datos no disponible para reservas"
+                        logger.warning("⚠️ DB no disponible, inicializando servicio de reservas en modo fallback (sin BD)")
+                        try:
+                            from services.reservation_service import ReservationService
+                            # Inicializar sin DB - modo fallback
+                            self.services['reservation'] = ReservationService(db=None, reserva_model=None)
+                            logger.info("✅ Servicio de reservas inicializado en modo fallback (sin BD)")
+                        except Exception as e:
+                            logger.error(f"❌ Error inicializando servicio fallback: {e}")
+                            return False, {}, f"Error inicializando servicio fallback: {str(e)}"
                 
                 if 'reservation' in self.services:
                     logger.info("✅ Servicio de reservas encontrado, procesando...")
