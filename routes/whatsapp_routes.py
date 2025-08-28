@@ -535,7 +535,7 @@ Responde de manera completa, útil y con la calidez característica de la hospit
         # Mover ANTES de detección de domos para evitar interceptación
         
         # Handle reservation flow initiation
-        if user_state["current_flow"] == "none" and detect_reservation_intent(incoming_msg, button_payload):
+        if user_state["current_flow"] == "none" and detect_reservation_intent(incoming_msg, button_payload, user_state):
             response = initiate_reservation_flow(user_state, memory, save_user_memory, from_number)
             resp.message(response)
             return str(resp)

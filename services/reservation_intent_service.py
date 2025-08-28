@@ -78,12 +78,13 @@ class ReservationIntentService:
             r'\bnúmero\s+de\s+reserva\b', r'\bnumero\s+de\s+reserva\b'
         ]
     
-    def analyze_reservation_intent(self, message: str) -> Tuple[str, str, str]:
+    def analyze_reservation_intent(self, message: str, user_state: dict = None) -> Tuple[str, str, str]:
         """
         Analiza la intención de reserva del usuario según Variable 3
         
         Args:
             message: Mensaje del usuario
+            user_state: Estado actual del usuario (crítico para contexto)
             
         Returns:
             Tuple[str, str, str]: (intent_type, action, reason)
@@ -96,6 +97,12 @@ class ReservationIntentService:
             
             logger.info(f"Analizando intención de reserva: '{message_clean[:50]}...'", 
                        extra={"component": "reservation_intent_service", "action": "analyze_intent"})
+            
+            # CRÍTICO: Si el usuario ya está en flujo de reserva, no detectar nueva intención
+            if user_state and user_state.get("current_flow") == "reserva":
+                logger.info("Usuario ya en flujo de reserva - no analizar nueva intención", 
+                           extra={"component": "reservation_intent_service", "current_flow": "reserva"})
+                return "none", "none", "Usuario ya está en flujo de reserva activo"
             
             # Verificar cada tipo de intención en orden de prioridad
             
@@ -240,18 +247,25 @@ Para consultar el estado de tu reserva, necesito algunos datos:
                         extra={"component": "reservation_intent_service"})
             return "Para consultar tu reserva, necesito tu nombre y número de teléfono. ¿Los tienes disponibles?"
     
-    def should_start_reservation_flow(self, message: str) -> bool:
+    def should_start_reservation_flow(self, message: str, user_state: dict = None) -> bool:
         """
         Determina si se debe iniciar el flujo de reservas según Variable 3
         
         Args:
             message: Mensaje del usuario
+            user_state: Estado actual del usuario (crítico para detectar flujos activos)
             
         Returns:
             bool: True si debe iniciar el flujo de reservas
         """
         try:
-            intent_type, action, reason = self.analyze_reservation_intent(message)
+            # CRÍTICO: Si ya hay un flujo de reserva activo, NO iniciar nuevo flujo
+            if user_state and user_state.get("current_flow") == "reserva":
+                logger.info("Usuario ya tiene flujo de reserva activo - NO iniciar nuevo flujo", 
+                           extra={"component": "reservation_intent_service", "current_flow": user_state.get("current_flow")})
+                return False
+            
+            intent_type, action, reason = self.analyze_reservation_intent(message, user_state)
             should_start = (intent_type == "make_reservation" and action == "start_flow")
             
             if should_start:

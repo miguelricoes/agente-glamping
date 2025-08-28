@@ -643,10 +643,10 @@ def handle_availability_request_unified(user_message: str, user_state: dict, mem
     
     return False, ""
 
-def detect_reservation_intent(user_message: str, button_payload: str = None) -> bool:
+def detect_reservation_intent(user_message: str, button_payload: str = None, user_state: dict = None) -> bool:
     """
     Detect if user wants to make a reservation (updated for Variable 3)
-    Now uses the intelligent reservation intent service
+    Now uses the intelligent reservation intent service with user_state awareness
     """
     try:
         # Check button payload intent first
@@ -658,8 +658,8 @@ def detect_reservation_intent(user_message: str, button_payload: str = None) -> 
         from services.reservation_intent_service import get_reservation_intent_service
         reservation_service = get_reservation_intent_service()
         
-        # Only return True if user specifically wants to make a reservation
-        return reservation_service.should_start_reservation_flow(user_message)
+        # Pass user_state to the service for better context awareness
+        return reservation_service.should_start_reservation_flow(user_message, user_state)
         
     except Exception as e:
         logger.error(f"Error detectando intención de reserva: {e}")
