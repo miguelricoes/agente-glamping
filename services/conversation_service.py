@@ -675,7 +675,7 @@ def initiate_reservation_flow(user_state: dict, memory, save_user_memory_func, u
     
     initial_message = """🏕️ **NUEVA RESERVA GLAMPING BRILLO DE LUNA** ✨
 
-📋 **DATOS OBLIGATORIOS (requeridos):**
+📋 **DATOS NECESARIOS:**
 • **Correo electrónico de contacto**
 • **Teléfono/WhatsApp de contacto** 
 • **Cantidad de huéspedes** (1, 2, 3...)
@@ -683,16 +683,11 @@ def initiate_reservation_flow(user_state: dict, memory, save_user_memory_func, u
 • **Fecha de entrada** (DD/MM/AAAA o DD-MM-AAAA)
 • **Fecha de salida** (DD/MM/AAAA o DD-MM-AAAA)
 • **Método de pago** (efectivo, tarjeta, transferencia, Nequi)
-
-📝 **DATOS OPCIONALES (si deseas):**
-• Nombres completos de huéspedes
-• Servicios adicionales (cena romántica, masajes, etc.)
-• Comentarios especiales o solicitudes
-• Información sobre mascotas
+• **Servicios** (paseos, masajes, caminatas)
 
 💬 **Envía toda la información en un solo mensaje**
 
-Ejemplo: "Reserva para María García y Juan Pérez, correo maria@email.com, teléfono 3001234567, 2 huéspedes, domo Antares, entrada 15/12/2024, salida 17/12/2024, pago efectivo"
+Ejemplo: "Reserva para Juan Pérez, correo juan@email.com, teléfono 3001234567, 2 huéspedes, domo Antares, entrada 15/12/2024, salida 17/12/2024, pago efectivo, servicios: masajes"
 
 ¿Puedes enviarme tus datos? 😊"""
     
@@ -725,7 +720,7 @@ def process_reservation_step_1(user_message: str, user_state: dict, memory, save
 
 🔍 **Problema detectado:** {parse_message}
 
-📋 **Recuerda incluir estos datos OBLIGATORIOS:**
+📋 **Recuerda incluir estos datos:**
 • **Correo electrónico** (ejemplo: maria@gmail.com)
 • **Teléfono/WhatsApp** (ejemplo: 3001234567)  
 • **Cantidad de huéspedes** (ejemplo: 2 personas)
@@ -733,9 +728,10 @@ def process_reservation_step_1(user_message: str, user_state: dict, memory, save
 • **Fecha entrada** (ejemplo: 15/12/2024)
 • **Fecha salida** (ejemplo: 17/12/2024)
 • **Método de pago** (efectivo, tarjeta, transferencia, Nequi)
+• **Servicios** (paseos, masajes, caminatas)
 
 💡 **Ejemplo completo:**
-"Reserva para Juan Pérez, correo juan@email.com, teléfono 3001234567, 2 huéspedes, domo Antares, entrada 15/12/2024, salida 17/12/2024, pago efectivo"
+"Reserva para Juan Pérez, correo juan@email.com, teléfono 3001234567, 2 huéspedes, domo Antares, entrada 15/12/2024, salida 17/12/2024, pago efectivo, servicios: masajes"
 
 ✏️ **Envía toda la información corregida en un solo mensaje** 😊"""
         
@@ -752,7 +748,7 @@ def process_reservation_step_1(user_message: str, user_state: dict, memory, save
             error_msg += f"""
 🔧 **Por favor, corrige estos problemas y envía la información completa nuevamente:**
 
-📋 **Datos OBLIGATORIOS que necesito:**
+📋 **Datos que necesito:**
 • **Correo electrónico** (formato: usuario@dominio.com)
 • **Teléfono/WhatsApp** (formato: 3001234567)  
 • **Cantidad de huéspedes** (número: 1, 2, 3...)
@@ -760,6 +756,7 @@ def process_reservation_step_1(user_message: str, user_state: dict, memory, save
 • **Fecha entrada** (formato: DD/MM/AAAA)
 • **Fecha salida** (formato: DD/MM/AAAA)
 • **Método de pago** (opciones: efectivo, tarjeta, transferencia, Nequi)
+• **Servicios** (opciones: paseos, masajes, caminatas)
 
 ✏️ **Envía todos los datos corregidos en un solo mensaje** 😊"""
             

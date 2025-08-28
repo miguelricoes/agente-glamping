@@ -23,6 +23,52 @@ def detect_topic_and_provide_fallback(message: str) -> Tuple[bool, str, str]:
         logger.debug(f"Mensaje detectado como datos de reserva, no aplicando fallback: {message[:50]}")
         return False, "", ""
 
+    # SERVICIOS INEXISTENTES - Detectar menciones de servicios que no ofrecemos
+    servicios_inexistentes = [
+        'yate', 'barco', 'lancha', 'navegación', 'paseo en yate', 'paseo en barco',
+        'buceo', 'snorkel', 'surf', 'windsurf', 'jet ski',
+        'casino', 'discoteca', 'bar nocturno', 'club nocturno',
+        'esquí', 'snowboard', 'patinaje en hielo',
+        'paracaidismo', 'parapente', 'ala delta',
+        'deportes extremos', 'bungee', 'puenting'
+    ]
+    
+    if any(servicio in message_lower for servicio in servicios_inexistentes):
+        response = """🚫 **SERVICIOS NO DISPONIBLES**
+
+Lo siento, pero el servicio que mencionas no está disponible en Brillo de Luna Glamping.
+
+🌟 **SERVICIOS QUE SÍ OFRECEMOS:**
+
+🧘 **Bienestar y Relajación:**
+• Yoga matutino con vista panorámica
+• Masajes relajantes (bajo reserva)
+• Meditación al amanecer
+• Spa y tratamientos de bienestar
+
+🚶 **Actividades de Naturaleza:**
+• Senderismo guiado por senderos naturales
+• Caminatas ecológicas
+• Observación de aves y fauna local
+• Tours de reconocimiento de flora
+
+🎯 **Experiencias Especiales:**
+• Observación astronómica con telescopio
+• Fotografía de paisajes y naturaleza
+• Fogatas nocturnas con marshmallows
+• Pesca deportiva en la Represa del Tominé
+
+🚴 **Deportes y Aventura:**
+• Ciclomontañismo por la región
+• Alquiler de bicicletas
+• Rappel (según disponibilidad)
+• Kayak en temporadas específicas
+
+¿Te interesa alguna de estas actividades que sí tenemos disponibles? 😊"""
+
+        logger.info(f"Servicio inexistente detectado en mensaje", extra={"topic": "servicio_inexistente"})
+        return True, response, "servicio_inexistente"
+
     # UBICACIÓN Y CONTACTO
     ubicacion_patterns = [
         'ubicacion', 'ubicación', 'donde', 'dónde', 'dirección', 'direccion',
@@ -268,7 +314,7 @@ def get_available_topics() -> list:
     Returns:
         list: Lista de nombres de temas
     """
-    return ["ubicacion", "concepto", "servicios", "actividades", "politicas"]
+    return ["ubicacion", "concepto", "servicios", "actividades", "politicas", "servicio_inexistente"]
 
 
 def add_topic_pattern(topic: str, patterns: list) -> bool:

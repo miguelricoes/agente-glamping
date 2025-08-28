@@ -100,15 +100,22 @@ class StandaloneAgent:
                 return False
             
             # Inicializar configuración de base de datos
+            logger.info("🔍 Llamando init_database_config...")
             self.database_config = init_database_config(self.app)
             
             if self.database_config:
                 self.db = self.database_config.db
-                logger.info(f"Base de datos inicializada: {self.database_config.database_available}", 
+                logger.info(f"✅ Base de datos inicializada: {self.database_config.database_available}", 
                            extra={"component": "standalone_agent", "db_available": self.database_config.database_available})
+                
+                # Verificar modelos específicos
+                Reserva = getattr(self.database_config, 'Reserva', None)
+                Usuario = getattr(self.database_config, 'Usuario', None)
+                logger.info(f"🔍 Modelos en database_config - Reserva: {Reserva is not None}, Usuario: {Usuario is not None}")
+                
                 return True
             else:
-                logger.warning("Configuración de base de datos no disponible", 
+                logger.error("❌ init_database_config() retornó None - configuración de base de datos no disponible", 
                               extra={"component": "standalone_agent"})
                 return False
                 
@@ -356,20 +363,38 @@ class StandaloneAgent:
             # Funciones de reserva
             def parse_reservation_details(user_input: str):
                 logger.info(f"🔍 DIAGNÓSTICO: Servicios disponibles: {list(self.services.keys())}")
+                
+                # Intentar inicializar servicio de reservas si no está disponible
+                if 'reservation' not in self.services:
+                    logger.warning("🚨 Servicio de reservas no disponible, intentando inicialización de emergencia...")
+                    
+                    if self.db and self.database_config and hasattr(self.database_config, 'Reserva'):
+                        try:
+                            from services.reservation_service import ReservationService
+                            self.services['reservation'] = ReservationService(self.db, self.database_config.Reserva)
+                            logger.info("✅ Servicio de reservas inicializado de emergencia")
+                        except Exception as e:
+                            logger.error(f"❌ Error en inicialización de emergencia: {e}")
+                            return False, {}, f"Error inicializando servicio: {str(e)}"
+                    else:
+                        logger.error(f"❌ No es posible inicializar - db: {self.db is not None}, config: {self.database_config is not None}")
+                        return False, {}, "Base de datos no disponible para reservas"
+                
                 if 'reservation' in self.services:
                     logger.info("✅ Servicio de reservas encontrado, procesando...")
                     return self.services['reservation'].parse_reservation_details(user_input)
                 else:
-                    logger.error("❌ Servicio de reservas no está disponible en self.services")
-                    logger.error(f"❌ Servicios disponibles: {list(self.services.keys())}")
-                return False, {}, "Servicio de reservas no disponible"
+                    logger.error("❌ Servicio de reservas sigue no disponible después de intentos")
+                    return False, {}, "Servicio de reservas no disponible"
             
             def validate_and_process_reservation_data(parsed_data: dict, from_number: str):
+                # Usar el mismo servicio que podría haber sido inicializado arriba
                 if 'reservation' in self.services:
                     return self.services['reservation'].validate_and_process_reservation_data(parsed_data, from_number)
                 return False, parsed_data, ["Servicio de reservas no disponible"]
             
             def calcular_precio_reserva(*args, **kwargs):
+                # Usar el mismo servicio que podría haber sido inicializado arriba
                 if 'reservation' in self.services:
                     return self.services['reservation'].calcular_precio_reserva(*args, **kwargs)
                 return False, 0.0, "Servicio de reservas no disponible"
