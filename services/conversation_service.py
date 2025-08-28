@@ -675,21 +675,33 @@ def initiate_reservation_flow(user_state: dict, memory, save_user_memory_func, u
     
     initial_message = """🏕️ **NUEVA RESERVA GLAMPING BRILLO DE LUNA** ✨
 
-📋 **DATOS NECESARIOS:**
-• **Correo electrónico de contacto**
-• **Teléfono/WhatsApp de contacto** 
-• **Cantidad de huéspedes** (1, 2, 3...)
-• **Domo preferido** (Antares, Polaris, Sirius, Centaury)
-• **Fecha de entrada** (DD/MM/AAAA o DD-MM-AAAA)
-• **Fecha de salida** (DD/MM/AAAA o DD-MM-AAAA)
-• **Método de pago** (efectivo, tarjeta, transferencia, Nequi)
-• **Servicios** (paseos, masajes, caminatas)
+📋 **ENVÍA TUS DATOS EN FORMATO DE LISTA (EN ESTE ORDEN):**
 
-💬 **Envía toda la información en un solo mensaje**
+1️⃣ **Nombre completo**
+2️⃣ **Número de teléfono/WhatsApp**  
+3️⃣ **Email/correo electrónico**
+4️⃣ **Número de personas** (1, 2, 3...)
+5️⃣ **Fecha de entrada** (DD/MM/AAAA)
+6️⃣ **Fecha de salida** (DD/MM/AAAA)
+7️⃣ **Domo preferido** (Antares, Polaris, Sirius, Centaury)
+8️⃣ **Servicios adicionales** (masajes, spa, ninguno)
+9️⃣ **Método de pago** (efectivo, tarjeta, transferencia)
+🔟 **Observaciones** (opcional - cualquier información adicional)
 
-Ejemplo: "Reserva para Juan Pérez, correo juan@email.com, teléfono 3001234567, 2 huéspedes, domo Antares, entrada 15/12/2024, salida 17/12/2024, pago efectivo, servicios: masajes"
+💬 **FORMATO CORRECTO - Envía cada dato en una línea:**
 
-¿Puedes enviarme tus datos? 😊"""
+Nombre: Juan Pérez
+Teléfono: 3001234567
+Email: juan@email.com
+Personas: 2
+Entrada: 15/12/2024
+Salida: 17/12/2024
+Domo: Antares
+Servicios: masajes
+Pago: efectivo
+Observaciones: celebración aniversario
+
+¿Puedes enviarme tus datos en este formato? 😊"""
     
     save_user_memory_func(user_id, memory)
     return initial_message

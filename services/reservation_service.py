@@ -201,152 +201,185 @@ class ReservationService:
     
     def parse_reservation_details(self, user_input: str) -> Tuple[bool, Dict[str, Any], str]:
         """
-        Parsea detalles de reserva desde input del usuario (extraído de agente.py líneas 1654-1770)
+        Parsea detalles de reserva desde formato de lista estructurado
         
         Args:
-            user_input: Input del usuario con detalles de reserva
+            user_input: Input del usuario con detalles en formato de lista
             
         Returns:
             Tuple[bool, Dict[str, Any], str]: (success, parsed_data, error_message)
         """
         try:
-            logger.info("Parseando detalles de reserva", 
+            logger.info("Parseando detalles de reserva en formato de lista", 
                        extra={"component": "reservation_service", "input_length": len(user_input)})
             
             if not user_input or not user_input.strip():
                 return False, {}, "Input vacío"
             
-            # Inicializar datos parseados
+            # Inicializar datos parseados según el orden requerido
             parsed_data = {
-                'nombres_huespedes': '',
-                'numero_whatsapp': '',
-                'email_contacto': '',
-                'cantidad_huespedes': 0,
-                'domo': '',
-                'fecha_entrada': None,
-                'fecha_salida': None,
-                'metodo_pago': '',
-                'servicios_adicionales': [],
-                'comentarios_especiales': '',
+                'nombres_huespedes': '',           # 1. Nombre completo
+                'numero_whatsapp': '',             # 2. Número de teléfono
+                'email_contacto': '',              # 3. Email
+                'cantidad_huespedes': 0,           # 4. Número de personas
+                'fecha_entrada': None,             # 5. Fecha entrada
+                'fecha_salida': None,              # 6. Fecha salida
+                'domo': '',                        # 7. Domo preferido
+                'servicios_adicionales': [],       # 8. Servicios adicionales
+                'metodo_pago': '',                 # 9. Método de pago
+                'comentarios_especiales': '',      # 10. Observaciones
                 'numero_contacto': ''
             }
             
-            # Patrones de extracción
-            patterns = {
-                'email': r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
-                'telefono': r'(?:\+57\s?)?(?:3\d{2}|\d{3})\s?\d{3}\s?\d{4}',
-                # Improved date pattern to catch more formats
-                'fecha': r'\b(?:\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2}|\d{1,2}\s+de\s+\w+\s+de?\s+\d{4})\b',
-                # More flexible number pattern with accent and encoding handling
-                'numero': r'\b(?:cantidad|personas|hu[eéè�]spedes?|huespedes?|guests?|para)[:\s]*(\d+)\b|\b(\d+)\s+(?:personas?|hu[eéè�]spedes?|huespedes?|guests?)\b',
-                'domo': r'\b(antares|polaris|sirius|centaury|centauro)\b',
-                'pago': r'\b(efectivo|tarjeta|transferencia|nequi|daviplata)\b'
+            # Procesar línea por línea para extraer los datos en el orden correcto
+            lines = user_input.strip().split('\n')
+            parsed_fields = {}
+            
+            # Patrones para cada campo específico
+            field_patterns = {
+                'nombre': r'(?:nombre|name):\s*(.*?)(?:\n|$)',
+                'telefono': r'(?:teléfono|telefono|phone):\s*(.*?)(?:\n|$)',
+                'email': r'(?:email|correo):\s*(.*?)(?:\n|$)',
+                'personas': r'(?:personas?|people|guests?):\s*(\d+)(?:\n|$)',
+                'entrada': r'(?:entrada|check.?in|from):\s*(.*?)(?:\n|$)',
+                'salida': r'(?:salida|check.?out|to|until):\s*(.*?)(?:\n|$)',
+                'domo': r'(?:domo|dome):\s*(.*?)(?:\n|$)',
+                'servicios': r'(?:servicios?|services?):\s*(.*?)(?:\n|$)',
+                'pago': r'(?:pago|payment):\s*(.*?)(?:\n|$)',
+                'observaciones': r'(?:observaciones?|comments?|notes?):\s*(.*?)(?:\n|$)'
             }
             
+            # Extraer datos usando patrones específicos (case insensitive)
             text_lower = user_input.lower()
             
-            # Extraer email
-            email_match = re.search(patterns['email'], user_input, re.IGNORECASE)
-            if email_match:
-                parsed_data['email_contacto'] = email_match.group().strip()
+            # 1. Nombre completo
+            name_match = re.search(field_patterns['nombre'], text_lower)
+            if name_match:
+                parsed_data['nombres_huespedes'] = name_match.group(1).strip().title()
             
-            # Extraer teléfono
-            phone_match = re.search(patterns['telefono'], user_input)
+            # 2. Teléfono
+            phone_match = re.search(field_patterns['telefono'], text_lower)
             if phone_match:
-                phone = re.sub(r'[^\d\+]', '', phone_match.group())
+                phone = re.sub(r'[^\d\+]', '', phone_match.group(1))
                 parsed_data['numero_whatsapp'] = phone
                 parsed_data['numero_contacto'] = phone
             
-            # Extraer fechas
-            date_matches = re.findall(patterns['fecha'], user_input)
-            if len(date_matches) >= 2:
-                # Parsear fechas - usar parsing simple sin validación de futuro
-                for i, date_str in enumerate(date_matches[:2]):
-                    try:
-                        # Intentar diferentes formatos de fecha
-                        from datetime import datetime
-                        date_formats = ['%d/%m/%Y', '%d-%m-%Y', '%d.%m.%Y', '%Y/%m/%d', '%Y-%m-%d', '%Y.%m.%d']
-                        
-                        parsed_date = None
-                        for fmt in date_formats:
-                            try:
-                                parsed_date = datetime.strptime(date_str, fmt).date()
-                                break
-                            except ValueError:
-                                continue
-                        
-                        if parsed_date:
-                            if i == 0:
-                                parsed_data['fecha_entrada'] = parsed_date
-                            else:
-                                parsed_data['fecha_salida'] = parsed_date
-                    except Exception:
-                        continue
+            # 3. Email
+            email_match = re.search(field_patterns['email'], text_lower)
+            if email_match:
+                email = email_match.group(1).strip()
+                if '@' in email:
+                    parsed_data['email_contacto'] = email
             
-            # Extraer cantidad de huéspedes - improved logic for flexible pattern
-            numero_match = re.search(patterns['numero'], text_lower)
-            if numero_match:
+            # 4. Número de personas
+            personas_match = re.search(field_patterns['personas'], text_lower)
+            if personas_match:
                 try:
-                    # Try both capture groups since the pattern has alternatives
-                    number = numero_match.group(1) if numero_match.group(1) else numero_match.group(2)
-                    if number:
-                        parsed_data['cantidad_huespedes'] = int(number)
-                except (ValueError, IndexError):
+                    parsed_data['cantidad_huespedes'] = int(personas_match.group(1))
+                except ValueError:
                     pass
             
-            # Extraer domo
-            domo_match = re.search(patterns['domo'], text_lower)
+            # 5. Fecha de entrada
+            entrada_match = re.search(field_patterns['entrada'], text_lower)
+            if entrada_match:
+                date_str = entrada_match.group(1).strip()
+                parsed_date = self._parse_date_string(date_str)
+                if parsed_date:
+                    parsed_data['fecha_entrada'] = parsed_date
+            
+            # 6. Fecha de salida
+            salida_match = re.search(field_patterns['salida'], text_lower)
+            if salida_match:
+                date_str = salida_match.group(1).strip()
+                parsed_date = self._parse_date_string(date_str)
+                if parsed_date:
+                    parsed_data['fecha_salida'] = parsed_date
+            
+            # 7. Domo
+            domo_match = re.search(field_patterns['domo'], text_lower)
             if domo_match:
-                domo_raw = domo_match.group().strip()
+                domo_raw = domo_match.group(1).strip()
                 success, domo_clean, _ = self.validation_service.validate_domo_selection(domo_raw)
                 if success:
                     parsed_data['domo'] = domo_clean
             
-            # Extraer método de pago
-            pago_match = re.search(patterns['pago'], text_lower)
+            # 8. Servicios adicionales
+            servicios_match = re.search(field_patterns['servicios'], text_lower)
+            if servicios_match:
+                servicios = servicios_match.group(1).strip()
+                if servicios and servicios != 'ninguno':
+                    parsed_data['servicios_adicionales'] = [s.strip() for s in servicios.split(',')]
+            
+            # 9. Método de pago
+            pago_match = re.search(field_patterns['pago'], text_lower)
             if pago_match:
-                pago_raw = pago_match.group().strip()
+                pago_raw = pago_match.group(1).strip()
                 success, pago_clean, _ = self.validation_service.validate_payment_method(pago_raw)
                 if success:
                     parsed_data['metodo_pago'] = pago_clean
             
-            # Extraer nombres (todo lo que no sea email, teléfono, fecha o números)
-            text_for_names = user_input
-            # Remover patrones conocidos
-            for pattern in [patterns['email'], patterns['telefono'], patterns['fecha']]:
-                text_for_names = re.sub(pattern, '', text_for_names, flags=re.IGNORECASE)
+            # 10. Observaciones
+            obs_match = re.search(field_patterns['observaciones'], text_lower)
+            if obs_match:
+                parsed_data['comentarios_especiales'] = obs_match.group(1).strip()
             
-            # Extraer posibles nombres (palabras que empiecen con mayúscula)
-            nombres_matches = re.findall(r'\b[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]+(?:\s+[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]+)*\b', text_for_names)
-            if nombres_matches:
-                parsed_data['nombres_huespedes'] = ', '.join(nombres_matches[:3])  # Máximo 3 nombres
+            # Verificar campos críticos
+            critical_fields = ['nombres_huespedes', 'numero_whatsapp', 'email_contacto', 'cantidad_huespedes']
+            optional_fields = ['fecha_entrada', 'fecha_salida', 'domo', 'metodo_pago']
             
-            # Verificar si se parsearon datos suficientes para una reserva válida
-            # Necesitamos al menos los campos críticos para proceder
-            critical_fields = ['email_contacto', 'numero_whatsapp', 'cantidad_huespedes', 'domo']
-            optional_critical_fields = ['fecha_entrada', 'fecha_salida', 'metodo_pago']
-            
-            # Contar campos críticos presentes
+            # Contar campos presentes
             critical_present = sum(1 for field in critical_fields if parsed_data.get(field))
-            optional_present = sum(1 for field in optional_critical_fields if parsed_data.get(field))
+            optional_present = sum(1 for field in optional_fields if parsed_data.get(field))
             
-            # Necesitamos al menos 3 campos críticos + 1 opcional para considerar éxito
-            total_required = critical_present + optional_present
+            total_fields = critical_present + optional_present
             
-            if critical_present < 3 or total_required < 4:
-                missing_fields = [field for field in critical_fields if not parsed_data.get(field)]
-                missing_optional = [field for field in optional_critical_fields if not parsed_data.get(field)]
-                return False, parsed_data, f"Información insuficiente: faltan {missing_fields + missing_optional[:2]}"
+            # Validación mejorada: necesitamos al menos 3 críticos + 2 opcionales
+            if critical_present < 3 or total_fields < 5:
+                missing_critical = [field for field in critical_fields if not parsed_data.get(field)]
+                missing_optional = [field for field in optional_fields if not parsed_data.get(field)]
+                
+                return False, parsed_data, f"""❌ **INFORMACIÓN INCOMPLETA**
+
+📋 **Campos críticos faltantes**: {', '.join(missing_critical) if missing_critical else 'Completos'}
+📋 **Campos opcionales faltantes**: {', '.join(missing_optional[:3]) if missing_optional else 'Completos'}
+
+💡 **Usa este formato exacto:**
+
+Nombre: Tu Nombre Completo
+Teléfono: 3001234567
+Email: tu@email.com
+Personas: 2
+Entrada: 15/12/2024
+Salida: 17/12/2024
+Domo: Antares
+Servicios: masajes
+Pago: efectivo
+Observaciones: opcional"""
             
-            logger.info(f"Detalles parseados exitosamente: {total_required} campos importantes", 
-                       extra={"component": "reservation_service", "parsed_fields": total_required})
+            logger.info(f"Detalles parseados exitosamente en formato lista: {total_fields} campos", 
+                       extra={"component": "reservation_service", "parsed_fields": total_fields})
             
-            return True, parsed_data, f"Parseados {total_required} campos importantes"
+            return True, parsed_data, f"Parseados {total_fields} campos exitosamente"
             
         except Exception as e:
             error_msg = f"Error parseando detalles de reserva: {e}"
             logger.error(error_msg, extra={"component": "reservation_service"})
             return False, {}, error_msg
+    
+    def _parse_date_string(self, date_str: str):
+        """Parsea string de fecha en múltiples formatos"""
+        try:
+            from datetime import datetime
+            date_formats = ['%d/%m/%Y', '%d-%m-%Y', '%d.%m.%Y', '%Y/%m/%d', '%Y-%m-%d', '%Y.%m.%d']
+            
+            for fmt in date_formats:
+                try:
+                    return datetime.strptime(date_str, fmt).date()
+                except ValueError:
+                    continue
+            return None
+        except Exception:
+            return None
     
     def validate_and_process_reservation_data(self, parsed_data: Dict[str, Any], 
                                             from_number: str) -> Tuple[bool, Dict[str, Any], List[str]]:
