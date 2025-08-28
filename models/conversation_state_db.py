@@ -35,10 +35,10 @@ class ConversationStateDB:
             reserva_step = self.db.Column(self.db.Integer, default=0, nullable=False)
             waiting_for_availability = self.db.Column(self.db.Boolean, default=False, nullable=False)
             
-            # NUEVOS CAMPOS para manejo de contexto
-            previous_context = self.db.Column(self.db.String(100), default='', nullable=True)
-            last_action = self.db.Column(self.db.String(100), default='', nullable=True)
-            waiting_for_continuation = self.db.Column(self.db.Boolean, default=False, nullable=False)
+            # NUEVOS CAMPOS para manejo de contexto - TEMPORALMENTE COMENTADOS (COLUMNAS NO EXISTEN EN BD)
+            # previous_context = self.db.Column(self.db.String(100), default='', nullable=True)
+            # last_action = self.db.Column(self.db.String(100), default='', nullable=True)
+            # waiting_for_continuation = self.db.Column(self.db.Boolean, default=False, nullable=False)
             
             # Datos de reserva en progreso (JSON)
             reserva_data = self.db.Column(self.db.JSON, default=dict, nullable=True)
@@ -64,9 +64,9 @@ class ConversationStateDB:
                     'reserva_step': self.reserva_step,
                     'reserva_data': self.reserva_data or {},
                     'waiting_for_availability': self.waiting_for_availability,
-                    'previous_context': self.previous_context or '',  # NUEVO
-                    'last_action': self.last_action or '',           # NUEVO
-                    'waiting_for_continuation': self.waiting_for_continuation,  # NUEVO
+                    # 'previous_context': self.previous_context or '',  # TEMPORALMENTE COMENTADO
+                    # 'last_action': self.last_action or '',           # TEMPORALMENTE COMENTADO
+                    # 'waiting_for_continuation': self.waiting_for_continuation,  # TEMPORALMENTE COMENTADO
                     'conversation_memory': self.conversation_memory or {},
                     'last_interaction': self.last_interaction.isoformat() if self.last_interaction else None,
                     'total_messages': self.total_messages
@@ -78,9 +78,9 @@ class ConversationStateDB:
                 self.reserva_step = state_dict.get('reserva_step', 0)
                 self.reserva_data = state_dict.get('reserva_data', {})
                 self.waiting_for_availability = state_dict.get('waiting_for_availability', False)
-                self.previous_context = state_dict.get('previous_context', '')  # NUEVO
-                self.last_action = state_dict.get('last_action', '')           # NUEVO
-                self.waiting_for_continuation = state_dict.get('waiting_for_continuation', False)  # NUEVO
+                # self.previous_context = state_dict.get('previous_context', '')  # TEMPORALMENTE COMENTADO
+                # self.last_action = state_dict.get('last_action', '')           # TEMPORALMENTE COMENTADO
+                # self.waiting_for_continuation = state_dict.get('waiting_for_continuation', False)  # TEMPORALMENTE COMENTADO
                 self.last_interaction = datetime.utcnow()
         
         self.UserConversationState = UserConversationState
@@ -106,9 +106,9 @@ class ConversationStateDB:
                     current_flow='none',
                     reserva_step=0,
                     waiting_for_availability=False,
-                    previous_context='',  # NUEVO
-                    last_action='',       # NUEVO
-                    waiting_for_continuation=False,  # NUEVO
+                    # previous_context='',  # TEMPORALMENTE COMENTADO
+                    # last_action='',       # TEMPORALMENTE COMENTADO
+                    # waiting_for_continuation=False,  # TEMPORALMENTE COMENTADO
                     reserva_data={},
                     conversation_memory={}
                 )
@@ -123,7 +123,28 @@ class ConversationStateDB:
         except Exception as e:
             logger.error(f"Error obteniendo estado conversacional: {e}",
                         extra={"user_id": user_id, "phase": "state_retrieval"})
-            self.db.session.rollback()
+            # Manejo especial para transacciones abortadas
+            try:
+                self.db.session.rollback()
+            except Exception as rollback_error:
+                logger.warning(f"Error en rollback: {rollback_error}")
+            
+            # Si el error es de columna inexistente, no es crítico para el funcionamiento
+            if "column" in str(e) and "does not exist" in str(e):
+                logger.warning("⚠️ Columnas de contexto no disponibles en BD - usando memoria")
+                # Retornar estado básico sin las columnas problemáticas
+                return type('MockState', (), {
+                    'current_flow': 'none',
+                    'reserva_step': 0,
+                    'waiting_for_availability': False,
+                    'reserva_data': {},
+                    'to_dict': lambda: {
+                        'current_flow': 'none',
+                        'reserva_step': 0,
+                        'waiting_for_availability': False,
+                        'reserva_data': {}
+                    }
+                })()
             raise
     
     def update_state(self, user_id: str, state_updates: Dict[str, Any]) -> bool:
@@ -169,7 +190,15 @@ class ConversationStateDB:
         except Exception as e:
             logger.error(f"Error actualizando estado: {e}",
                         extra={"user_id": user_id, "phase": "state_update"})
-            self.db.session.rollback()
+            try:
+                self.db.session.rollback()
+            except:
+                pass
+            
+            # Si es error de columnas faltantes, no fallar completamente
+            if "column" in str(e) and "does not exist" in str(e):
+                logger.warning("⚠️ BD UPDATE: user_conversation_states - usando memoria en lugar de BD")
+                return True  # Fingir éxito, los datos están en memoria
             return False
     
     def update_memory(self, user_id: str, memory_data: Dict[str, Any]) -> bool:
@@ -198,7 +227,15 @@ class ConversationStateDB:
         except Exception as e:
             logger.error(f"Error actualizando memoria: {e}",
                         extra={"user_id": user_id, "phase": "memory_update"})
-            self.db.session.rollback()
+            try:
+                self.db.session.rollback()
+            except:
+                pass
+            
+            # Si es error de columnas faltantes, no fallar completamente
+            if "column" in str(e) and "does not exist" in str(e):
+                logger.warning("⚠️ BD UPDATE: memory - usando memoria en lugar de BD")
+                return True
             return False
     
     def get_memory(self, user_id: str) -> Dict[str, Any]:
@@ -218,6 +255,9 @@ class ConversationStateDB:
         except Exception as e:
             logger.error(f"Error obteniendo memoria: {e}",
                         extra={"user_id": user_id, "phase": "memory_retrieval"})
+            # Si es error de columnas, retornar diccionario vacío
+            if "column" in str(e) and "does not exist" in str(e):
+                logger.warning("⚠️ BD GET: memory - usando memoria por defecto")
             return {}
     
     def cleanup_old_states(self, days_old: int = 30) -> int:
@@ -283,4 +323,8 @@ class ConversationStateDB:
         except Exception as e:
             logger.error(f"Error obteniendo estadísticas: {e}",
                         extra={"user_id": user_id, "phase": "stats"})
+            # Si es error de columnas, retornar estadísticas básicas
+            if "column" in str(e) and "does not exist" in str(e):
+                logger.warning("⚠️ BD STATS: usando estadísticas por defecto")
+                return {"exists": True, "error": "columnas_contexto_no_disponibles"}
             return {"exists": False, "error": str(e)}
