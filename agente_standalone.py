@@ -159,19 +159,37 @@ class StandaloneAgent:
             # Inicializar servicios básicos
             self.services['validation_service'] = ValidationService()
             self.services['validation'] = self.services['validation_service']  # Compatibilidad
+            logger.info("✅ Servicio de validación inicializado")
             
             # Servicios que requieren base de datos
             if self.db and self.database_config:
+                logger.info("🔍 Database y database_config disponibles, iniciando servicios DB...")
                 Reserva = self.database_config.Reserva
                 Usuario = self.database_config.Usuario
+                
+                logger.info(f"🔍 Modelos disponibles - Reserva: {Reserva is not None}, Usuario: {Usuario is not None}")
                 
                 if Reserva and Usuario:
                     self.services['database'] = DatabaseService(self.db, Reserva, Usuario)
                     self.services['user'] = UserService(self.db, Usuario)
+                    logger.info("✅ Servicios database y user inicializados")
                     
                 if Reserva:
-                    self.services['availability'] = AvailabilityService(self.db, Reserva)
-                    self.services['reservation'] = ReservationService(self.db, Reserva)
+                    try:
+                        self.services['availability'] = AvailabilityService(self.db, Reserva)
+                        logger.info("✅ Servicio de disponibilidad inicializado")
+                    except Exception as e:
+                        logger.error(f"❌ Error inicializando availability service: {e}")
+                        
+                    try:
+                        self.services['reservation'] = ReservationService(self.db, Reserva)
+                        logger.info("✅ Servicio de reservas inicializado exitosamente")
+                    except Exception as e:
+                        logger.error(f"❌ Error inicializando reservation service: {e}")
+                else:
+                    logger.warning("⚠️ Modelo Reserva no disponible - servicios de reserva no inicializados")
+            else:
+                logger.warning(f"⚠️ DB o database_config no disponibles - db: {self.db is not None}, config: {self.database_config is not None}")
             
             # Servicio RAG
             if self.llm_service and self.llm_service.qa_chains:
@@ -337,8 +355,13 @@ class StandaloneAgent:
             
             # Funciones de reserva
             def parse_reservation_details(user_input: str):
+                logger.info(f"🔍 DIAGNÓSTICO: Servicios disponibles: {list(self.services.keys())}")
                 if 'reservation' in self.services:
+                    logger.info("✅ Servicio de reservas encontrado, procesando...")
                     return self.services['reservation'].parse_reservation_details(user_input)
+                else:
+                    logger.error("❌ Servicio de reservas no está disponible en self.services")
+                    logger.error(f"❌ Servicios disponibles: {list(self.services.keys())}")
                 return False, {}, "Servicio de reservas no disponible"
             
             def validate_and_process_reservation_data(parsed_data: dict, from_number: str):
