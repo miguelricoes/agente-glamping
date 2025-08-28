@@ -63,26 +63,38 @@ class DatabaseConfig:
         logger.info(f"🔍 DIAGNÓSTICO DB - DATABASE_PUBLIC_URL: {DATABASE_PUBLIC_URL is not None}")
         logger.info(f"🔍 DIAGNÓSTICO DB - DATABASE_URL: {DATABASE_URL is not None}")
         
-        database_url = DATABASE_PRIVATE_URL or DATABASE_PUBLIC_URL or DATABASE_URL
+        # Seleccionar URL en orden de prioridad
+        if DATABASE_PRIVATE_URL:
+            database_url = DATABASE_PRIVATE_URL
+            logger.info("🔍 DIAGNÓSTICO DB - Usando DATABASE_PRIVATE_URL")
+        elif DATABASE_PUBLIC_URL:
+            database_url = DATABASE_PUBLIC_URL
+            logger.info("🔍 DIAGNÓSTICO DB - Usando DATABASE_PUBLIC_URL")
+        elif DATABASE_URL:
+            # Solo verificar railway.internal para DATABASE_URL (no para las otras)
+            if "railway.internal" in DATABASE_URL:
+                logger.warning("🔍 DIAGNÓSTICO DB - DATABASE_URL es interna de Railway, podría no funcionar en local")
+                # En producción/Railway debería funcionar, solo en local es problemático
+                # Pero intentemos usarla de todos modos
+            database_url = DATABASE_URL
+            logger.info("🔍 DIAGNÓSTICO DB - Usando DATABASE_URL (puede ser interna)")
+        else:
+            database_url = None
+            
         logger.info(f"🔍 DIAGNÓSTICO DB - URL final seleccionada: {database_url is not None}")
         
-        # Verificar si estamos en entorno local y la URL es interna de Railway
-        if database_url and "railway.internal" in database_url:
-            logger.warning("Detectada URL interna de Railway en entorno local - Deshabilitando BD", 
-                         extra={"phase": "startup"})
-            return None
-        
         # Logging de configuración seleccionada
-        if DATABASE_PRIVATE_URL:
-            log_startup(logger, "Usando DATABASE_PRIVATE_URL (sin costos de egress)", "SUCCESS", "")
-        elif DATABASE_PUBLIC_URL:
-            logger.warning("Usando DATABASE_PUBLIC_URL (puede generar costos de egress)", 
-                         extra={"phase": "startup"})
-            print("TIP: Usa DATABASE_PRIVATE_URL para evitar costos")
-        elif DATABASE_URL:
-            logger.info("Usando DATABASE_URL genérica", extra={"phase": "startup"})
+        if database_url:
+            if DATABASE_PRIVATE_URL:
+                log_startup(logger, "✅ Usando DATABASE_PRIVATE_URL (sin costos de egress)", "SUCCESS", "")
+            elif DATABASE_PUBLIC_URL:
+                logger.warning("✅ Usando DATABASE_PUBLIC_URL (puede generar costos de egress)", 
+                             extra={"phase": "startup"})
+                print("TIP: Usa DATABASE_PRIVATE_URL para evitar costos")
+            elif DATABASE_URL:
+                logger.info("✅ Usando DATABASE_URL genérica", extra={"phase": "startup"})
         else:
-            logger.warning("Ninguna DATABASE_URL configurada - Funcionalidad de base de datos deshabilitada", 
+            logger.error("❌ Ninguna DATABASE_URL configurada - Funcionalidad de base de datos deshabilitada", 
                          extra={"phase": "startup"})
             print("TIP: Configura DATABASE_PRIVATE_URL, DATABASE_PUBLIC_URL o DATABASE_URL")
         
