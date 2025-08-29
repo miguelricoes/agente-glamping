@@ -1247,8 +1247,8 @@ def handle_comprehensive_fallback(user_message: str, validation_service, qa_chai
         if any(word in message_clean for word in ['domos', 'domo', 'alojamiento', 'habitacion', 'habitación']):
             return True, get_domos_information(qa_chains)
         
-        # Handle servicios/actividades requests
-        if any(word in message_clean for word in ['servicios', 'actividades', 'incluye', 'ofertas', 'experiencias']):
+        # Handle servicios/actividades requests - REMOVED 'servicios' to avoid intercept
+        if any(word in message_clean for word in ['actividades', 'incluye', 'ofertas', 'experiencias']):
             return True, get_servicios_information(qa_chains)
         
         # Handle disponibilidad requests

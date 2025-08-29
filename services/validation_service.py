@@ -72,7 +72,7 @@ class ValidationService:
         
         # Detectar variantes textuales - palabras simples Y exactas
         menu_variants = {
-            '1': ['informacion', 'información', 'informacion general', 'información general', 'opcion 1', 'opción 1'],
+            '1': ['informacion general', 'información general', 'opcion 1', 'opción 1'],
             '2': ['domos', 'domos disponibles', 'opcion 2', 'opción 2'],
             '3': ['disponibilidad', 'consultar disponibilidad', 'opcion 3', 'opción 3'],
             '4': ['servicios incluidos', 'servicios combinados', 'opcion 4', 'opción 4'],
