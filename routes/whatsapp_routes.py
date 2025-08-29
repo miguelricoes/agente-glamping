@@ -814,6 +814,23 @@ Responde de manera completa, útil y con la calidez característica de la hospit
             resp.message(enhanced_agent_answer)
             return str(resp)
 
+        # 12.5. FALLBACK ESPECÍFICO SIN LLM - EJECUTAR ANTES DE IA
+        # Verificar si hay respuesta automática disponible para temas específicos
+        logger.info(f"🔍 CHECKING TOPIC FALLBACK: current_flow = {user_state.get('current_flow')}, mensaje = {incoming_msg[:50]}")
+        handled_topic_fallback, topic_fallback_response, detected_topic = detect_topic_and_provide_fallback(incoming_msg)
+        logger.info(f"🔍 TOPIC FALLBACK RESULT: handled = {handled_topic_fallback}, topic = {detected_topic}")
+        
+        if handled_topic_fallback and user_state.get("current_flow") == "none":
+            logger.info(f"✅ EJECUTANDO TOPIC FALLBACK SIN LLM: {detected_topic}")
+            enhanced_topic_response = personality.apply_personality_to_response(topic_fallback_response, "topic_fallback")
+            resp.message(enhanced_topic_response)
+            
+            logger.info(f"Topic fallback response sent to {from_number}: {detected_topic}",
+                       extra={"user_id": from_number, "topic": detected_topic, "phase": "topic_fallback"})
+            return str(resp)
+        else:
+            logger.info(f"❌ TOPIC FALLBACK NO EJECUTADO: handled={handled_topic_fallback}, current_flow={user_state.get('current_flow')}")
+
         # 13. Fallback con personalidad (OPTIMIZADO CON ASYNC Y CACHE)
         try:
             # Crear contexto para procesamiento asíncrono
