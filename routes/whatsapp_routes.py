@@ -339,7 +339,15 @@ Responde de manera completa, útil y con la calidez característica de la hospit
         try:
             return main_webhook_process()
         except KeyError as critical_key_error:
-            logger.error(f"🚨 CRITICAL KEYERROR: {critical_key_error}")
+            import traceback
+            # Capturar información del KeyError sin logging complejo
+            print(f"KEYERROR DEBUG: {critical_key_error}")  # Print directo para evitar logging issues
+            print(f"KEYERROR TRACEBACK: {traceback.format_exc()}")
+            
+            try:
+                logger.error(f"Critical KeyError in webhook: {str(critical_key_error)}")
+            except:
+                pass  # Si el logging falla, continuar sin él
             from_number = request.values.get('From', '')
             
             # Reinicializar estado de emergencia
@@ -602,16 +610,10 @@ Responde de manera completa, útil y con la calidez característica de la hospit
             save_user_memory, from_number, is_menu_selection, validation_service
         )
         
-        # DEBUGGING: Log menu selection results
-        logger.info(f"🔍 MENU DEBUG: handled={handled}, response_type={type(response)}", 
-                   extra={"user_id": from_number, "message": incoming_msg[:50]})
-        
         if handled:
             if isinstance(response, dict):
-                logger.info(f"🔍 MENU DEBUG: Enviando dict message: {len(response.get('message', ''))} chars")
                 resp.message(response["message"])
             else:
-                logger.info(f"🔍 MENU DEBUG: Enviando string response: {len(str(response))} chars")
                 resp.message(response)
             return str(resp)
 
