@@ -133,6 +133,7 @@ class MenuService:
             except Exception as e:
                 logger.warning(f"No se pudo actualizar context_service: {e}")
             
+            print(f"MENU_SERVICE: Returning servicios_message type={type(servicios_message)}, length={len(str(servicios_message))}")
             return servicios_message
             
         elif option == "5":

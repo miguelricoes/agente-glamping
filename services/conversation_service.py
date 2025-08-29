@@ -236,11 +236,13 @@ def handle_menu_selection_unified(user_message: str, user_state: dict, memory, q
                         
                     add_message_to_memory(memory, user_message, menu_response["message"])
                     save_user_memory_func(user_id, memory)
+                    print(f"CONVERSATION_SERVICE: Returning dict response, handled=True")
                     return True, menu_response
                 else:
                     # String response
                     add_message_to_memory(memory, user_message, menu_response)
                     save_user_memory_func(user_id, memory)
+                    print(f"CONVERSATION_SERVICE: Returning string response, handled=True, length={len(str(menu_response))}")
                     return True, menu_response
                     
             except Exception as e:

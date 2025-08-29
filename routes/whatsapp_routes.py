@@ -610,6 +610,8 @@ Responde de manera completa, útil y con la calidez característica de la hospit
             save_user_memory, from_number, is_menu_selection, validation_service
         )
         
+        print(f"WEBHOOK: menu_selection_unified returned handled={handled}, response_type={type(response)}")
+        
         if handled:
             if isinstance(response, dict):
                 resp.message(response["message"])
