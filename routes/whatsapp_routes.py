@@ -1043,7 +1043,7 @@ def handle_fallback_menu_response(user_message, current_flow):
     # Detección básica de opciones de menú
     if any(indicator in user_msg_lower for indicator in ['1', 'uno', 'domo', 'domos', 'habitacion']):
         return generate_simple_menu_response('domos')
-    elif any(indicator in user_msg_lower for indicator in ['2', 'dos', 'servicio', 'servicios', 'incluido']):
+    elif any(indicator in user_msg_lower for indicator in ['2', 'dos', 'servicio', 'incluido']):
         return generate_simple_menu_response('servicios')
     elif any(indicator in user_msg_lower for indicator in ['3', 'tres', 'disponibilidad', 'reserva', 'reservar', 'fecha']):
         return generate_simple_menu_response('disponibilidad')
