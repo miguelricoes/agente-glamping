@@ -104,9 +104,16 @@ class MenuService:
         elif option == "4":
             # Servicios combinados (incluidos y adicionales)
             servicios_response = self._handle_servicios_combinados_option()
-            if isinstance(servicios_response, dict) and "set_waiting_for_servicios_followup" in servicios_response:
-                user_state["current_flow"] = "servicios_followup"
-                user_state["waiting_for_servicios_followup"] = True
+            
+            # FIX: Extraer mensaje si la respuesta es un diccionario
+            if isinstance(servicios_response, dict):
+                if "set_waiting_for_servicios_followup" in servicios_response:
+                    user_state["current_flow"] = "servicios_followup"
+                    user_state["waiting_for_servicios_followup"] = True
+                # Extraer el mensaje real del diccionario
+                servicios_message = servicios_response.get("message", str(servicios_response))
+            else:
+                servicios_message = servicios_response
             
             # Después de mostrar info de servicios:
             user_state["last_action"] = "showed_services"
@@ -126,7 +133,7 @@ class MenuService:
             except Exception as e:
                 logger.warning(f"No se pudo actualizar context_service: {e}")
             
-            return servicios_response
+            return servicios_message
             
         elif option == "5":
             politicas_response = self._handle_politicas_option()
