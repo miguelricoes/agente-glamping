@@ -494,7 +494,7 @@ class StandaloneAgent:
                 get_welcome_menu=get_welcome_menu,
                 is_menu_selection=is_menu_selection_standalone
             )
-            #lol
+            #lolx2
             # Registrar rutas Chat
             register_chat_routes(
                 app=self.app,
