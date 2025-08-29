@@ -601,10 +601,17 @@ Responde de manera completa, útil y con la calidez característica de la hospit
             incoming_msg, user_state, memory, qa_chains, handle_menu_selection, 
             save_user_memory, from_number, is_menu_selection, validation_service
         )
+        
+        # DEBUGGING: Log menu selection results
+        logger.info(f"🔍 MENU DEBUG: handled={handled}, response_type={type(response)}", 
+                   extra={"user_id": from_number, "message": incoming_msg[:50]})
+        
         if handled:
             if isinstance(response, dict):
+                logger.info(f"🔍 MENU DEBUG: Enviando dict message: {len(response.get('message', ''))} chars")
                 resp.message(response["message"])
             else:
+                logger.info(f"🔍 MENU DEBUG: Enviando string response: {len(str(response))} chars")
                 resp.message(response)
             return str(resp)
 

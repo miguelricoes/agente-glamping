@@ -221,6 +221,10 @@ def handle_menu_selection_unified(user_message: str, user_state: dict, memory, q
                 menu_service = create_menu_service(qa_chains, validation_service)
                 menu_response = menu_service.handle_menu_selection(user_message, user_state)
                 
+                # DEBUGGING: Log what menu_service returned
+                logger.info(f"🔍 CONVERSATION DEBUG: menu_response type={type(menu_response)}, is_dict={isinstance(menu_response, dict)}", 
+                           extra={"component": "conversation_service", "user_message": user_message[:30]})
+                
                 # Handle dictionary response (option 3 - availability, option 1 - domos followup, option 2 - servicios followup)
                 if isinstance(menu_response, dict):
                     if "set_waiting_for_availability" in menu_response:
