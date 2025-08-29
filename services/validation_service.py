@@ -86,6 +86,10 @@ class ValidationService:
                 if variant == message_clean or f" {variant}" in message_clean or f"{variant} " in message_clean or f" {variant} " in message_clean:
                     return True
         
+        # RAILWAY DEBUG: Si 'servicios' llega aquí es un bug
+        if "servicios" in message.lower() and not any(phrase in message.lower() for phrase in ['servicios incluidos', 'servicios combinados']):
+            logger.warning(f"🚨 SERVICIOS INTERCEPTADO POR MENU: '{message}' - ESTO ES UN BUG", extra={"component": "validation_service"})
+        
         return False
     
     def extract_menu_option(self, message: str) -> str:
