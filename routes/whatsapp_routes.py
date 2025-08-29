@@ -788,6 +788,8 @@ Responde de manera completa, útil y con la calidez característica de la hospit
         # 11.5. FALLBACK ESPECÍFICO SIN LLM - EJECUTAR ANTES DE AUTO-AI
         # Verificar si hay respuesta automática disponible para temas específicos
         logger.info(f"🔍 CHECKING TOPIC FALLBACK: current_flow = {user_state.get('current_flow')}, mensaje = {incoming_msg[:50]}")
+        if "servicios" in incoming_msg.lower():
+            logger.warning(f"🚨 SERVICIOS LLEGÓ A TOPIC FALLBACK - ESTO SIGNIFICA QUE EL FIX FUNCIONÓ: '{incoming_msg}'")
         handled_topic_fallback, topic_fallback_response, detected_topic = detect_topic_and_provide_fallback(incoming_msg)
         logger.info(f"🔍 TOPIC FALLBACK RESULT: handled = {handled_topic_fallback}, topic = {detected_topic}")
         
