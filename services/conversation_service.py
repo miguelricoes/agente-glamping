@@ -178,6 +178,9 @@ def handle_menu_selection_unified(user_message: str, user_state: dict, memory, q
                    extra={"component": "conversation_service"})
         
         # VALIDACIÓN DE PARÁMETROS ANTES DE PROCEDER
+        if "servicios" in user_message.lower():
+            logger.warning(f"🚨 DEBUG SERVICIOS EN handle_menu_selection_unified: validation_service = {validation_service is not None}")
+        
         if validation_service is None:
             logger.warning("validation_service no disponible, usando fallback", 
                           extra={"component": "conversation_service"})
@@ -188,10 +191,14 @@ def handle_menu_selection_unified(user_message: str, user_state: dict, memory, q
             if handled:
                 logger.info(f"Fallback service manejó consulta: {topic}", 
                            extra={"component": "conversation_service", "topic": topic})
+                if "servicios" in user_message.lower():
+                    logger.warning(f"🚨 SERVICIOS MANEJADO POR FALLBACK_SERVICE: {topic}")
                 return True, fallback_response
             else:
                 # Si no se detectó tema específico, usar fallback básico como último recurso
                 from routes.whatsapp_routes import handle_fallback_menu_response
+                if "servicios" in user_message.lower():
+                    logger.warning(f"🚨 SERVICIOS VA A handle_fallback_menu_response - AQUÍ ESTÁ EL PROBLEMA")
                 fallback_response = handle_fallback_menu_response(user_message, user_state.get('current_flow', 'none'))
                 return True, fallback_response
         
