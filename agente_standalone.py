@@ -334,6 +334,27 @@ class StandaloneAgent:
             
             def handle_menu_selection(selection: str, qa_chains: dict) -> str:
                 try:
+                    # Convert keywords to numbers first
+                    selection_processed = selection.strip().lower()
+                    
+                    # Convertir palabras clave a números
+                    keyword_to_number = {
+                        'domos': '1',
+                        'servicios': '2',
+                        'disponibilidad': '3',
+                        'información': '4',
+                        'informacion': '4',
+                        'general': '4'
+                    }
+                    
+                    # Si es una palabra clave, convertir a número
+                    for keyword, number in keyword_to_number.items():
+                        if keyword in selection_processed:
+                            selection_processed = number
+                            break
+                    
+                    print(f"🚨 DEBUG: handle_menu_selection procesando: '{selection}' -> '{selection_processed}'")
+                    
                     # Use the new menu service instead of the dummy response
                     from services.validation_service import ValidationService
                     from services.menu_service import create_menu_service
@@ -344,7 +365,7 @@ class StandaloneAgent:
                     # Create a dummy user_state for the menu service
                     user_state = {"current_flow": "none"}
                     
-                    result = menu_service.handle_menu_selection(selection, user_state)
+                    result = menu_service.handle_menu_selection(selection_processed, user_state)
                     
                     # Handle dictionary responses (some menu options return dicts)
                     if isinstance(result, dict):

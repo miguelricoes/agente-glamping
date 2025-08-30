@@ -75,7 +75,7 @@ class ValidationService:
             '1': ['informacion general', 'información general', 'opcion 1', 'opción 1'],
             '2': ['domos', 'domos disponibles', 'opcion 2', 'opción 2'],
             '3': ['disponibilidad', 'consultar disponibilidad', 'opcion 3', 'opción 3'],
-            '4': ['servicios incluidos', 'servicios combinados', 'opcion 4', 'opción 4'],
+            '4': ['servicios', 'servicios incluidos', 'servicios combinados', 'opcion 4', 'opción 4'],
             '5': ['politicas', 'políticas', 'opcion 5', 'opción 5']
             # Opciones 6, 7, 8 eliminadas - ahora se manejan via auto-activación IA
         }
@@ -118,7 +118,7 @@ class ValidationService:
             '1': ['informacion general', 'información general', 'opcion 1', 'opción 1'],
             '2': ['domos', 'domos disponibles', 'opcion 2', 'opción 2'],
             '3': ['disponibilidad', 'consultar disponibilidad', 'opcion 3', 'opción 3'],
-            '4': ['servicios incluidos', 'servicios combinados', 'opcion 4', 'opción 4'],
+            '4': ['servicios', 'servicios incluidos', 'servicios combinados', 'opcion 4', 'opción 4'],
             '5': ['politicas', 'políticas', 'opcion 5', 'opción 5']
             # Opciones 6, 7, 8 eliminadas - ahora se manejan via auto-activación IA
         }

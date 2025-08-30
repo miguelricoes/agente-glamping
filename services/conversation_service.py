@@ -168,6 +168,40 @@ def handle_greeting_new_conversation(memory, user_message: str, is_greeting_mess
         return True, welcome_message
     return False, ""
 
+def is_menu_keyword(user_message: str) -> bool:
+    """Check if message contains valid menu keywords"""
+    message_lower = user_message.lower().strip()
+    menu_keywords = {
+        'domos': '1',
+        'servicios': '2',
+        'disponibilidad': '3',
+        'información': '4',
+        'informacion': '4',
+        'general': '4'
+    }
+
+    for keyword in menu_keywords:
+        if keyword in message_lower:
+            return True
+    return False
+
+def convert_keyword_to_menu_number(user_message: str) -> str:
+    """Convert menu keyword to menu number"""
+    message_lower = user_message.lower().strip()
+    menu_keywords = {
+        'domos': '1',
+        'servicios': '2',
+        'disponibilidad': '3',
+        'información': '4',
+        'informacion': '4',
+        'general': '4'
+    }
+
+    for keyword, number in menu_keywords.items():
+        if keyword in message_lower:
+            return number
+    return user_message
+
 def handle_menu_selection_unified(user_message: str, user_state: dict, memory, qa_chains, 
                                 handle_menu_selection_func, save_user_memory_func, user_id: str, 
                                 is_menu_selection_func, validation_service=None) -> Tuple[bool, Union[str, dict]]:
@@ -220,13 +254,16 @@ def handle_menu_selection_unified(user_message: str, user_state: dict, memory, q
         is_menu_sel = validation_service.is_menu_selection(user_message)
         current_flow_none = user_state["current_flow"] == "none"
         
-        if is_menu_sel and current_flow_none:
+        if (is_menu_sel or is_menu_keyword(user_message)) and current_flow_none:
             try:
                 logger.info("Using improved menu service", extra={"component": "conversation_service"})
                 # Import and use the new menu service
                 from services.menu_service import create_menu_service
                 menu_service = create_menu_service(qa_chains, validation_service)
-                menu_response = menu_service.handle_menu_selection(user_message, user_state)
+                
+                # Convert keywords to menu numbers if needed
+                processed_message = convert_keyword_to_menu_number(user_message)
+                menu_response = menu_service.handle_menu_selection(processed_message, user_state)
                 
                 
                 # Handle dictionary response (option 3 - availability, option 1 - domos followup, option 2 - servicios followup)
@@ -262,10 +299,13 @@ def handle_menu_selection_unified(user_message: str, user_state: dict, memory, q
     
         # Fallback to original menu selection handling
         logger.info("Falling back to original menu selection handling", extra={"component": "conversation_service"})
-        if is_menu_selection_func(user_message) and user_state["current_flow"] == "none":
+        if (is_menu_selection_func(user_message) or is_menu_keyword(user_message)) and user_state["current_flow"] == "none":
             try:
                 logger.info("Using fallback menu service", extra={"component": "conversation_service"})
-                menu_response = handle_menu_selection_func(user_message, qa_chains)
+                converted_message = convert_keyword_to_menu_number(user_message)
+                print(f"🚨 DEBUG SERVICIOS EN handle_menu_selection_unified: validation_service = True")
+                print(f"🚨 DEBUG: Mensaje original: '{user_message}' -> Convertido: '{converted_message}'")
+                menu_response = handle_menu_selection_func(converted_message, qa_chains)
                 
                 # Handle dictionary response (option 3)
                 if isinstance(menu_response, dict):
