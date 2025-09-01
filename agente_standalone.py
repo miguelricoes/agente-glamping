@@ -333,48 +333,141 @@ class StandaloneAgent:
                     return any(greeting in message.lower() for greeting in greetings)
             
             def handle_menu_selection(selection: str, qa_chains: dict) -> str:
-                try:
-                    # Convert keywords to numbers first
-                    selection_processed = selection.strip().lower()
-                    
-                    # Convertir palabras clave a números
-                    keyword_to_number = {
-                        'domos': '1',
-                        'servicios': '2',
-                        'disponibilidad': '3',
-                        'información': '4',
-                        'informacion': '4',
-                        'general': '4'
-                    }
-                    
-                    # Si es una palabra clave, convertir a número
-                    for keyword, number in keyword_to_number.items():
-                        if keyword in selection_processed:
-                            selection_processed = number
-                            break
-                    
-                    print(f"🚨 DEBUG: handle_menu_selection procesando: '{selection}' -> '{selection_processed}'")
-                    
-                    # Use the new menu service instead of the dummy response
-                    from services.validation_service import ValidationService
-                    from services.menu_service import create_menu_service
-                    
-                    validation_service = ValidationService()
-                    menu_service = create_menu_service(qa_chains, validation_service)
-                    
-                    # Create a dummy user_state for the menu service
-                    user_state = {"current_flow": "none"}
-                    
-                    result = menu_service.handle_menu_selection(selection_processed, user_state)
-                    
-                    # Handle dictionary responses (some menu options return dicts)
-                    if isinstance(result, dict):
-                        return result.get("message", str(result))
-                    
-                    return result
-                except Exception as e:
-                    logger.error(f"Error en handle_menu_selection: {e}")
-                    return f"Error procesando la opción {selection}. Intenta de nuevo."
+                print(f"🔍 MENU_DEBUG: Procesando selección: '{selection}'")
+
+                selection_lower = selection.lower().strip()
+
+                # Convertir palabras clave a números
+                if 'domo' in selection_lower:
+                    selection_num = "1"
+                elif 'servicio' in selection_lower:
+                    selection_num = "2"
+                elif 'disponibilidad' in selection_lower:
+                    selection_num = "3"
+                elif 'información' in selection_lower or 'informacion' in selection_lower or 'general' in selection_lower:
+                    selection_num = "4"
+                elif selection.strip() in ["1", "2", "3", "4"]:
+                    selection_num = selection.strip()
+                else:
+                    selection_num = selection.strip()
+
+                print(f"🔍 MENU_DEBUG: Selección convertida a: '{selection_num}'")
+
+                if selection_num == "1":
+                    # INFORMACIÓN DE DOMOS
+                    return """🏠 *INFORMACIÓN DE NUESTROS DOMOS* 🌟
+
+🏠 *NUESTROS DOMOS TEMÁTICOS:*
+
+🌟 *DOMO ANTARES* (2 personas)
+* Jacuzzi privado y malla catamarán
+* Vista panorámica a represa de Tominé
+* Terraza con parasol
+* Dos pisos: sala y cama principal
+
+⭐ *DOMO POLARIS* (2-4 personas)
+* Sofá cama para personas adicionales
+* Vista maravillosa a la represa
+* Cocineta completamente equipada
+* Dos pisos con sala y dormitorio
+
+🌌 *DOMO SIRIUS* (2 personas)
+* Un solo piso diseño para parejas
+* Vista bella a represa y montaña
+* Terraza acogedora
+* Nevera y cafetera incluidos
+
+✨ *DOMO CENTAURY* (2 personas)
+* Similar a Sirius, un solo piso
+* Vista hermosa a represa y montaña
+* Terraza relajante
+* Nevera y cafetera incluidos
+
+💰 *PRECIOS Y TARIFAS:*
+💰 *TARIFAS 2024:*
+
+🌟 *DOMO ANTARES*: $650.000 COP/noche para pareja
+⭐ *DOMO POLARIS*: $550.000 COP/noche para pareja (+$100.000 por persona adicional)
+🌌 *DOMO SIRIUS*: $450.000 COP/noche para pareja
+✨ *DOMO CENTAURY*: $450.000 COP/noche para pareja
+
+✨ *INCLUYE:*
+* Desayuno gourmet continental
+* Acceso a todas las instalaciones
+* Wifi de alta velocidad
+* Parqueadero privado
+* Kit de bienvenida
+
+📋 *Para más información específica:*
+* Escribe el nombre del domo (Antares, Polaris, Sirius, Centaury)
+* Escribe "disponibilidad" para consultar fechas
+* Escribe "reservar" para hacer una reserva
+* Escribe "menú" para volver al menú principal"""
+
+                elif selection_num == "2":
+                    # INFORMACIÓN DE SERVICIOS
+                    print(f"🔍 MENU_DEBUG: Ejecutando lógica de SERVICIOS")
+                    return """🎯 *NUESTROS SERVICIOS* ✨
+
+🍳 *SERVICIOS INCLUIDOS:*
+* Desayuno gourmet continental
+* WiFi de alta velocidad 📶
+* Parqueadero privado 🚗
+* Acceso a áreas comunes 🏞️
+* Ropa de cama y toallas premium 🛏️
+* Kit de bienvenida 🎁
+* Limpieza diaria básica 🧹
+
+🌟 *SERVICIOS ADICIONALES DISPONIBLES:*
+* Masajes relajantes y terapéuticos 💆‍♀️
+* Decoraciones especiales para ocasiones 🌹
+* Cenas románticas bajo las estrellas 🕯️
+* Paseos en velero por la represa ⛵
+* Paseos en lancha 🚤
+* Caminatas ecológicas guiadas 🥾
+* Avistamiento de aves 🦅
+* Fogatas nocturnas 🔥
+* Sesiones de yoga y meditación 🧘‍♀️
+
+💡 *NOTA:* Los servicios adicionales tienen costo extra y requieren reserva previa.
+
+¿Te interesa algún servicio específico? ¿O quieres saber precios de servicios adicionales? 😊"""
+
+                elif selection_num == "3":
+                    # CONSULTA DE DISPONIBILIDAD
+                    return """📅 *CONSULTA DE DISPONIBILIDAD* 📋
+
+Para consultar disponibilidad necesito algunos datos:
+
+📍 *¿Para qué fechas?*
+   • Fecha de llegada (ej: 15 de septiembre)
+   • Fecha de salida (ej: 17 de septiembre)
+
+👥 *¿Cuántas personas?*
+   • Número total de huéspedes
+
+🏠 *¿Tipo de domo?* (opcional)
+   • Antares, Polaris, Sirius, Centaury, o cualquiera disponible
+
+💬 Puedes escribir todo junto o paso a paso.
+*Ejemplo:* "Quiero consultar disponibilidad para 2 personas del 15 al 17 de septiembre"
+
+¿Cuáles son tus fechas? 📅"""
+
+                elif selection_num == "4":
+                    # INFORMACIÓN GENERAL
+                    return """ℹ️ *INFORMACIÓN GENERAL* 🌟
+
+¿Qué información específica te gustaría conocer?
+
+📍 *1. UBICACIÓN* - Dónde nos encontramos y cómo llegar
+🏕️ *2. CONCEPTO DEL GLAMPING* - Nuestra filosofía y sitio web
+📋 *3. POLÍTICAS* - Normas, mascotas, privacidad y cancelaciones
+
+¿Qué te interesa saber? 😊"""
+
+                else:
+                    return f"🤔 No entendí tu selección '{selection}'. Por favor elige:\n\n1️⃣ *Domos*\n2️⃣ *Servicios*\n3️⃣ *Disponibilidad*\n4️⃣ *Información General*\n\nO escribe directamente la palabra clave."
             
             def handle_availability_request(message: str) -> str:
                 if 'availability' in self.services:
@@ -446,23 +539,14 @@ class StandaloneAgent:
                 """
                 Función que genera el menú de bienvenida para WhatsApp
                 """
-                return """🌟 **¡Bienvenido a Glamping Brillo de Luna!** 🌟
+                return """🏕️ **BIENVENIDO A GLAMPING BRILLO DE LUNA** 🌙
 
-🏞️ Tu escape perfecto en Guatavita, Colombia
+1️⃣ **Domos** - Tipos, características y precios
+2️⃣ **Servicios** - Lo que incluye tu estadía
+3️⃣ **Disponibilidad** - Fechas libres y reservas
+4️⃣ **Información General** - Ubicación, políticas y más
 
-**¿En qué puedo ayudarte hoy?**
-
-1️⃣ 📍 **Información General** - Ubicación, concepto, contacto
-2️⃣ 🏠 **Domos Disponibles** - Tipos, características, precios
-3️⃣ 📅 **Consultar Disponibilidad** - Fechas libres para reservar
-4️⃣ 🛎️ **Servicios Incluidos** - Qué incluye tu estadía
-5️⃣ 📋 **Políticas del Glamping** - Normas y condiciones
-
-💬 **Escribe el número de tu opción o pregúntame directamente**
-
-✨ *Estoy aquí para hacer tu experiencia inolvidable*
-
-🔧 **VERSION: 2025-08-26 HOTFIX - SALUDO CORREGIDO**"""
+💬 También puedes escribir directamente: 'domos', 'servicios', 'disponibilidad' o 'reservar'"""
             
             def is_menu_selection_standalone(message: str) -> bool:
                 """
@@ -477,11 +561,10 @@ class StandaloneAgent:
                 
                 # Detectar variantes textuales
                 menu_variants = {
-                    '1': ['informacion', 'información', 'informacion general', 'información general'],
-                    '2': ['domos', 'domos disponibles'],
-                    '3': ['disponibilidad', 'consultar disponibilidad'],
-                    '4': ['servicios', 'servicios incluidos'],
-                    '5': ['politicas', 'políticas']
+                    '1': ['domos', 'domos disponibles', 'domo'],
+                    '2': ['servicios', 'servicios incluidos', 'servicio'],
+                    '3': ['disponibilidad', 'consultar disponibilidad', 'reservar', 'reservas'],
+                    '4': ['informacion', 'información', 'informacion general', 'información general', 'politicas', 'políticas']
                 }
                 
                 for option, variants in menu_variants.items():

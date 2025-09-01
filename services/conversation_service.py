@@ -173,11 +173,17 @@ def is_menu_keyword(user_message: str) -> bool:
     message_lower = user_message.lower().strip()
     menu_keywords = {
         'domos': '1',
+        'domo': '1', 
         'servicios': '2',
+        'servicio': '2',
         'disponibilidad': '3',
+        'reservar': '3',
+        'reservas': '3',
         'información': '4',
         'informacion': '4',
-        'general': '4'
+        'general': '4',
+        'politicas': '4',
+        'políticas': '4'
     }
 
     for keyword in menu_keywords:
@@ -190,11 +196,17 @@ def convert_keyword_to_menu_number(user_message: str) -> str:
     message_lower = user_message.lower().strip()
     menu_keywords = {
         'domos': '1',
+        'domo': '1', 
         'servicios': '2',
+        'servicio': '2',
         'disponibilidad': '3',
+        'reservar': '3',
+        'reservas': '3',
         'información': '4',
         'informacion': '4',
-        'general': '4'
+        'general': '4',
+        'politicas': '4',
+        'políticas': '4'
     }
 
     for keyword, number in menu_keywords.items():

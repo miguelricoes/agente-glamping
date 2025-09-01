@@ -72,12 +72,11 @@ class ValidationService:
         
         # Detectar variantes textuales - palabras simples Y exactas
         menu_variants = {
-            '1': ['informacion general', 'información general', 'opcion 1', 'opción 1'],
-            '2': ['domos', 'domos disponibles', 'opcion 2', 'opción 2'],
-            '3': ['disponibilidad', 'consultar disponibilidad', 'opcion 3', 'opción 3'],
-            '4': ['servicios', 'servicios incluidos', 'servicios combinados', 'opcion 4', 'opción 4'],
-            '5': ['politicas', 'políticas', 'opcion 5', 'opción 5']
-            # Opciones 6, 7, 8 eliminadas - ahora se manejan via auto-activación IA
+            '1': ['domos', 'domos disponibles', 'domo', 'opcion 1', 'opción 1'],
+            '2': ['servicios', 'servicios incluidos', 'servicio', 'opcion 2', 'opción 2'],
+            '3': ['disponibilidad', 'consultar disponibilidad', 'reservar', 'reservas', 'opcion 3', 'opción 3'],
+            '4': ['informacion general', 'información general', 'politicas', 'políticas', 'opcion 4', 'opción 4']
+            # Menú simplificado a 4 opciones principales
         }
         
         for option, variants in menu_variants.items():
@@ -115,12 +114,11 @@ class ValidationService:
         
         # Variantes textuales con detección para todas las opciones - palabras simples Y exactas
         menu_variants = {
-            '1': ['informacion general', 'información general', 'opcion 1', 'opción 1'],
-            '2': ['domos', 'domos disponibles', 'opcion 2', 'opción 2'],
-            '3': ['disponibilidad', 'consultar disponibilidad', 'opcion 3', 'opción 3'],
-            '4': ['servicios', 'servicios incluidos', 'servicios combinados', 'opcion 4', 'opción 4'],
-            '5': ['politicas', 'políticas', 'opcion 5', 'opción 5']
-            # Opciones 6, 7, 8 eliminadas - ahora se manejan via auto-activación IA
+            '1': ['domos', 'domos disponibles', 'domo', 'opcion 1', 'opción 1'],
+            '2': ['servicios', 'servicios incluidos', 'servicio', 'opcion 2', 'opción 2'],
+            '3': ['disponibilidad', 'consultar disponibilidad', 'reservar', 'reservas', 'opcion 3', 'opción 3'],
+            '4': ['informacion general', 'información general', 'politicas', 'políticas', 'opcion 4', 'opción 4']
+            # Menú simplificado a 4 opciones principales
         }
         
         for option, variants in menu_variants.items():
